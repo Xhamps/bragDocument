@@ -46,7 +46,12 @@ export { supabaseMock };
 export type Routes = Record<string, unknown>;
 
 export function mockFetch(table: Routes) {
-  const calls: { method: string; path: string; body?: unknown }[] = [];
+  const calls: {
+    method: string;
+    path: string;
+    search: string;
+    body?: unknown;
+  }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,6 +61,7 @@ export function mockFetch(table: Routes) {
       calls.push({
         method,
         path: url.pathname,
+        search: url.search,
         body: init?.body ? JSON.parse(String(init.body)) : undefined,
       });
       if (!(key in table))

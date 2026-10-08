@@ -22,6 +22,7 @@ func newLogsFixture() logsFixture {
 	f := logsFixture{docs: newFakeDocs(), logs: newFakeLogs(), impact: &fakeImpact{statement: "Cut p95 by 4x"}}
 	f.docs.docs["d1"] = domain.Document{ID: "d1", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
 	f.docs.docs["d2"] = domain.Document{ID: "d2", TenantID: "t1", OwnerID: "u1", State: domain.DocumentArchived}
+	f.docs.docs["d3"] = domain.Document{ID: "d3", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
 	f.s = NewLogs(f.docs, f.logs, f.impact)
 	f.s.now = func() time.Time { return time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC) }
 	return f
@@ -169,4 +170,63 @@ func TestLogsTags(t *testing.T) {
 	tags, err := newLogsFixture().s.Tags(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, []string{"project"}, tags)
+}
+
+func TestLogsFutureDate(t *testing.T) {
+	ctx := context.Background()
+	f := newLogsFixture()
+	ok := f.s.now().Add(23 * time.Hour)
+	in := createIn("d1")
+	in.CreatedAt = &ok
+	l, err := f.s.Create(ctx, in)
+	require.NoError(t, err, "within the 24h slack")
+
+	future := f.s.now().Add(25 * time.Hour)
+	f.impact.calls = 0
+	in.CreatedAt = &future
+	_, err = f.s.Create(ctx, in)
+	var ve *domain.ValidationError
+	require.ErrorAs(t, err, &ve)
+	require.Zero(t, f.impact.calls, "rejected before extraction")
+
+	_, err = f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d1", UserID: "u1", CreatedAt: &future})
+	require.ErrorAs(t, err, &ve)
+}
+
+func TestLogsExtractCancelled(t *testing.T) {
+	f := newLogsFixture()
+	f.impact.err = errors.New("context canceled")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	l, err := f.s.Create(ctx, createIn("d1"))
+	require.NoError(t, err)
+	require.Nil(t, l.ImpactStatement)
+}
+
+func TestLogsUpdateMore(t *testing.T) {
+	ctx := context.Background()
+	f := newLogsFixture()
+	f.logs.logs["a"] = domain.Log{ID: "a", DocumentID: "d2", Name: "A", Impact: "low", Status: "done"}
+	name := "renamed"
+	_, err := f.s.Update(ctx, UpdateLogInput{ID: "a", DocumentID: "d2", UserID: "u1", Name: &name})
+	require.ErrorIs(t, err, domain.ErrConflict, "archived is read-only")
+
+	l, err := f.s.Create(ctx, createIn("d1"))
+	require.NoError(t, err)
+	f.impact.calls = 0
+	got, err := f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d1", UserID: "u1", Name: &name})
+	require.NoError(t, err)
+	require.Equal(t, 1, f.impact.calls, "name change re-extracts")
+
+	f.impact.err = errors.New("boom")
+	desc := "different"
+	got, err = f.s.Update(ctx, UpdateLogInput{ID: got.ID, DocumentID: "d1", UserID: "u1", Description: &desc})
+	require.NoError(t, err)
+	require.Nil(t, got.ImpactStatement, "failed re-extraction: not checked")
+
+	_, err = f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d3", UserID: "u1", Name: &name})
+	require.ErrorIs(t, err, domain.ErrNotFound, "log of another document")
+	require.ErrorIs(t, f.s.Delete(ctx, "d3", l.ID, "u1"), domain.ErrNotFound, "log of another document")
+
+	require.ErrorIs(t, f.s.DeleteExamples(ctx, "d1", "u2"), domain.ErrForbidden)
 }

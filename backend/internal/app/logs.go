@@ -44,9 +44,21 @@ func (s *Logs) extract(ctx context.Context, l domain.Log) *string {
 	switch {
 	case errors.Is(err, domain.ErrUnavailable):
 		return nil // extraction disabled; logged once at startup
+	case err != nil && ctx.Err() != nil:
+		return nil // client went away; the save fails on the same ctx anyway
 	case err != nil:
-		slog.WarnContext(ctx, "impact extraction failed; saving without a statement", slog.Any("err", err))
+		slog.WarnContext(ctx, "impact extraction failed; saving without a statement",
+			slog.String("document_id", l.DocumentID), slog.Any("err", err))
 		return nil
 	}
 	return &st
+}
+
+// checkDate rejects future dates. The 24h slack covers clients sending noon
+// local time for today.
+func (s *Logs) checkDate(l domain.Log) error {
+	if l.CreatedAt.After(s.now().Add(24 * time.Hour)) {
+		return domain.NewValidationError(map[string]string{"created_at": "must not be in the future"})
+	}
+	return nil
 }

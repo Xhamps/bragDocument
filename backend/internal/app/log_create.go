@@ -36,6 +36,9 @@ func (s *Logs) Create(ctx context.Context, in CreateLogInput) (domain.Log, error
 	if in.CreatedAt != nil {
 		l.CreatedAt = *in.CreatedAt
 	}
+	if err := s.checkDate(l); err != nil {
+		return domain.Log{}, err
+	}
 	if err := l.Validate(); err != nil {
 		return domain.Log{}, err
 	}

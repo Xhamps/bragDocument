@@ -53,6 +53,9 @@ func (s *Logs) Update(ctx context.Context, in UpdateLogInput) (domain.Log, error
 	if in.CreatedAt != nil {
 		l.CreatedAt = *in.CreatedAt
 	}
+	if err := s.checkDate(l); err != nil {
+		return domain.Log{}, err
+	}
 	l.IsExample = false // an edited example is the user's log now
 	l.UpdatedBy = in.UserID
 	if err := l.Validate(); err != nil {

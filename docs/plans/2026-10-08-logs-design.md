@@ -62,7 +62,7 @@ Owner-only: other tenant → 404, same-tenant non-owner → 403, write on an arc
 | GET | `/tags` | `TagList` | Tenant tag names, sorted. |
 | GET | `/documents` | existing | Adds `log_count` and `last_log_at` (examples excluded) via a `LEFT JOIN` aggregate. |
 
-Validation (domain, 422): name 1–120 after trim; description ≤ 20,000; enums; tags trimmed, lowercased, 1–50 chars, deduplicated, ≤ 20; links `http`/`https` only, ≤ 20, label ≤ 100, `host` lowercased with `www.` stripped.
+Validation (domain, 422): name 1–120 after trim; description ≤ 20,000; enums; tags trimmed, lowercased, 1–50 chars, deduplicated, ≤ 20; links `http`/`https` only, ≤ 20, label ≤ 100, `host` lowercased with `www.` stripped. `from`/`to` are UTC calendar days (`to` inclusive). Back-dated logs are stored at noon local time, so they land on the chosen day; a log created late in the evening west of UTC may fall on the next UTC day. Client-local ranges can come later via RFC 3339 instants.
 
 Sort order: impact `critical > high > medium > low`, status `idea → in_progress → done → dropped`, tiebreak on `id`.
 

@@ -274,10 +274,10 @@ components:
     LogStatus: { type: string, enum: [idea, in_progress, done, dropped] }
     Link:
       type: object
-      required: [url]
+      required: [url, label]
       properties:
         url: { type: string, format: uri, description: http or https only }
-        label: { type: string, maxLength: 100 }
+        label: { type: string, maxLength: 100, description: Optional in requests; always present in responses. }
     Log:
       type: object
       required: [id, document_id, name, description, impact, impact_statement, status, is_example, tags, links, created_at, created_by, updated_at, updated_by]
@@ -315,7 +315,7 @@ components:
         created_at: { type: string, format: date-time, description: Defaults to now; set to back-date. Not more than 24 h in the future }
     UpdateLog:
       type: object
-      description: Absent fields are unchanged; tags and links replace the whole set when present.
+      description: Absent fields are unchanged; tags and links replace the whole set when present. null is treated as absent.
       properties:
         name: { type: string, minLength: 1, maxLength: 120 }
         description: { type: string, maxLength: 20000 }

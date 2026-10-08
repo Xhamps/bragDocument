@@ -43,6 +43,9 @@ func Load() (Config, error) {
 	if c.LogFormat != "json" && c.LogFormat != "text" {
 		return Config{}, fmt.Errorf("config: LOG_FORMAT must be json or text, got %q", c.LogFormat)
 	}
+	if c.LLMTimeout <= 0 {
+		return Config{}, fmt.Errorf("config: LLM_TIMEOUT must be positive, got %s", c.LLMTimeout)
+	}
 	if c.DatabaseOwnerURL == "" {
 		c.DatabaseOwnerURL = c.DatabaseURL
 	}

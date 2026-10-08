@@ -51,6 +51,9 @@ func NewOpenAIExtractor(apiKey, model string, timeout time.Duration, reg prometh
 		Help: "Impact extractions that failed, by reason; the log was saved without a statement.",
 	}, []string{"reason"})
 	reg.MustRegister(failures)
+	for _, r := range []string{"api", "timeout", "parse", "refusal"} {
+		failures.WithLabelValues(r)
+	}
 	opts = append([]option.RequestOption{option.WithAPIKey(apiKey), option.WithMaxRetries(0)}, opts...)
 	return &OpenAIExtractor{client: openai.NewClient(opts...), model: model, timeout: timeout, failures: failures}
 }
@@ -89,6 +92,12 @@ func (e *OpenAIExtractor) Extract(ctx context.Context, name, description string)
 	var out struct {
 		Found     bool   `json:"found"`
 		Statement string `json:"statement"`
+	}
+	if len(res.Choices) > 0 {
+		if c := res.Choices[0]; c.Message.Refusal != "" || c.FinishReason != "stop" {
+			e.failures.WithLabelValues("refusal").Inc()
+			return "", fmt.Errorf("openai: no usable answer (finish_reason=%s)", c.FinishReason)
+		}
 	}
 	if len(res.Choices) == 0 || json.Unmarshal([]byte(res.Choices[0].Message.Content), &out) != nil {
 		e.failures.WithLabelValues("parse").Inc()

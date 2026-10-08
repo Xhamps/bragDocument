@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,17 +28,16 @@ func completion(content string) string {
 	return string(b)
 }
 
-func newTest(t *testing.T, h http.HandlerFunc, timeout time.Duration) (*OpenAIExtractor, *prometheus.Registry) {
+func newTest(t *testing.T, h http.HandlerFunc, timeout time.Duration) *OpenAIExtractor {
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	reg := prometheus.NewRegistry()
-	return NewOpenAIExtractor("k", "test-model", timeout, reg, option.WithBaseURL(srv.URL+"/")), reg
+	return NewOpenAIExtractor("k", "test-model", timeout, prometheus.NewRegistry(), option.WithBaseURL(srv.URL+"/"))
 }
 
 func TestOpenAIExtractorFound(t *testing.T) {
 	var body map[string]any
-	e, _ := newTest(t, func(w http.ResponseWriter, r *http.Request) {
+	e := newTest(t, func(w http.ResponseWriter, r *http.Request) {
 		require.True(t, strings.HasSuffix(r.URL.Path, "/chat/completions"))
 		require.Equal(t, "Bearer k", r.Header.Get("Authorization"))
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
@@ -54,7 +54,7 @@ func TestOpenAIExtractorFound(t *testing.T) {
 
 func TestOpenAIExtractorNotFoundAndTruncation(t *testing.T) {
 	content := `{"found":false,"statement":"ignored"}`
-	e, _ := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
+	e := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(completion(content)))
 	}, time.Second)
@@ -69,7 +69,7 @@ func TestOpenAIExtractorNotFoundAndTruncation(t *testing.T) {
 }
 
 func TestOpenAIExtractorFailures(t *testing.T) {
-	e, reg := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
+	e := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, `{"error":{"message":"boom"}}`, http.StatusInternalServerError)
 	}, time.Second)
 	_, err := e.Extract(context.Background(), "n", "d")
@@ -77,7 +77,7 @@ func TestOpenAIExtractorFailures(t *testing.T) {
 	require.NotErrorIs(t, err, domain.ErrUnavailable, "only Disabled reports ErrUnavailable")
 	require.Equal(t, 1.0, testutil.ToFloat64(e.failures.WithLabelValues("api")))
 
-	e, _ = newTest(t, func(w http.ResponseWriter, _ *http.Request) {
+	e = newTest(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(completion(`not json`)))
 	}, time.Second)
@@ -85,7 +85,8 @@ func TestOpenAIExtractorFailures(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 1.0, testutil.ToFloat64(e.failures.WithLabelValues("parse")))
 
-	e, _ = newTest(t, func(w http.ResponseWriter, r *http.Request) {
+	e = newTest(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
 		select {
 		case <-r.Context().Done():
 		case <-time.After(time.Second):
@@ -96,7 +97,6 @@ func TestOpenAIExtractorFailures(t *testing.T) {
 	require.Error(t, err)
 	require.Less(t, time.Since(start), 500*time.Millisecond, "timeout honoured, no retries")
 	require.Equal(t, 1.0, testutil.ToFloat64(e.failures.WithLabelValues("timeout")))
-	_ = reg
 }
 
 func TestDisabled(t *testing.T) {
@@ -105,7 +105,7 @@ func TestDisabled(t *testing.T) {
 }
 
 func TestOpenAIExtractorCallerCancelledNoMetric(t *testing.T) {
-	e, _ := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
+	e := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(completion(`{"found":true,"statement":"x"}`)))
 	}, time.Second)
@@ -116,4 +116,27 @@ func TestOpenAIExtractorCallerCancelledNoMetric(t *testing.T) {
 	for _, r := range []string{"api", "timeout", "parse"} {
 		require.Equal(t, 0.0, testutil.ToFloat64(e.failures.WithLabelValues(r)), r)
 	}
+}
+
+func TestOpenAIExtractorRefusal(t *testing.T) {
+	for name, body := range map[string]string{
+		"length":  `{"id":"c1","object":"chat.completion","created":0,"model":"m","choices":[{"index":0,"finish_reason":"length","message":{"role":"assistant","content":"{\"found\":tr"}}]}`,
+		"refusal": `{"id":"c1","object":"chat.completion","created":0,"model":"m","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"","refusal":"I can't help with that."}}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newTest(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(body))
+			}, time.Second)
+			_, err := e.Extract(context.Background(), "n", "d")
+			require.ErrorContains(t, err, "finish_reason=")
+			require.Equal(t, 1.0, testutil.ToFloat64(e.failures.WithLabelValues("refusal")))
+			require.Equal(t, 0.0, testutil.ToFloat64(e.failures.WithLabelValues("parse")))
+		})
+	}
+}
+
+func TestOpenAIExtractorLabelsPreinitialised(t *testing.T) {
+	e := newTest(t, func(http.ResponseWriter, *http.Request) {}, time.Second)
+	require.Equal(t, 4, testutil.CollectAndCount(e.failures))
 }

@@ -2477,13 +2477,17 @@ REDIS_URL=redis://localhost:6379/0
 ```
 Remove `SUPABASE_JWT_SECRET`. Keep the other lines as they are.
 
-**Step 6: `docker-compose.yml`** — in the `api`, `bot`, and `worker` services set:
+**Step 6: `docker-compose.yml`** — in the `api`, `bot`, and `worker` services set the application role:
 
 ```yaml
       DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
-      DATABASE_OWNER_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
 ```
-and add a one-shot migration service that the api depends on:
+and on `api` only, so the app profile reaches a local Supabase out of the box:
+
+```yaml
+      SUPABASE_URL: ${SUPABASE_URL_COMPOSE:-http://host.docker.internal:54321}
+```
+then add a one-shot migration service that the api depends on (only it gets the owner credentials):
 
 ```yaml
   migrate:
@@ -2493,7 +2497,7 @@ and add a one-shot migration service that the api depends on:
     command: ["migrate"]
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      DATABASE_OWNER_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

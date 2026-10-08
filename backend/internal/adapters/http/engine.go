@@ -6,7 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// maxBodyBytes caps every request body; no route accepts more than a few KB.
+// maxBodyBytes caps every request body (413 via bindJSON); no route accepts
+// more than a few KB. Headers keep Go's 1 MiB default.
 const maxBodyBytes = 1 << 20
 
 // NewEngine builds the Gin engine with the standard middleware chain and the

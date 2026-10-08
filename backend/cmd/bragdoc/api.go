@@ -48,7 +48,8 @@ func apiCmd() *cobra.Command {
 			// Fetches the JWKS now, then refreshes hourly and on unknown kid. The
 			// default storage only logs a failed first fetch, so check we actually
 			// got keys: Supabase is a required tier and the api must not start
-			// in a state where every token is a 401.
+			// in a state where every token is a 401. The fetch is bounded by
+			// keyfunc's default 1-minute HTTP timeout.
 			jwksURL := strings.TrimRight(cfg.SupabaseURL, "/") + "/auth/v1/.well-known/jwks.json"
 			jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
 			if err != nil {
@@ -79,7 +80,6 @@ func apiCmd() *cobra.Command {
 				Addr:              cfg.HTTPAddr,
 				Handler:           engine,
 				ReadHeaderTimeout: 5 * time.Second,
-				MaxHeaderBytes:    1 << 20,
 			}
 			errCh := make(chan error, 1)
 			go func() { errCh <- srv.ListenAndServe() }()

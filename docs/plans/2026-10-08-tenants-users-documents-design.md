@@ -59,7 +59,7 @@ Public routes: `/healthz`, `/readyz`, `/metrics`. Everything else is behind the 
 
 Security requirement: step 2 of `UserEnsure` trusts the `email` claim, so the Supabase project must have "Confirm email" enabled and only OAuth providers that verify addresses; an unverified email would let anyone consume another person's invitation.
 
-Config: `SUPABASE_URL` required for `api`; `JWKS_REFRESH` default `1h`; `DATABASE_OWNER_URL` for `migrate`. `SUPABASE_JWT_SECRET` is removed from `.env.example`.
+Config: `SUPABASE_URL` required for `api` (keyfunc's default refresh: hourly and on unknown `kid`); `DATABASE_OWNER_URL` for `migrate`. `SUPABASE_JWT_SECRET` is removed from `.env.example`.
 
 ## 3. API
 

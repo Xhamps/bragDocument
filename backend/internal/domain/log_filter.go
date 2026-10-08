@@ -12,6 +12,7 @@ var LogSorts = []string{"created_at", "name", "impact", "status"}
 const (
 	defaultLogsPerPage = 50
 	maxLogsPerPage     = 100
+	maxLogsPage        = 100000 // keeps the offset well inside int32
 )
 
 // LogFilter is one list query (PRD-0002 FR-5). Zero values mean "no filter".
@@ -41,7 +42,19 @@ func (f *LogFilter) Validate() error {
 	fields := map[string]string{}
 	f.Query = strings.TrimSpace(f.Query)
 	f.Domain = NormalizeHost(f.Domain)
-	f.Tags, _ = normalizeTags(f.Tags) // an over-long tag simply matches nothing
+	if strings.ContainsAny(f.Domain, `%_\`) {
+		fields["domain"] = "must be a host name, e.g. github.com"
+	}
+	// Not normalizeTags: its limits would drop tags, widening the filter.
+	// An over-long tag is kept and simply matches nothing.
+	tags := []string{}
+	for _, t := range f.Tags {
+		t = strings.ToLower(strings.TrimSpace(t))
+		if t != "" && !slices.Contains(tags, t) {
+			tags = append(tags, t)
+		}
+	}
+	f.Tags = tags
 	for _, s := range f.Statuses {
 		if !slices.Contains(Statuses, s) {
 			fields["status"] = "must be one of " + strings.Join(Statuses, ", ")
@@ -61,7 +74,7 @@ func (f *LogFilter) Validate() error {
 	if f.From != nil && f.To != nil && !f.From.Before(*f.To) {
 		fields["to"] = "must be after from"
 	}
-	f.Page = max(f.Page, 1)
+	f.Page = min(max(f.Page, 1), maxLogsPage)
 	if f.PerPage < 1 {
 		f.PerPage = defaultLogsPerPage
 	}

@@ -25,6 +25,7 @@ const (
 	maxTags              = 20
 	maxLinks             = 20
 	maxLinkLabelLen      = 100
+	maxLinkURLLen        = 2048
 )
 
 // Link is a piece of evidence. Validate derives Host, which backs the domain filter.
@@ -116,6 +117,9 @@ func (l *Log) normalizeLinks() string {
 		k := &l.Links[i]
 		k.URL = strings.TrimSpace(k.URL)
 		k.Label = strings.TrimSpace(k.Label)
+		if utf8.RuneCountInString(k.URL) > maxLinkURLLen {
+			return "each link at most " + strconv.Itoa(maxLinkURLLen) + " characters"
+		}
 		u, err := url.Parse(k.URL)
 		// Scheme allow-list: a javascript: URL rendered as a link is XSS.
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {

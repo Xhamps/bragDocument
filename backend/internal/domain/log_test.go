@@ -34,6 +34,7 @@ func TestLogValidate(t *testing.T) {
 		{"relative link", func(l *Log) { l.Links = []Link{{URL: "/pr/1"}} }, "links"},
 		{"long label", func(l *Log) { l.Links = []Link{{URL: "https://a.com", Label: strings.Repeat("a", 101)}} }, "links"},
 		{"too many links", func(l *Log) { l.Links = make([]Link, 21) }, "links"},
+		{"long link", func(l *Log) { l.Links = []Link{{URL: "https://a.com/" + strings.Repeat("a", 2035)}} }, "links"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -72,14 +73,23 @@ func TestLogFilterValidate(t *testing.T) {
 	require.Equal(t, "github.com", f.Domain)
 	require.Equal(t, "mig", f.Query)
 
-	f = LogFilter{PerPage: 1000}
+	f = LogFilter{PerPage: 1000, Page: 1 << 40}
 	require.NoError(t, f.Validate())
 	require.Equal(t, 100, f.PerPage)
+	require.Equal(t, 100000, f.Page)
+
+	// An over-long tag is kept (it matches nothing) and does not drop the others.
+	f = LogFilter{Tags: []string{strings.Repeat("a", 51), " Project ", "project", ""}}
+	require.NoError(t, f.Validate())
+	require.Equal(t, []string{strings.Repeat("a", 51), "project"}, f.Tags)
 
 	for _, bad := range []LogFilter{
 		{Sort: "title"},
 		{Statuses: []string{"doing"}},
 		{Impacts: []string{"huge"}},
+		{Domain: "git%hub.com"},
+		{Domain: "git_hub.com"},
+		{Domain: `git\hub.com`},
 		{From: ptr(time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)), To: ptr(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))},
 	} {
 		var ve *ValidationError

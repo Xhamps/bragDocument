@@ -28,6 +28,9 @@ type Document struct {
 	State       string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// LogCount and LastLogAt exclude example logs. Only ListByOwner sets them.
+	LogCount  int
+	LastLogAt *time.Time
 }
 
 // Validate trims the title and checks lengths and state. It mutates the receiver.

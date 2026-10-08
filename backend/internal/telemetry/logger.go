@@ -32,9 +32,13 @@ func NewLogger(level, format string, w io.Writer) *slog.Logger {
 	return slog.New(ctxHandler{h})
 }
 
+// ctxHandler injects request_id and tenant_id from the context into every
+// record. WithGroup nests those attributes inside the group, so callers must
+// not use WithGroup for request-scoped loggers; use attributes (With) instead.
 type ctxHandler struct{ slog.Handler }
 
 func (h ctxHandler) Handle(ctx context.Context, r slog.Record) error {
+	r = r.Clone()
 	if id := RequestID(ctx); id != "" {
 		r.AddAttrs(slog.String("request_id", id))
 	}

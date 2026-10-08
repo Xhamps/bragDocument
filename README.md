@@ -13,3 +13,16 @@ docker compose --profile app up --build   # adds api, bot, worker, frontend
 ```
 
 Stack: Go + Gin backend, React + Tailwind frontend, PostgreSQL, Redis, Supabase Auth, Gotenberg.
+
+## Backend
+
+```sh
+cd backend
+make migrate   # apply migrations to the compose Postgres
+make run       # api on :8080 → /healthz /readyz /metrics
+make test      # unit tests
+make test-integration   # needs Docker (testcontainers)
+make lint      # run from backend/; uses backend/bin/golangci-lint when present
+```
+
+Subcommands: `bragdoc api | bot | worker | migrate`. Layout and rules: `docs/adr/0012-hexagonal-backend-layout.md`. Adding a feature: `.claude/skills/backend-endpoint/SKILL.md`.

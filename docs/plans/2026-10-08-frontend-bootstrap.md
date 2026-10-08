@@ -826,6 +826,7 @@ server {
     }
 
     location / {
+        add_header Cache-Control "no-cache";
         try_files $uri /index.html;
     }
 }
@@ -836,7 +837,8 @@ server {
 node_modules
 **/node_modules
 **/dist
-.env
+**/.env
+**/.env.*.local
 ```
 
 **Step 3: Verify**

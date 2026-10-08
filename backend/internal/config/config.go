@@ -25,6 +25,10 @@ type Config struct {
 	TelegramToken string `env:"TELEGRAM_BOT_TOKEN"`
 	TelegramMode  string `env:"TELEGRAM_MODE" envDefault:"polling"`
 
+	OpenAIAPIKey string        `env:"OPENAI_API_KEY"` // empty: impact extraction disabled (PRD-0007)
+	OpenAIModel  string        `env:"OPENAI_MODEL" envDefault:"gpt-4.1-mini"`
+	LLMTimeout   time.Duration `env:"LLM_TIMEOUT" envDefault:"5s"`
+
 	DBTimeout       time.Duration `env:"DB_TIMEOUT" envDefault:"5s"`
 	CacheTimeout    time.Duration `env:"CACHE_TIMEOUT" envDefault:"200ms"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`

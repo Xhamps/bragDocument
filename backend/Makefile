@@ -1,3 +1,5 @@
+GOLANGCI ?= $(shell test -x ./bin/golangci-lint && echo ./bin/golangci-lint || echo golangci-lint)
+
 .PHONY: run test test-integration lint migrate sqlc docker tidy
 
 run:
@@ -10,7 +12,7 @@ test-integration:
 	go test -tags integration ./...
 
 lint:
-	golangci-lint run ./...
+	$(GOLANGCI) run ./...
 
 migrate:
 	go run ./cmd/bragdoc migrate

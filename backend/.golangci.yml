@@ -1,35 +1,41 @@
+version: "2"
+
 run:
   timeout: 3m
 
 linters:
+  default: none
   enable:
     - depguard
     - errcheck
     - govet
     - staticcheck
     - unused
+  settings:
+    depguard:
+      rules:
+        domain:
+          files:
+            - "**/internal/domain/**"
+            - "!$test"
+          allow:
+            - $gostd
+        app-and-ports:
+          files:
+            - "**/internal/app/**"
+            - "**/internal/ports/**"
+          allow:
+            - $gostd
+            - github.com/xhamps/bragdocument/backend/internal/domain
+            - github.com/xhamps/bragdocument/backend/internal/ports
+        adapters:
+          files:
+            - "**/internal/adapters/**"
+          deny:
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+
+formatters:
+  enable:
     - gofmt
     - goimports
-
-linters-settings:
-  depguard:
-    rules:
-      domain:
-        files:
-          - "**/internal/domain/**"
-        allow:
-          - $gostd
-      app-and-ports:
-        files:
-          - "**/internal/app/**"
-          - "**/internal/ports/**"
-        allow:
-          - $gostd
-          - github.com/xhamps/bragdocument/backend/internal/domain
-          - github.com/xhamps/bragdocument/backend/internal/ports
-      adapters:
-        files:
-          - "**/internal/adapters/**"
-        deny:
-          - pkg: github.com/xhamps/bragdocument/backend/internal/adapters
-            desc: adapters must not import each other; share code through ports, domain, or telemetry

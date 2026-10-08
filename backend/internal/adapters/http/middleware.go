@@ -29,6 +29,15 @@ func RequestID() gin.HandlerFunc {
 	}
 }
 
+// MaxBody caps request bodies at n bytes; a larger body fails at read time
+// with *http.MaxBytesError, which bindJSON reports as 422.
+func MaxBody(n int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, n)
+		c.Next()
+	}
+}
+
 // Logger writes one structured line per request.
 func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/spf13/cobra"
 
 	httpadapter "github.com/xhamps/bragdocument/backend/internal/adapters/http"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/redis"
+	"github.com/xhamps/bragdocument/backend/internal/app"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
@@ -38,6 +42,26 @@ func apiCmd() *cobra.Command {
 			}
 			defer func() { _ = rc.Close() }() // deferred after db.Close, so runs first: Redis closes before the pool
 
+			if cfg.SupabaseURL == "" {
+				return errors.New("SUPABASE_URL is required for api")
+			}
+			// Fetches the JWKS now, then refreshes hourly and on unknown kid. The
+			// default storage only logs a failed first fetch, so check we actually
+			// got keys: Supabase is a required tier and the api must not start
+			// in a state where every token is a 401.
+			jwksURL := strings.TrimRight(cfg.SupabaseURL, "/") + "/auth/v1/.well-known/jwks.json"
+			jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
+			if err != nil {
+				return fmt.Errorf("jwks: %w", err)
+			}
+			ks, err := jwks.VerificationKeySet(ctx)
+			if err == nil && len(ks.Keys) == 0 {
+				err = errors.New("empty key set")
+			}
+			if err != nil {
+				return fmt.Errorf("jwks: %s: %w", jwksURL, err)
+			}
+
 			reg := telemetry.NewRegistry()
 			_ = redis.NewDegrading(rc, reg) // ponytail: wired now so the counter exists; use cases take it in the next pass
 
@@ -46,11 +70,16 @@ func apiCmd() *cobra.Command {
 				{Name: "postgres", Required: true, Ping: db.Ping},
 				{Name: "cache", Ping: rc.Ping},
 			})
+			authed := engine.Group("/", httpadapter.Auth(jwks.Keyfunc, app.NewUserEnsure(postgres.NewUserRepo(db)), reg))
+			httpadapter.RegisterMe(authed)
+			httpadapter.RegisterDocuments(authed, app.NewDocuments(postgres.NewDocumentRepo(db)))
+			httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
 
 			srv := &http.Server{
 				Addr:              cfg.HTTPAddr,
 				Handler:           engine,
 				ReadHeaderTimeout: 5 * time.Second,
+				MaxHeaderBytes:    1 << 20,
 			}
 			errCh := make(chan error, 1)
 			go func() { errCh <- srv.ListenAndServe() }()

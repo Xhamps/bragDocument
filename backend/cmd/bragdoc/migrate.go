@@ -17,7 +17,7 @@ func migrateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := postgres.Migrate(cfg.DatabaseURL); err != nil {
+			if err := postgres.Migrate(cfg.DatabaseOwnerURL); err != nil {
 				return err
 			}
 			slog.InfoContext(cmd.Context(), "migrations applied")

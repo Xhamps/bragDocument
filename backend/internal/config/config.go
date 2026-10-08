@@ -16,9 +16,11 @@ type Config struct {
 	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`
 	HTTPAddr  string `env:"HTTP_ADDR" envDefault:":8080"`
 
-	DatabaseURL  string `env:"DATABASE_URL,required,notEmpty"`
-	RedisURL     string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
-	GotenbergURL string `env:"GOTENBERG_URL" envDefault:"http://localhost:3000"`
+	DatabaseURL      string `env:"DATABASE_URL,required,notEmpty"`
+	DatabaseOwnerURL string `env:"DATABASE_OWNER_URL"` // migrations; defaults to DatabaseURL
+	SupabaseURL      string `env:"SUPABASE_URL"`       // required by api; JWKS at /auth/v1/.well-known/jwks.json
+	RedisURL         string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
+	GotenbergURL     string `env:"GOTENBERG_URL" envDefault:"http://localhost:3000"`
 
 	TelegramToken string `env:"TELEGRAM_BOT_TOKEN"`
 	TelegramMode  string `env:"TELEGRAM_MODE" envDefault:"polling"`
@@ -36,6 +38,9 @@ func Load() (Config, error) {
 	}
 	if c.LogFormat != "json" && c.LogFormat != "text" {
 		return Config{}, fmt.Errorf("config: LOG_FORMAT must be json or text, got %q", c.LogFormat)
+	}
+	if c.DatabaseOwnerURL == "" {
+		c.DatabaseOwnerURL = c.DatabaseURL
 	}
 	return c, nil
 }

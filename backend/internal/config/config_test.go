@@ -33,3 +33,12 @@ func TestLoadRejectsBadLogFormat(t *testing.T) {
 	_, err := Load()
 	require.ErrorContains(t, err, "LOG_FORMAT")
 }
+
+func TestLoadOwnerURLFallsBackToDatabaseURL(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://app:app@localhost:5432/db")
+	t.Setenv("DATABASE_OWNER_URL", "")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.Equal(t, cfg.DatabaseURL, cfg.DatabaseOwnerURL)
+}

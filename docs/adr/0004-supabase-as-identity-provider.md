@@ -34,6 +34,7 @@ Chosen option: "Supabase Auth with JWT verification in the API", because it is t
 * Neutral, because the local `users` table mirrors id and email from the token on first sign-in; profile data stays local.
 * Neutral, because locally we run the Supabase CLI stack (`supabase start`) or point to a hosted dev project; the compose file carries the URL and keys as environment variables.
 * Bad, because tenant membership is not in Supabase; tenant resolution happens in the API on the first request after sign-in ([PRD-0001](../prd/0001-tenants-users-and-brag-documents.md)).
+* Bad, because the API consumes invitations by the token's `email` claim, so the Supabase project must have "Confirm email" enabled and only OAuth providers that verify addresses; otherwise anyone can claim an email and join its tenant.
 * Bad, because key rotation in Supabase requires redeploying the verification key; use JWKS when available to avoid this.
 
 ### Confirmation

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@bragdoc/ui";
-import { ApiError } from "../lib/api";
+import { errorText } from "../lib/errors";
 import type { Document } from "../lib/types";
 import { DocumentCard } from "../documents/DocumentCard";
 import { DocumentFormDialog } from "../documents/DocumentFormDialog";
@@ -20,16 +20,6 @@ import {
 } from "../documents/useDocuments";
 
 const ARTICLE = "https://jvns.ca/blog/brag-documents/";
-
-function errorText(e: unknown) {
-  if (e instanceof ApiError)
-    return e.fields
-      ? Object.entries(e.fields)
-          .map(([field, message]) => `${field}: ${message}`)
-          .join(", ")
-      : e.message;
-  return e instanceof Error ? e.message : null;
-}
 
 export function Component() {
   const { data, isPending, error } = useDocuments();

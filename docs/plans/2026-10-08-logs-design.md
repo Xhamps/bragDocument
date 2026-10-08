@@ -7,7 +7,7 @@ Date: 2026-10-08. Status: approved. Implements [PRD-0002](../prd/0002-logs.md) a
 | Topic | Decision |
 |---|---|
 | Scope | Backend and frontend in one PR, including FR-9 (tag autocomplete), FR-10 (suggested tags), example logs, and the document card counters deferred from PRD-0001. |
-| Permissions | Owner only until PRD-0004. Non-owners and other tenants get 404. |
+| Permissions | Owner only until PRD-0004, reusing the documents rule: other tenants get 404 (RLS), a same-tenant non-owner gets 403 (PRD-0004 FR-7). Log writes on an archived document get 409. |
 | Cache (NFR-2) | Deferred. Indexed Postgres queries are expected to meet NFR-1 at 10k logs; add the Redis cache when a measurement says otherwise. |
 | Impact | Closes PRD-0002's open question: a fixed level (required, filterable) plus a statement that an LLM extracts from the description. No separate input. When no impact is found, the user is warned. |
 | Extraction timing | Synchronous on save, short timeout. A save never fails because of the LLM. |
@@ -50,7 +50,7 @@ RLS `tenant_id = app_tenant_id()` on all four tables, as on `documents`. Grants 
 
 ## 3. API
 
-Owner-only; non-owner or other tenant → 404.
+Owner-only: other tenant → 404, same-tenant non-owner → 403, write on an archived document → 409.
 
 | Method | Path | Use case | Notes |
 |---|---|---|---|
@@ -60,7 +60,7 @@ Owner-only; non-owner or other tenant → 404.
 | DELETE | `/documents/:id/logs/:logId` | `LogDelete` | 204 |
 | DELETE | `/documents/:id/example-logs` | `LogDeleteExamples` | 204 |
 | GET | `/tags` | `TagList` | Tenant tag names, sorted. |
-| GET | `/documents` | existing | Adds `log_count` and `last_log_date` via a `LEFT JOIN` aggregate. |
+| GET | `/documents` | existing | Adds `log_count` and `last_log_at` (examples excluded) via a `LEFT JOIN` aggregate. |
 
 Validation (domain, 422): name 1–120 after trim; description ≤ 20,000; enums; tags trimmed, lowercased, 1–50 chars, deduplicated, ≤ 20; links `http`/`https` only, ≤ 20, label ≤ 100, `host` lowercased with `www.` stripped.
 
@@ -72,7 +72,7 @@ Sort order: impact `critical > high > medium > low`, status `idea → in_progres
 
 - Route `/documents/:id` → `routes/DocumentLogs.tsx`. Document cards link there and show "N logs · last on {date}".
 - Header: document title from the cached `useDocuments` list; **New log** button (FR-3). Archived documents are read-only.
-- Filter bar: debounced search, tags input, Status and Impact multi-checkbox dropdowns, native date inputs, domain input, sort select. Active filters as removable chips; result count.
+- Filter bar: debounced search, tags input, Status and Impact toggle buttons (`aria-pressed`), native date inputs, domain input, sort select. Active filters as removable chips; result count.
 - All filter, sort, and page state lives in `useSearchParams` (FR-6). Filter changes reset `page`.
 - Rows: name with the impact statement below, or an amber "No impact stated" when `''`; impact and status badges; tags; date; row menu Edit and Delete. Expanding a row renders the description as Markdown and the links with `target="_blank" rel="noopener noreferrer"`. Example logs carry an "Example" badge and a "Remove examples" banner.
 - Pagination Prev/Next with "page X of Y". Empty states for "no logs yet" and "no matches".
@@ -83,7 +83,7 @@ Sort order: impact `critical > high > medium > low`, status `idea → in_progres
 
 ## 5. Testing
 
-- Backend unit: domain validation tables; one test per use case with fakes, including extraction found / none / error → NULL / unchanged fields → no call, and the owner 404.
+- Backend unit: domain validation tables; one test per use case with fakes, including extraction found / none / error → NULL / unchanged fields → no call, and the owner check (404/403) and archived 409.
 - Backend HTTP: each handler with a fake use case; `LogList` query parsing (repeated params, bad sort → 422, `per_page` clamp).
 - OpenAI adapter: `httptest` server with canned found, not found, 500, and slow responses. No live calls in CI.
 - Integration (`integration` tag): RLS isolation on the four tables; each filter and sort; cascade on document delete; examples on create; a 10k-log timing reported in the PR, not asserted.

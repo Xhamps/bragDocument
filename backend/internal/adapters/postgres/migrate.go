@@ -3,6 +3,7 @@ package postgres
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -22,7 +23,12 @@ func Migrate(databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("migrate: init: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		srcErr, dbErr := m.Close()
+		if srcErr != nil || dbErr != nil {
+			slog.Warn("migrate: close", slog.Any("source_err", srcErr), slog.Any("db_err", dbErr))
+		}
+	}()
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("migrate: up: %w", err)

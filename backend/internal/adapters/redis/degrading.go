@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -42,6 +43,9 @@ func NewDegrading(inner ports.Cache, reg prometheus.Registerer) *Degrading {
 func (d *Degrading) Healthy() bool { return d.healthy.Load() }
 
 func (d *Degrading) fail(ctx context.Context, op string, err error) {
+	if errors.Is(err, context.Canceled) {
+		return // client went away; a miss, not a cache outage
+	}
 	d.errors.Inc()
 	d.healthy.Store(false)
 	now := time.Now().Unix()

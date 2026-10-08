@@ -40,6 +40,9 @@ func Connect(ctx context.Context, url string, timeout time.Duration) (*DB, error
 		lastErr = err
 		backoff := time.Duration(attempt*attempt) * 500 * time.Millisecond // ponytail: quadratic backoff, 0.5s..12.5s; jitter if herds appear
 		slog.WarnContext(ctx, "postgres not ready", slog.Int("attempt", attempt), slog.Any("err", err))
+		if attempt == connectAttempts {
+			break
+		}
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -63,6 +66,9 @@ func (d *DB) Close() { d.Pool.Close() }
 // for the duration of the transaction. Row-level-security policies read that
 // setting. Every tenant-scoped repository call goes through here.
 func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx context.Context, tx pgx.Tx) error) error {
+	if tenantID == "" {
+		return fmt.Errorf("postgres: %w: empty tenant id", domain.ErrForbidden)
+	}
 	ctx, cancel := context.WithTimeout(ctx, d.timeout)
 	defer cancel()
 
@@ -80,7 +86,7 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("postgres: commit: %w", err)
+		return fmt.Errorf("postgres: commit: %w", wrap(err))
 	}
 	return nil
 }

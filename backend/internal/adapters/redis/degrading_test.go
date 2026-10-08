@@ -70,3 +70,13 @@ func TestDegradingPassesThroughWhenHealthy(t *testing.T) {
 	require.Equal(t, []byte("v"), v)
 	require.True(t, d.Healthy())
 }
+
+func TestDegradingIgnoresCanceledContext(t *testing.T) {
+	d := NewDegrading(&fakeCache{err: context.Canceled}, prometheus.NewRegistry())
+
+	_, found, err := d.Get(context.Background(), "k")
+	require.NoError(t, err)
+	require.False(t, found)
+	require.True(t, d.Healthy())
+	require.Equal(t, float64(0), testutil.ToFloat64(d.errors))
+}

@@ -1,5 +1,5 @@
 .env
 *.pdf
 backend/bin/
-frontend/node_modules/
-frontend/dist/
+frontend/**/node_modules/
+frontend/**/dist/

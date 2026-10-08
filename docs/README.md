@@ -55,7 +55,10 @@ Detailed requirements live in the PRDs under [`prd/`](prd/).
 .
 ├── docker-compose.yml     # postgres, redis, gotenberg, backend, frontend
 ├── backend/               # Go + Gin API (and the Telegram bot worker)
-├── frontend/              # React + Tailwind SPA
+├── frontend/              # npm workspace
+│   └── packages/
+│       ├── ui/            # @bragdoc/ui: design system (Tailwind v4 tokens, shadcn-style components)
+│       └── app/           # @bragdoc/app: React + Tailwind SPA
 └── docs/
     ├── README.md          # this file
     ├── prd/               # Product Requirements Documents

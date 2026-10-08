@@ -38,6 +38,7 @@ type Querier interface {
 	ListLinksForLogs(ctx context.Context, ids []uuid.UUID) ([]LogLink, error)
 	// Every array parameter must be non-NULL (pass an empty array for "no filter"):
 	// cardinality(NULL) is NULL and would filter out every row.
+	// impact and status orders mirror domain.Impacts and domain.Statuses; keep in sync.
 	ListLogs(ctx context.Context, arg ListLogsParams) ([]ListLogsRow, error)
 	ListTags(ctx context.Context) ([]string, error)
 	ListTagsForLogs(ctx context.Context, ids []uuid.UUID) ([]ListTagsForLogsRow, error)

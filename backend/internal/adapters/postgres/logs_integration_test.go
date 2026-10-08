@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -22,7 +23,7 @@ func TestLogRepo(t *testing.T) {
 
 	users, docs, logs := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db)
 	admin, tenantA := provisionTenant(t, users, "A", "a@example.com")
-	_, tenantB := provisionTenant(t, users, "B", "b@example.com")
+	adminB, tenantB := provisionTenant(t, users, "B", "b@example.com")
 	ctx := telemetry.WithTenantID(context.Background(), tenantA.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tenantB.ID)
 
@@ -131,6 +132,25 @@ func TestLogRepo(t *testing.T) {
 	tagsB, err := logs.ListTags(ctxB)
 	require.NoError(t, err)
 	require.Empty(t, tagsB)
+	aB := a
+	aB.Name, aB.UpdatedBy = "hijacked", adminB.ID
+	_, err = logs.Update(ctxB, aB)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	require.NoError(t, logs.DeleteExamples(ctxB, doc.ID))
+	pA, err := logs.List(ctx, doc.ID, q{Page: 1, PerPage: 50, Sort: "created_at"})
+	require.NoError(t, err)
+	require.Equal(t, 3, pA.Total)
+	// The composite FK (document_id, tenant_id) finds no B document with A's
+	// id (FK checks bypass RLS), so the insert is a 23503 -> ErrConflict.
+	_, err = logs.Create(ctxB, domain.Log{TenantID: tenantB.ID, DocumentID: doc.ID, Name: "x", Impact: "low",
+		Status: "done", CreatedAt: now, CreatedBy: adminB.ID, UpdatedBy: adminB.ID})
+	require.ErrorIs(t, err, domain.ErrConflict)
+
+	// Update of a missing log.
+	missing := b
+	missing.ID = uuid.NewString()
+	_, err = logs.Update(ctx, missing)
+	require.ErrorIs(t, err, domain.ErrNotFound)
 
 	// Delete and cascade.
 	require.NoError(t, logs.Delete(ctx, doc.ID, c.ID))

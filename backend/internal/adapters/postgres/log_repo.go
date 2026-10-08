@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -49,6 +50,8 @@ func listParams(did uuid.UUID, f domain.LogFilter) sqlcgen.ListLogsParams {
 	return p
 }
 
+// List returns one page of the document's logs. f must have passed
+// domain.LogFilter.Validate (defaults, clamps, whitelisted sort).
 func (r *LogRepo) List(ctx context.Context, documentID string, f domain.LogFilter) (domain.LogPage, error) {
 	did, err := parseID(documentID)
 	if err != nil {
@@ -177,7 +180,7 @@ func insertLog(ctx context.Context, q *sqlcgen.Queries, l domain.Log) (domain.Lo
 		return domain.Log{}, err
 	}
 	out := toLog(row)
-	out.Tags, out.Links = orEmpty(l.Tags), orEmpty(l.Links)
+	out.Tags, out.Links = slices.Sorted(slices.Values(orEmpty(l.Tags))), orEmpty(l.Links) // matches Get's ORDER BY tag_name
 	return out, nil
 }
 
@@ -235,7 +238,7 @@ func (r *LogRepo) Update(ctx context.Context, l domain.Log) (domain.Log, error) 
 			return err
 		}
 		out = toLog(row)
-		out.Tags, out.Links = orEmpty(l.Tags), orEmpty(l.Links)
+		out.Tags, out.Links = slices.Sorted(slices.Values(orEmpty(l.Tags))), orEmpty(l.Links) // matches Get's ORDER BY tag_name
 		return nil
 	})
 	return out, err

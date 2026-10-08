@@ -16,6 +16,7 @@ WHERE l.document_id = @document_id
           AND (k.host = sqlc.narg('host') OR k.host LIKE '%.' || sqlc.narg('host'))))
   AND (sqlc.narg('from_at')::timestamptz IS NULL OR l.created_at >= sqlc.narg('from_at'))
   AND (sqlc.narg('to_at')::timestamptz IS NULL OR l.created_at < sqlc.narg('to_at'))
+-- impact and status orders mirror domain.Impacts and domain.Statuses; keep in sync.
 ORDER BY
   CASE WHEN @sort::text = 'created_at' AND NOT @descending::bool THEN l.created_at END ASC,
   CASE WHEN @sort::text = 'created_at' AND @descending::bool THEN l.created_at END DESC,

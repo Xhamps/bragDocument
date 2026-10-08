@@ -269,6 +269,7 @@ type ListLogsRow struct {
 
 // Every array parameter must be non-NULL (pass an empty array for "no filter"):
 // cardinality(NULL) is NULL and would filter out every row.
+// impact and status orders mirror domain.Impacts and domain.Statuses; keep in sync.
 func (q *Queries) ListLogs(ctx context.Context, arg ListLogsParams) ([]ListLogsRow, error) {
 	rows, err := q.db.Query(ctx, listLogs,
 		arg.DocumentID,

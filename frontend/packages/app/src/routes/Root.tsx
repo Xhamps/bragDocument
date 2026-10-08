@@ -9,7 +9,7 @@ export function Component() {
             <Link to="/">Brag Document</Link>
           </h1>
           {import.meta.env.DEV && (
-            <Link to="/kitchen-sink" className="text-muted-foreground text-sm">
+            <Link to="/kitchen-sink" className="text-sm text-muted-foreground">
               Kitchen sink
             </Link>
           )}

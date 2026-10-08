@@ -17,7 +17,14 @@ import {
   Input,
 } from "@bragdoc/ui";
 
-const variants = ["default", "outline", "secondary", "ghost", "destructive", "link"] as const;
+const variants = [
+  "default",
+  "outline",
+  "secondary",
+  "ghost",
+  "destructive",
+  "link",
+] as const;
 const sizes = ["xs", "sm", "default", "lg"] as const;
 
 export function Component() {
@@ -38,9 +45,9 @@ export function Component() {
 
       <section className="max-w-sm space-y-4">
         <h2 className="text-xl font-semibold">Input</h2>
-        <Input placeholder="Type here" />
-        <Input placeholder="Disabled" disabled />
-        <Input placeholder="Invalid" aria-invalid />
+        <Input aria-label="Text" placeholder="Type here" />
+        <Input aria-label="Disabled" placeholder="Disabled" disabled />
+        <Input aria-label="Invalid" placeholder="Invalid" aria-invalid />
       </section>
 
       <section className="space-y-4">

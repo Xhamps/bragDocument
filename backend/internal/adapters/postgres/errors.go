@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -20,6 +21,8 @@ func wrap(err error) error {
 		return nil
 	case errors.Is(err, pgx.ErrNoRows):
 		return domain.ErrNotFound
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+		return err
 	case pgconn.SafeToRetry(err), errors.As(err, &netErr):
 		return fmt.Errorf("%w: %v", domain.ErrUnavailable, err)
 	}

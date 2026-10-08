@@ -38,7 +38,7 @@ func Connect(ctx context.Context, url string, timeout time.Duration) (*DB, error
 			pool.Close()
 		}
 		lastErr = err
-		backoff := time.Duration(attempt*attempt) * 500 * time.Millisecond // ponytail: quadratic backoff, 0.5s..12.5s; jitter if herds appear
+		backoff := time.Duration(attempt*attempt) * 500 * time.Millisecond // ponytail: quadratic backoff, waits 0.5s, 2s, 4.5s, 8s (15s total, no sleep after the last attempt); jitter if herds appear
 		slog.WarnContext(ctx, "postgres not ready", slog.Int("attempt", attempt), slog.Any("err", err))
 		if attempt == connectAttempts {
 			break

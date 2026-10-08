@@ -14,8 +14,3 @@ type Cache interface {
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 }
-
-// Pinger reports whether a dependency is reachable. Used by readiness checks.
-type Pinger interface {
-	Ping(ctx context.Context) error
-}

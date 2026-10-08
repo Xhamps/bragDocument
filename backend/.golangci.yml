@@ -2,6 +2,8 @@ version: "2"
 
 run:
   timeout: 3m
+  build-tags:
+    - integration
 
 linters:
   default: none
@@ -29,11 +31,29 @@ linters:
             - $gostd
             - github.com/xhamps/bragdocument/backend/internal/domain
             - github.com/xhamps/bragdocument/backend/internal/ports
-        adapters:
+        adapter-http:
           files:
-            - "**/internal/adapters/**"
+            - "**/internal/adapters/http/**"
           deny:
-            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/postgres
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+        adapter-postgres:
+          files:
+            - "**/internal/adapters/postgres/**"
+          deny:
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/http
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+        adapter-redis:
+          files:
+            - "**/internal/adapters/redis/**"
+          deny:
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/http
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/postgres
               desc: adapters must not import each other; share code through ports, domain, or telemetry
 
 formatters:

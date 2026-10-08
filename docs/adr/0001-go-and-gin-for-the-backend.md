@@ -58,4 +58,4 @@ Chosen option: "Go with Gin", because it is the stated requirement and it meets 
 
 ## More Information
 
-Layout: `backend/cmd/api`, `backend/cmd/bot`, `backend/cmd/worker`, `backend/internal/{auth,tenant,document,log,share,report,telegram}`. See [ADR-0003](0003-monorepo-layout.md).
+Layout: superseded by [ADR-0012](0012-hexagonal-backend-layout.md) (hexagonal packages, single Cobra binary). See also [ADR-0003](0003-monorepo-layout.md).

@@ -37,7 +37,7 @@ Detailed requirements live in the PRDs under [`prd/`](prd/).
 
 | Concern | Decision | ADR |
 |---|---|---|
-| Backend | Go with the Gin HTTP framework | [ADR-0001](adr/0001-go-and-gin-for-the-backend.md) |
+| Backend | Go with the Gin HTTP framework, hexagonal layout, one Cobra binary | [ADR-0001](adr/0001-go-and-gin-for-the-backend.md), [ADR-0012](adr/0012-hexagonal-backend-layout.md) |
 | Frontend | React with Tailwind CSS | [ADR-0002](adr/0002-react-and-tailwind-for-the-frontend.md) |
 | Repository | Monorepo: `backend/` and `frontend/` side by side | [ADR-0003](adr/0003-monorepo-layout.md) |
 | Identity | Supabase Auth as the identity provider | [ADR-0004](adr/0004-supabase-as-identity-provider.md) |
@@ -105,3 +105,4 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0009](adr/0009-telegram-bot-integration.md) | Telegram bot integration | proposed |
 | [0010](adr/0010-pdf-generation-with-gotenberg.md) | PDF generation with Gotenberg | proposed |
 | [0011](adr/0011-rbac-model.md) | RBAC model for documents | proposed |
+| [0012](adr/0012-hexagonal-backend-layout.md) | Hexagonal backend layout with a single Cobra binary | accepted |

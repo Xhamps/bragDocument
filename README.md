@@ -28,3 +28,17 @@ make lint      # run from backend/; uses backend/bin/golangci-lint when present
 `make run` reads `DATABASE_URL` and `REDIS_URL` from the environment; `.env.example` has the local values (`set -a; source .env; set +a` or an equivalent).
 
 Subcommands: `bragdoc api | bot | worker | migrate`. Layout and rules: `docs/adr/0012-hexagonal-backend-layout.md`. Adding a feature: `.claude/skills/backend-endpoint/SKILL.md`.
+
+## Frontend
+
+```sh
+cd frontend
+npm install
+cp packages/app/.env.example packages/app/.env
+make dev       # vite on :5173; /kitchen-sink shows the design system
+make test      # vitest in ui and app
+make lint      # eslint + prettier check
+make build     # static bundle in packages/app/dist
+```
+
+Workspace: `packages/ui` is the design system (`@bragdoc/ui`, shadcn-style components on Tailwind v4), `packages/app` is the SPA. Add a component with `npx shadcn@latest add <name>` from `packages/ui`, then export it from `src/index.ts`. Design: `docs/plans/2026-10-08-frontend-bootstrap-design.md`.

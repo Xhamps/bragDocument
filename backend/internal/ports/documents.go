@@ -9,6 +9,7 @@ import (
 // DocumentRepo stores documents of the tenant in the context.
 type DocumentRepo interface {
 	ListByOwner(ctx context.Context, ownerID string) ([]domain.Document, error)
+	// Get returns domain.ErrNotFound when no row matches.
 	Get(ctx context.Context, id string) (domain.Document, error)
 	Create(ctx context.Context, d domain.Document) (domain.Document, error)
 	Update(ctx context.Context, d domain.Document) (domain.Document, error)

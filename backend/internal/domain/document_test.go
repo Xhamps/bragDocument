@@ -14,6 +14,8 @@ func TestDocumentValidate(t *testing.T) {
 		field string // "" means valid
 	}{
 		{"valid", Document{Title: "2026", State: DocumentActive}, ""},
+		{"max title", Document{Title: strings.Repeat("x", 200), State: DocumentActive}, ""},
+		{"max title runes", Document{Title: strings.Repeat("é", 200), State: DocumentActive}, ""},
 		{"empty title", Document{Title: "   ", State: DocumentActive}, "title"},
 		{"long title", Document{Title: strings.Repeat("x", 201), State: DocumentActive}, "title"},
 		{"long description", Document{Title: "t", Description: strings.Repeat("x", 2001), State: DocumentActive}, "description"},
@@ -31,4 +33,10 @@ func TestDocumentValidate(t *testing.T) {
 			require.Contains(t, ve.Fields, tc.field)
 		})
 	}
+}
+
+func TestDocumentValidateTrimsTitle(t *testing.T) {
+	d := Document{Title: "  x  ", State: DocumentActive}
+	require.NoError(t, d.Validate())
+	require.Equal(t, "x", d.Title)
 }

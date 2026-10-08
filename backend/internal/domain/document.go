@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -30,6 +31,7 @@ type Document struct {
 }
 
 // Validate trims the title and checks lengths and state. It mutates the receiver.
+// Description is deliberately left untrimmed.
 func (d *Document) Validate() error {
 	d.Title = strings.TrimSpace(d.Title)
 	fields := map[string]string{}
@@ -37,10 +39,10 @@ func (d *Document) Validate() error {
 	case n == 0:
 		fields["title"] = "required"
 	case n > maxTitleLen:
-		fields["title"] = "at most 200 characters"
+		fields["title"] = "at most " + strconv.Itoa(maxTitleLen) + " characters"
 	}
 	if utf8.RuneCountInString(d.Description) > maxDescriptionLen {
-		fields["description"] = "at most 2000 characters"
+		fields["description"] = "at most " + strconv.Itoa(maxDescriptionLen) + " characters"
 	}
 	if d.State != DocumentActive && d.State != DocumentArchived {
 		fields["state"] = "must be active or archived"

@@ -16,6 +16,7 @@ type Invitation struct {
 }
 
 // NormalizeEmail trims, lowercases, and validates an email address.
+// Accepts only a bare local@domain address; display names, comments, and quoted local parts are rejected.
 func NormalizeEmail(email string) (string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {

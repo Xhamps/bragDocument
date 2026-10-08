@@ -13,6 +13,7 @@ type UserRepo interface {
 }
 
 // ProvisionTx is what the sign-in use case can do inside Provision.
+// GetUser, GetTenant, and FindInvitationByEmail return domain.ErrNotFound when no row matches.
 type ProvisionTx interface {
 	GetUser(ctx context.Context, id string) (domain.User, error)
 	GetTenant(ctx context.Context, id string) (domain.Tenant, error)

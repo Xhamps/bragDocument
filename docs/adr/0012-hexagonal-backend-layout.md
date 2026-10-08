@@ -21,7 +21,7 @@ decision-makers: Engineering
 
 * Flat domain packages, handler and service together
 * Flat domain packages plus a separate `internal/api` for handlers
-* Hexagonal: `domain`, `app`, `ports`, `adapters/{http,postgres,redis,telemetry}`
+* Hexagonal: `domain`, `app`, `ports`, `adapters/{http,postgres,redis}` plus a shared `telemetry` package
 
 ## Decision Outcome
 

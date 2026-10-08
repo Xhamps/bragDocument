@@ -29,7 +29,7 @@ backend/
       http/                        # Gin engine, middleware, health, metrics, handlers, error mapping
       postgres/                    # pgx pool, sqlc output, tenant-scoped Tx, repositories
       redis/                       # Cache implementation + degrading decorator
-      telemetry/                   # slog + prometheus setup
+    telemetry/                     # slog + prometheus setup (shared infra, imported by adapters and cmd)
     config/                        # env → Config, validated at startup
   migrations/                      # NNNN_name.up.sql / .down.sql, embedded
   queries/                         # sqlc input

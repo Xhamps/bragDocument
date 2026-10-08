@@ -24,6 +24,7 @@ linters:
           files:
             - "**/internal/app/**"
             - "**/internal/ports/**"
+            - "!$test"
           allow:
             - $gostd
             - github.com/xhamps/bragdocument/backend/internal/domain

@@ -80,7 +80,7 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 
 	// SET LOCAL cannot take bind parameters; set_config with is_local=true is the equivalent.
 	if _, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", tenantID); err != nil {
-		return fmt.Errorf("postgres: set tenant: %w", err)
+		return fmt.Errorf("postgres: set tenant: %w", wrap(err))
 	}
 	if err := fn(ctx, tx); err != nil {
 		return err

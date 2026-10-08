@@ -47,7 +47,7 @@ func (uc *UserEnsure) Execute(ctx context.Context, in EnsureUserInput) (Principa
 		p, err = uc.provision(ctx, in, email)
 	}
 	if err != nil {
-		return Principal{}, fmt.Errorf("provision user %s (%s): %w", in.ID, email, err)
+		return Principal{}, fmt.Errorf("provision user %s: %w", in.ID, err)
 	}
 	return p, nil
 }

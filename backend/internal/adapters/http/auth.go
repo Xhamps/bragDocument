@@ -2,14 +2,17 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/xhamps/bragdocument/backend/internal/app"
+	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
@@ -41,6 +44,7 @@ func (c supabaseClaims) displayName() string {
 // Auth verifies the Supabase bearer token with keyFn, provisions the caller
 // through ensure, and stores the principal and tenant id for the request.
 // Only asymmetric algorithms are accepted: keys come from the JWKS.
+// It registers auth_failures_total on reg, so call it once per registry.
 func Auth(keyFn jwt.Keyfunc, ensure UserEnsurer, reg prometheus.Registerer) gin.HandlerFunc {
 	failures := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "auth_failures_total",
@@ -51,6 +55,7 @@ func Auth(keyFn jwt.Keyfunc, ensure UserEnsurer, reg prometheus.Registerer) gin.
 	parser := jwt.NewParser(
 		jwt.WithAudience("authenticated"),
 		jwt.WithExpirationRequired(),
+		jwt.WithLeeway(30*time.Second),
 		jwt.WithValidMethods([]string{"ES256", "RS256"}),
 	)
 
@@ -70,6 +75,13 @@ func Auth(keyFn jwt.Keyfunc, ensure UserEnsurer, reg prometheus.Registerer) gin.
 		p, err := ensure.Execute(c.Request.Context(), app.EnsureUserInput{
 			ID: claims.Subject, Email: claims.Email, DisplayName: claims.displayName(),
 		})
+		var ve *domain.ValidationError
+		if errors.As(err, &ve) {
+			// Token verified but carries no usable identity (e.g. no email).
+			failures.WithLabelValues("unusable_identity").Inc()
+			unauthorized(c)
+			return
+		}
 		if err != nil {
 			RespondError(c, err)
 			return
@@ -87,6 +99,9 @@ func unauthorized(c *gin.Context) {
 
 // principal returns the caller set by Auth. Only routes behind Auth call it.
 func principal(c *gin.Context) app.Principal {
-	p, _ := c.Get(principalKey)
+	p, ok := c.Get(principalKey)
+	if !ok {
+		panic("http: principal called on a route not behind Auth")
+	}
 	return p.(app.Principal)
 }

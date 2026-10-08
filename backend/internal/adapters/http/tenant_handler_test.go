@@ -18,6 +18,7 @@ type fakeTenantUC struct {
 	invites   []domain.Invitation
 	invited   string
 	removedID string
+	uninvited string
 }
 
 func (f *fakeTenantUC) ListMembers(_ context.Context, actor domain.User) ([]domain.User, error) {
@@ -50,10 +51,11 @@ func (f *fakeTenantUC) Invite(_ context.Context, actor domain.User, email string
 	return domain.Invitation{ID: "i1", Email: email}, nil
 }
 
-func (f *fakeTenantUC) Uninvite(_ context.Context, actor domain.User, _ string) error {
+func (f *fakeTenantUC) Uninvite(_ context.Context, actor domain.User, id string) error {
 	if !actor.IsAdmin() {
 		return domain.ErrForbidden
 	}
+	f.uninvited = id
 	return nil
 }
 
@@ -110,4 +112,19 @@ func TestTenantRemoveMember(t *testing.T) {
 	rec := do(tenantEngine(t, adminP, uc), http.MethodDelete, "/tenant/members/u9", "")
 	require.Equal(t, 204, rec.Code)
 	require.Equal(t, "u9", uc.removedID)
+}
+
+func TestTenantListInvitations(t *testing.T) {
+	uc := &fakeTenantUC{invites: []domain.Invitation{{ID: "i1", Email: "new@acme.com"}}}
+	rec := do(tenantEngine(t, adminP, uc), http.MethodGet, "/tenant/invitations", "")
+	require.Equal(t, 200, rec.Code)
+	require.Contains(t, rec.Body.String(), `"id":"i1"`)
+	require.Contains(t, rec.Body.String(), `"email":"new@acme.com"`)
+}
+
+func TestTenantUninvite(t *testing.T) {
+	uc := &fakeTenantUC{}
+	rec := do(tenantEngine(t, adminP, uc), http.MethodDelete, "/tenant/invitations/i9", "")
+	require.Equal(t, 204, rec.Code)
+	require.Equal(t, "i9", uc.uninvited)
 }

@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -85,8 +87,29 @@ func TestAuthValidToken(t *testing.T) {
 	rec := get(authedEngine(t, key, ensure), sign(t, key, validClaims()))
 	require.Equal(t, 200, rec.Code)
 	require.Contains(t, rec.Body.String(), `"tenant":"t1"`)
+	require.Equal(t, "11111111-1111-1111-1111-111111111111", ensure.got.ID)
 	require.Equal(t, "a@acme.com", ensure.got.Email)
 	require.Equal(t, "Ada", ensure.got.DisplayName)
+}
+
+func TestAuthAudienceArray(t *testing.T) {
+	key := newKey(t)
+	claims := validClaims()
+	claims["aud"] = []string{"authenticated"}
+	rec := get(authedEngine(t, key, &fakeEnsure{}), sign(t, key, claims))
+	require.Equal(t, 200, rec.Code)
+}
+
+// signHS256 signs with the PEM public key as the HMAC secret: the classic
+// algorithm-confusion attack, which WithValidMethods must reject.
+func signHS256(t *testing.T, key *ecdsa.PrivateKey, claims jwt.MapClaims) string {
+	t.Helper()
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+	secret := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
+	require.NoError(t, err)
+	return s
 }
 
 func TestAuthRejects(t *testing.T) {
@@ -106,6 +129,7 @@ func TestAuthRejects(t *testing.T) {
 		"expired":   sign(t, key, expired),
 		"wrong aud": sign(t, key, wrongAud),
 		"no sub":    sign(t, key, noSub),
+		"hs256":     signHS256(t, key, validClaims()),
 	}
 	for name, token := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -116,6 +140,16 @@ func TestAuthRejects(t *testing.T) {
 			require.Empty(t, ensure.got.ID, "use case never called")
 		})
 	}
+}
+
+func TestAuthUnusableIdentityIs401(t *testing.T) {
+	key := newKey(t)
+	claims := validClaims()
+	delete(claims, "email")
+	ensure := &fakeEnsure{err: domain.NewValidationError(map[string]string{"email": "required"})}
+	rec := get(authedEngine(t, key, ensure), sign(t, key, claims))
+	require.Equal(t, 401, rec.Code)
+	require.Equal(t, "Bearer", rec.Header().Get("WWW-Authenticate"))
 }
 
 func TestAuthProvisioningErrorIsMapped(t *testing.T) {

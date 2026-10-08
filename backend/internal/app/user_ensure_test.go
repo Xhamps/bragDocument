@@ -76,7 +76,6 @@ func TestUserEnsureRetryConflictIsWrapped(t *testing.T) {
 	_, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u7", Email: "c@example.com"})
 	require.ErrorIs(t, err, domain.ErrConflict)
 	require.Contains(t, err.Error(), "u7")
-	require.Contains(t, err.Error(), "c@example.com")
 	require.Equal(t, 2, f.createUserCalls)
 }
 

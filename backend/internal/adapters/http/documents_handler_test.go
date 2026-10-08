@@ -97,3 +97,10 @@ func TestDocumentsDeleteForbidden(t *testing.T) {
 	rec := do(docsEngine(t, &fakeDocUC{err: domain.ErrForbidden}), http.MethodDelete, "/documents/d1", "")
 	require.Equal(t, 403, rec.Code)
 }
+
+func TestDocumentsUpdateInvalidJSON(t *testing.T) {
+	uc := &fakeDocUC{}
+	rec := do(docsEngine(t, uc), http.MethodPatch, "/documents/d1", `{not json`)
+	require.Equal(t, 422, rec.Code)
+	require.Empty(t, uc.updated.ID, "use case never called")
+}

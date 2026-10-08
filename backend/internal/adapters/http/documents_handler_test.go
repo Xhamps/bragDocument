@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -49,13 +50,16 @@ func docsEngine(t *testing.T, uc *fakeDocUC) *gin.Engine {
 }
 
 func TestDocumentsList(t *testing.T) {
-	uc := &fakeDocUC{doc: domain.Document{ID: "d1", OwnerID: "u1", Title: "Q3"}}
+	ts := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	uc := &fakeDocUC{doc: domain.Document{ID: "d1", OwnerID: "u1", Title: "Q3", LogCount: 2, LastLogAt: &ts}}
 	rec := do(docsEngine(t, uc), http.MethodGet, "/documents", "")
 	require.Equal(t, 200, rec.Code)
 	var body DocumentListResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Len(t, body.Owned, 1)
 	require.Equal(t, "d1", body.Owned[0].ID)
+	require.Equal(t, 2, body.Owned[0].LogCount)
+	require.Contains(t, rec.Body.String(), `"last_log_at":"2026-03-01T00:00:00Z"`)
 	require.Contains(t, rec.Body.String(), `"shared":[]`)
 }
 

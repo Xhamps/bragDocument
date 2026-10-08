@@ -13,9 +13,11 @@ import (
 	"github.com/spf13/cobra"
 
 	httpadapter "github.com/xhamps/bragdocument/backend/internal/adapters/http"
+	"github.com/xhamps/bragdocument/backend/internal/adapters/llm"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/redis"
 	"github.com/xhamps/bragdocument/backend/internal/app"
+	"github.com/xhamps/bragdocument/backend/internal/ports"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
@@ -64,6 +66,12 @@ func apiCmd() *cobra.Command {
 			}
 
 			reg := telemetry.NewRegistry()
+			var impact ports.ImpactExtractor = llm.Disabled{}
+			if cfg.OpenAIAPIKey == "" {
+				slog.WarnContext(ctx, "OPENAI_API_KEY not set; impact extraction disabled")
+			} else {
+				impact = llm.NewOpenAIExtractor(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.LLMTimeout, reg)
+			}
 			_ = redis.NewDegrading(rc, reg) // ponytail: wired now so the counter exists; use cases take it in the next pass
 
 			engine := httpadapter.NewEngine(reg)
@@ -73,7 +81,9 @@ func apiCmd() *cobra.Command {
 			})
 			authed := engine.Group("/", httpadapter.Auth(jwks.Keyfunc, app.NewUserEnsure(postgres.NewUserRepo(db)), reg))
 			httpadapter.RegisterMe(authed)
-			httpadapter.RegisterDocuments(authed, app.NewDocuments(postgres.NewDocumentRepo(db)))
+			docRepo := postgres.NewDocumentRepo(db)
+			httpadapter.RegisterDocuments(authed, app.NewDocuments(docRepo))
+			httpadapter.RegisterLogs(authed, app.NewLogs(docRepo, postgres.NewLogRepo(db), impact))
 			httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
 
 			srv := &http.Server{

@@ -21,13 +21,15 @@ type DocumentUseCases interface {
 
 // DocumentResponse is one document.
 type DocumentResponse struct {
-	ID          string    `json:"id"`
-	OwnerID     string    `json:"owner_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	State       string    `json:"state"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string     `json:"id"`
+	OwnerID     string     `json:"owner_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	State       string     `json:"state"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	LogCount    int        `json:"log_count"`
+	LastLogAt   *time.Time `json:"last_log_at"`
 }
 
 // DocumentListResponse separates owned from shared documents (FR-9).
@@ -51,7 +53,8 @@ type UpdateDocumentRequest struct {
 
 func toDocument(d domain.Document) DocumentResponse {
 	return DocumentResponse{ID: d.ID, OwnerID: d.OwnerID, Title: d.Title, Description: d.Description,
-		State: d.State, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt}
+		State: d.State, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt,
+		LogCount: d.LogCount, LastLogAt: d.LastLogAt}
 }
 
 func toDocuments(ds []domain.Document) []DocumentResponse {

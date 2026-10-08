@@ -73,7 +73,10 @@ export function mockFetch(table: Routes) {
         typeof v === "function" ? (v as (i?: RequestInit) => unknown)(init) : v;
       if (r instanceof Response) return r;
       const { status, body } =
-        r !== null && typeof r === "object" && "status" in r
+        r !== null &&
+        typeof r === "object" &&
+        "status" in r &&
+        typeof r.status === "number" // a Log's own `status` is a string
           ? (r as { status: number; body?: unknown })
           : { status: method === "POST" ? 201 : 200, body: r };
       if (body === undefined) return new Response(null, { status: 204 });

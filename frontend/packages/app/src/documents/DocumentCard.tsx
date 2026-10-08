@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@bragdoc/ui";
 import { MoreHorizontalIcon } from "lucide-react";
+import { Link } from "react-router";
 import type { Document } from "../lib/types";
 
 type Props = {
@@ -35,7 +36,11 @@ export function DocumentCard({
   return (
     <Card className={archived ? "opacity-60" : undefined}>
       <CardHeader>
-        <CardTitle>{doc.title}</CardTitle>
+        <CardTitle>
+          <Link to={`/documents/${doc.id}`} className="hover:underline">
+            {doc.title}
+          </Link>
+        </CardTitle>
         {doc.description && (
           <CardDescription>{doc.description}</CardDescription>
         )}
@@ -67,6 +72,12 @@ export function DocumentCard({
         )}
       </CardHeader>
       <CardContent className="flex items-center gap-2 text-muted-foreground">
+        <span>
+          {doc.log_count} {doc.log_count === 1 ? "log" : "logs"}
+          {doc.last_log_at &&
+            ` · last on ${new Date(doc.last_log_at).toLocaleDateString()}`}
+          {" ·"}
+        </span>
         <span>Updated {new Date(doc.updated_at).toLocaleDateString()}</span>
         {archived && <Badge variant="secondary">Archived</Badge>}
       </CardContent>

@@ -1,0 +1,259 @@
+import { useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router";
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@bragdoc/ui";
+import { errorText } from "../lib/errors";
+import type { Log } from "../lib/types";
+import { useDocuments } from "../documents/useDocuments";
+import { LogFormDialog } from "../logs/LogFormDialog";
+import { ActiveFilters, LogFilters } from "../logs/LogFilters";
+import { LogRow } from "../logs/LogRow";
+import {
+  useCreateLog,
+  useDeleteExamples,
+  useDeleteLog,
+  useLogs,
+  useUpdateLog,
+  type LogForm,
+} from "../logs/useLogs";
+
+const PER_PAGE = 50; // the API default; the URL may override it with per_page
+
+export function Component() {
+  const { id = "" } = useParams();
+  const [params, setParams] = useSearchParams();
+  const docs = useDocuments();
+  const logs = useLogs(id, params.toString());
+  const create = useCreateLog(id);
+  const update = useUpdateLog(id);
+  const remove = useDeleteLog(id);
+  const removeExamples = useDeleteExamples(id);
+  const [editing, setEditing] = useState<Log | "new" | null>(null);
+  const [noImpact, setNoImpact] = useState(false);
+  const [deleting, setDeletingLog] = useState<Log | null>(null);
+  const setDeleting = (log: Log | null) => {
+    setDeletingLog(log);
+    remove.reset(); // don't carry a failed delete's error to the next dialog
+  };
+
+  if (docs.isPending) return <p className="text-muted-foreground">Loading…</p>;
+  const doc = [...(docs.data?.owned ?? []), ...(docs.data?.shared ?? [])].find(
+    (d) => d.id === id,
+  );
+  if (!doc)
+    return (
+      <p role="alert" className="text-destructive">
+        {errorText(docs.error) ?? "Document not found."}
+      </p>
+    );
+  const readOnly = doc.state === "archived";
+
+  const setFilter = (key: string, values: string[]) => {
+    const next = new URLSearchParams(params);
+    next.delete(key);
+    values.forEach((v) => next.append(key, v));
+    next.delete("page");
+    setParams(next);
+  };
+  const setPage = (p: number) => {
+    const next = new URLSearchParams(params);
+    if (p > 1) next.set("page", String(p));
+    else next.delete("page");
+    setParams(next);
+  };
+  const clearFilters = () => {
+    const sort = params.get("sort");
+    setParams(sort ? { sort } : {});
+  };
+
+  const closeForm = () => {
+    setEditing(null);
+    setNoImpact(false);
+    create.reset();
+    update.reset();
+  };
+  // PRD-0007 FR-4: no impact found → keep the form open on the saved log.
+  const saved = (log: Log) => {
+    if (log.impact_statement === "") {
+      setEditing(log);
+      setNoImpact(true);
+    } else closeForm();
+  };
+  const submit = (form: LogForm) =>
+    editing === "new"
+      ? create.mutate(form, { onSuccess: saved })
+      : editing &&
+        update.mutate({ id: editing.id, ...form }, { onSuccess: saved });
+
+  const page = Number(params.get("page") ?? 1);
+  const perPage = Number(params.get("per_page") ?? PER_PAGE);
+  const total = logs.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const filtered = [...params.keys()].some((k) => k !== "sort" && k !== "page");
+  const items = logs.data?.items ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <Link to="/" className="text-sm text-muted-foreground hover:underline">
+          ← Documents
+        </Link>
+        <h2 className="text-xl font-semibold">{doc.title}</h2>
+        {readOnly ? (
+          <Badge variant="secondary">Archived · read-only</Badge>
+        ) : (
+          <Button className="ml-auto" onClick={() => setEditing("new")}>
+            New log
+          </Button>
+        )}
+      </div>
+
+      <LogFilters params={params} onChange={setFilter} />
+      <ActiveFilters
+        params={params}
+        onRemove={(k, v) =>
+          setFilter(
+            k,
+            params.getAll(k).filter((x) => x !== v),
+          )
+        }
+        onClear={clearFilters}
+      />
+
+      {logs.error ? (
+        <p role="alert" className="text-destructive">
+          {errorText(logs.error)}
+        </p>
+      ) : logs.isPending ? (
+        <p className="text-muted-foreground">Loading…</p>
+      ) : (
+        <>
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {total} {total === 1 ? "log" : "logs"}
+          </p>
+          {!readOnly && items.some((l) => l.is_example) && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3 text-sm">
+              <span>
+                Example logs show what a good entry looks like: what you did,
+                the result, and the evidence.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={removeExamples.isPending}
+                onClick={() => removeExamples.mutate(undefined)}
+              >
+                Remove examples
+              </Button>
+            </div>
+          )}
+          {items.length === 0 ? (
+            filtered ? (
+              <p className="text-muted-foreground">
+                No logs match these filters.{" "}
+                <Button variant="link" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                No logs yet. Capture your latest win while you still remember
+                the details.
+              </p>
+            )
+          ) : (
+            <ul className="flex flex-col divide-y rounded-md border">
+              {items.map((l) => (
+                <LogRow
+                  key={l.id}
+                  log={l}
+                  readOnly={readOnly}
+                  onEdit={setEditing}
+                  onDelete={setDeleting}
+                />
+              ))}
+            </ul>
+          )}
+          {pages > 1 && (
+            <nav aria-label="Pagination" className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {page} of {pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= pages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </nav>
+          )}
+        </>
+      )}
+
+      <LogFormDialog
+        open={editing !== null}
+        formKey={editing === "new" ? "new" : (editing?.id ?? "none")}
+        onOpenChange={(o) => !o && closeForm()}
+        initial={editing === "new" ? undefined : (editing ?? undefined)}
+        busy={create.isPending || update.isPending}
+        error={errorText(create.error ?? update.error)}
+        noImpact={noImpact}
+        onSubmit={submit}
+      />
+
+      <Dialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete log?</DialogTitle>
+            <DialogDescription>
+              “{deleting?.name}” will be removed permanently.
+            </DialogDescription>
+          </DialogHeader>
+          {remove.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {errorText(remove.error)}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={() =>
+                deleting &&
+                remove.mutate(deleting.id, {
+                  onSuccess: () => setDeleting(null),
+                })
+              }
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

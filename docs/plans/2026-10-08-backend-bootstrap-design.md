@@ -24,7 +24,7 @@ backend/
   internal/
     domain/                        # entities, value objects, typed errors. Stdlib only.
     app/                           # use cases. Imports domain + ports.
-    ports/                         # interfaces: repositories, Cache, Clock, IDs.
+    ports/                         # interfaces the app needs: Cache now; repositories per feature.
     adapters/
       http/                        # Gin engine, middleware, health, metrics, handlers, error mapping
       postgres/                    # pgx pool, sqlc output, tenant-scoped Tx, repositories
@@ -44,14 +44,14 @@ Dependency rule, enforced by golangci-lint depguard:
 - `adapters/*` may import anything external, never each other.
 - `cmd` wires adapters into app services.
 
-Skeleton deliverables: config loading; Cobra commands; Gin server with recovery, request id, slog request log, Prometheus middleware; `/healthz`, `/readyz` (pings Postgres and Redis, JSON body per dependency), `/metrics`; pgx pool with `WithTenant(ctx, tenantID, fn)` doing `SET LOCAL app.tenant_id`; Redis client; `migrate` subcommand; initial migration creating `app_meta`; sqlc config; multi-stage Dockerfile; Makefile targets `run`, `test`, `test-integration`, `lint`, `migrate`, `sqlc`, `docker`. `bot` and `worker` start, log, and block on signal.
+Skeleton deliverables: config loading; Cobra commands; Gin server with recovery, request id, slog request log, Prometheus middleware; `/healthz`, `/readyz` (pings Postgres and Redis, JSON body per dependency), `/metrics`; pgx pool with `WithTenant(ctx, tenantID, fn)` doing `set_config('app.tenant_id', $1, true)` (transaction-local; `SET LOCAL` cannot bind parameters); Redis client; `migrate` subcommand; initial migration creating `app_meta`; sqlc config; multi-stage Dockerfile; Makefile targets `run`, `test`, `test-integration`, `lint`, `migrate`, `sqlc`, `docker`. `bot` and `worker` start, log, and block on signal.
 
 ### Graceful degradation and shutdown
 
 | Dependency | Tier | Unavailable at startup | Lost at runtime |
 |---|---|---|---|
 | PostgreSQL | Required | `api` exits non-zero after 5 retries with backoff | `/readyz` 503; handlers 503 + `Retry-After`; pool reconnects |
-| Redis | Optional | Warn, start with no-op cache | Decorator returns miss, logs once per minute, increments `cache_errors_total`; `/readyz` shows `cache: degraded`, status 200 |
+| Redis | Optional | Warn, start the real client behind the degrading decorator (go-redis reconnects on its own) | Decorator returns miss, logs once per minute, increments `cache_errors_total`; `/readyz` shows `cache: degraded`, status 200 |
 | Gotenberg | Optional, worker | Worker starts; export jobs fail retriable | Same |
 | Telegram API | Optional, bot | Retry with backoff forever; readiness shows degraded | Same |
 
@@ -73,11 +73,11 @@ Flow: handler binds and validates with Gin tags → converts to a plain input st
 |---|---|
 | `domain.ErrNotFound` | 404 |
 | `domain.ErrForbidden` | 403 |
-| `domain.ErrValidation` (field errors) | 422 `{"error":"validation","fields":{...}}` |
+| `*domain.ValidationError` (field errors) | 422 `{"error":"validation","fields":{...}}` |
 | `domain.ErrConflict` | 409 |
 | `context.DeadlineExceeded` | 504 |
 | pgx connection errors | 503 + `Retry-After` |
-| other | 500, logged with stack, body has only the request id |
+| other | 500, logged at ERROR (stack only for panics), body carries code, generic message, and request id |
 
 Error body shape: `{"error":"<code>","message":"<text>","request_id":"<id>","fields":{...}}`.
 

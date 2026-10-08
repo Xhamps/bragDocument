@@ -25,7 +25,7 @@ The product is multi-tenant. Data of one tenant must never be visible to another
 
 ## Decision Outcome
 
-Chosen option: "Shared schema with `tenant_id` and RLS", because it meets the drivers with the least operational cost. Every tenant-scoped table has a `tenant_id` column with a foreign key and an index. RLS policies compare `tenant_id` with `current_setting('app.tenant_id')`. The API opens each request's transaction with `SET LOCAL app.tenant_id = $1`, taken from the authenticated user, before running any query. The application role is not the table owner and cannot bypass RLS.
+Chosen option: "Shared schema with `tenant_id` and RLS", because it meets the drivers with the least operational cost. Every tenant-scoped table has a `tenant_id` column with a foreign key and an index. RLS policies compare `tenant_id` with `current_setting('app.tenant_id')`. The API opens each request's transaction with `set_config('app.tenant_id', $1, true)` (the parameterised equivalent of `SET LOCAL`), taken from the authenticated user, before running any query. The application role is not the table owner and cannot bypass RLS.
 
 ### Consequences
 

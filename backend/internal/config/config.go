@@ -1,0 +1,41 @@
+// Package config loads the process configuration from environment variables.
+package config
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/caarlos0/env/v11"
+)
+
+// Config is the full configuration for every subcommand. Unused fields for a
+// given subcommand are harmless.
+type Config struct {
+	Env       string `env:"APP_ENV" envDefault:"development"`
+	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`
+	HTTPAddr  string `env:"HTTP_ADDR" envDefault:":8080"`
+
+	DatabaseURL  string `env:"DATABASE_URL,required,notEmpty"`
+	RedisURL     string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
+	GotenbergURL string `env:"GOTENBERG_URL" envDefault:"http://localhost:3000"`
+
+	TelegramToken string `env:"TELEGRAM_BOT_TOKEN"`
+	TelegramMode  string `env:"TELEGRAM_MODE" envDefault:"polling"`
+
+	DBTimeout       time.Duration `env:"DB_TIMEOUT" envDefault:"5s"`
+	CacheTimeout    time.Duration `env:"CACHE_TIMEOUT" envDefault:"200ms"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`
+}
+
+// Load reads and validates the configuration. It is called once per process.
+func Load() (Config, error) {
+	var c Config
+	if err := env.Parse(&c); err != nil {
+		return Config{}, fmt.Errorf("config: %w", err)
+	}
+	if c.LogFormat != "json" && c.LogFormat != "text" {
+		return Config{}, fmt.Errorf("config: LOG_FORMAT must be json or text, got %q", c.LogFormat)
+	}
+	return c, nil
+}

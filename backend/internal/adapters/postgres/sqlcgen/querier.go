@@ -13,20 +13,38 @@ import (
 type Querier interface {
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (TenantInvitation, error)
+	CreateLog(ctx context.Context, arg CreateLogParams) (Log, error)
 	CreateTenant(ctx context.Context, name string) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
 	DeleteInvitation(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteLog(ctx context.Context, arg DeleteLogParams) (int64, error)
+	DeleteLogLinks(ctx context.Context, logID uuid.UUID) error
+	DeleteLogTags(ctx context.Context, logID uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	GetDocument(ctx context.Context, id uuid.UUID) (Document, error)
 	GetInvitationByEmail(ctx context.Context, email string) (TenantInvitation, error)
+	GetLog(ctx context.Context, arg GetLogParams) (Log, error)
 	GetMeta(ctx context.Context, key string) (string, error)
 	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
-	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]Document, error)
+	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
+	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
+	// last_log_at falls back to d.created_at so the column is never NULL; it is
+	// meaningful only when log_count > 0. Examples are not counted.
+	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
 	ListInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]TenantInvitation, error)
+	ListLinksForLogs(ctx context.Context, ids []uuid.UUID) ([]LogLink, error)
+	// Every array parameter must be non-NULL (pass an empty array for "no filter"):
+	// cardinality(NULL) is NULL and would filter out every row.
+	ListLogs(ctx context.Context, arg ListLogsParams) ([]ListLogsRow, error)
+	ListTags(ctx context.Context) ([]string, error)
+	ListTagsForLogs(ctx context.Context, ids []uuid.UUID) ([]ListTagsForLogsRow, error)
 	ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error)
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
+	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)
+	UpsertTags(ctx context.Context, arg UpsertTagsParams) error
 }
 
 var _ Querier = (*Queries)(nil)

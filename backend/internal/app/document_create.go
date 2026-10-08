@@ -20,5 +20,5 @@ func (s *Documents) Create(ctx context.Context, in CreateDocumentInput) (domain.
 	if err := d.Validate(); err != nil {
 		return domain.Document{}, err
 	}
-	return s.docs.Create(ctx, d)
+	return s.docs.Create(ctx, d, nil)
 }

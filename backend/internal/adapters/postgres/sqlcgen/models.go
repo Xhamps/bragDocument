@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AppMetum struct {
@@ -24,6 +25,43 @@ type Document struct {
 	State       string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type Log struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	DocumentID      uuid.UUID
+	Name            string
+	Description     string
+	Impact          string
+	ImpactStatement pgtype.Text
+	Status          string
+	IsExample       bool
+	CreatedAt       time.Time
+	CreatedBy       uuid.UUID
+	UpdatedAt       time.Time
+	UpdatedBy       uuid.UUID
+}
+
+type LogLink struct {
+	ID       uuid.UUID
+	TenantID uuid.UUID
+	LogID    uuid.UUID
+	Url      string
+	Label    string
+	Host     string
+	Position int32
+}
+
+type LogTag struct {
+	TenantID uuid.UUID
+	LogID    uuid.UUID
+	TagName  string
+}
+
+type Tag struct {
+	TenantID uuid.UUID
+	Name     string
 }
 
 type Tenant struct {

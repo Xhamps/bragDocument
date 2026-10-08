@@ -16,10 +16,15 @@ type DocumentRepo struct{ db *DB }
 // NewDocumentRepo wires the repository to the pool.
 func NewDocumentRepo(db *DB) *DocumentRepo { return &DocumentRepo{db: db} }
 
-func (r *DocumentRepo) tx(ctx context.Context, fn func(ctx context.Context, q *sqlcgen.Queries) error) error {
-	return r.db.WithTenant(ctx, telemetry.TenantID(ctx), func(ctx context.Context, tx pgx.Tx) error {
+// withQueries runs fn in a transaction scoped to the tenant in the context.
+func withQueries(ctx context.Context, db *DB, fn func(ctx context.Context, q *sqlcgen.Queries) error) error {
+	return db.WithTenant(ctx, telemetry.TenantID(ctx), func(ctx context.Context, tx pgx.Tx) error {
 		return fn(ctx, sqlcgen.New(tx))
 	})
+}
+
+func (r *DocumentRepo) tx(ctx context.Context, fn func(ctx context.Context, q *sqlcgen.Queries) error) error {
+	return withQueries(ctx, r.db, fn)
 }
 
 func (r *DocumentRepo) ListByOwner(ctx context.Context, ownerID string) ([]domain.Document, error) {
@@ -33,8 +38,14 @@ func (r *DocumentRepo) ListByOwner(ctx context.Context, ownerID string) ([]domai
 		if err != nil {
 			return wrap(err)
 		}
-		for _, d := range rows {
-			out = append(out, toDocument(d))
+		for _, row := range rows {
+			d := toDocument(row.Document)
+			d.LogCount = int(row.LogCount)
+			if d.LogCount > 0 {
+				t := row.LastLogAt
+				d.LastLogAt = &t
+			}
+			out = append(out, d)
 		}
 		return nil
 	})
@@ -58,7 +69,7 @@ func (r *DocumentRepo) Get(ctx context.Context, id string) (domain.Document, err
 	return out, err
 }
 
-func (r *DocumentRepo) Create(ctx context.Context, d domain.Document) (domain.Document, error) {
+func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
 	tid, err := parseID(d.TenantID)
 	if err != nil {
 		return domain.Document{}, err
@@ -72,6 +83,12 @@ func (r *DocumentRepo) Create(ctx context.Context, d domain.Document) (domain.Do
 		row, err := q.CreateDocument(ctx, sqlcgen.CreateDocumentParams{TenantID: tid, OwnerID: oid, Title: d.Title, Description: d.Description})
 		if err != nil {
 			return wrap(err)
+		}
+		for _, ex := range examples {
+			ex.TenantID, ex.DocumentID = row.TenantID.String(), row.ID.String()
+			if _, err := insertLog(ctx, q, ex); err != nil {
+				return err
+			}
 		}
 		out = toDocument(row)
 		return nil

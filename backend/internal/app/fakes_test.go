@@ -85,8 +85,9 @@ func (f *fakeUsers) DeleteInvitation(_ context.Context, id string) error {
 }
 
 type fakeDocs struct {
-	docs map[string]domain.Document
-	seq  int
+	docs     map[string]domain.Document
+	examples []domain.Log
+	seq      int
 }
 
 func newFakeDocs() *fakeDocs { return &fakeDocs{docs: map[string]domain.Document{}} }
@@ -107,7 +108,8 @@ func (f *fakeDocs) Get(_ context.Context, id string) (domain.Document, error) {
 	}
 	return d, nil
 }
-func (f *fakeDocs) Create(_ context.Context, d domain.Document) (domain.Document, error) {
+func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
+	f.examples = examples
 	f.seq++
 	d.ID = "d" + strconv.Itoa(f.seq)
 	f.docs[d.ID] = d

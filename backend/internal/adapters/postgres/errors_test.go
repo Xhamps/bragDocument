@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -24,4 +25,15 @@ func TestWrap(t *testing.T) {
 
 	other := errors.New("boom")
 	require.Equal(t, other, wrap(other))
+
+	for _, tc := range []struct {
+		name string
+		err  error
+		want error
+	}{
+		{"unique violation", &pgconn.PgError{Code: "23505"}, domain.ErrConflict},
+		{"fk violation", &pgconn.PgError{Code: "23503"}, domain.ErrConflict},
+	} {
+		t.Run(tc.name, func(t *testing.T) { require.ErrorIs(t, wrap(tc.err), tc.want) })
+	}
 }

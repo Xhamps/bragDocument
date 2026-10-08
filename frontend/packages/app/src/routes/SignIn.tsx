@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  type Location,
+} from "react-router";
 import {
   Button,
   Card,
@@ -24,9 +29,8 @@ export function Component() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const from =
-    (location.state as { from?: { pathname: string } } | null)?.from
-      ?.pathname ?? "/";
+  const fromLoc = (location.state as { from?: Location } | null)?.from;
+  const from = fromLoc ? fromLoc.pathname + fromLoc.search + fromLoc.hash : "/";
   if (!loading && session) return <Navigate to={from} replace />;
 
   async function run(
@@ -119,7 +123,9 @@ export function Component() {
               </p>
             )}
             {message && (
-              <p className="text-sm text-muted-foreground">{message}</p>
+              <p aria-live="polite" className="text-sm text-muted-foreground">
+                {message}
+              </p>
             )}
             <Button type="submit" disabled={busy}>
               Sign in

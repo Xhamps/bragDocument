@@ -23,9 +23,11 @@ const supabaseMock = vi.hoisted(() => ({
     getSession: vi.fn(async () => ({
       data: { session: { access_token: "tok" } },
     })),
-    onAuthStateChange: vi.fn(() => ({
-      data: { subscription: { unsubscribe() {} } },
-    })),
+    onAuthStateChange: vi.fn<
+      (cb: (event: string, session: unknown) => void) => {
+        data: { subscription: { unsubscribe(): void } };
+      }
+    >(() => ({ data: { subscription: { unsubscribe() {} } } })),
     signInWithPassword: vi.fn(async () => ({ error: null })),
     signUp: vi.fn(async () => ({ error: null })),
     signInWithOtp: vi.fn(async () => ({ error: null })),
@@ -38,15 +40,13 @@ vi.mock("../lib/supabase", () => ({ supabase: supabaseMock }));
 export { supabaseMock };
 
 /** Route table for fetch: key "METHOD /path" → JSON body (or a function). */
-export type Routes = Record<
-  string,
-  unknown | ((init?: RequestInit) => unknown)
->;
+export type Routes = Record<string, unknown>;
 
 export function mockFetch(table: Routes) {
   const calls: { method: string; path: string; body?: unknown }[] = [];
-  globalThis.fetch = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       const method = init?.method ?? "GET";
       const key = `${method} ${url.pathname}`;
@@ -67,8 +67,8 @@ export function mockFetch(table: Routes) {
         status: method === "POST" ? 201 : 200,
         headers: { "Content-Type": "application/json" },
       });
-    },
-  ) as typeof fetch;
+    }),
+  );
   return calls;
 }
 

@@ -11,7 +11,8 @@ import (
 
 func TestDocumentsDelete(t *testing.T) {
 	s := NewDocuments(newFakeDocs())
-	d, _ := s.Create(context.Background(), CreateDocumentInput{TenantID: "t1", OwnerID: "u1", Title: "mine"})
+	d, err := s.Create(context.Background(), CreateDocumentInput{TenantID: "t1", OwnerID: "u1", Title: "mine"})
+	require.NoError(t, err)
 
 	require.ErrorIs(t, s.Delete(context.Background(), d.ID, "u2"), domain.ErrForbidden)
 	require.NoError(t, s.Delete(context.Background(), d.ID, "u1"))

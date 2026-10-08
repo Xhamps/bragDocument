@@ -16,6 +16,8 @@ func (s *Tenants) Invite(ctx context.Context, actor domain.User, email string) (
 	if err != nil {
 		return domain.Invitation{}, err
 	}
+	// ponytail: O(members) scan and TOCTOU window; add a GetUserByEmail query if tenants grow.
+	// Emails already owned by another tenant are not detected (checking would leak existence).
 	members, err := s.repo.ListMembers(ctx)
 	if err != nil {
 		return domain.Invitation{}, err

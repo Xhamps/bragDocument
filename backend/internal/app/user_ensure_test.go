@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 
@@ -52,6 +54,49 @@ func TestUserEnsureRetriesOnceOnConflict(t *testing.T) {
 	p, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u4", Email: "r@example.com"})
 	require.NoError(t, err)
 	require.Equal(t, "t9", p.Tenant.ID)
+}
+
+func TestUserEnsureRetriesOnConflictIntoInvitedTenant(t *testing.T) {
+	f := newFakeUsers()
+	f.tenants["t1"] = domain.Tenant{ID: "t1", Name: "Acme"}
+	f.invitations["r@acme.com"] = domain.Invitation{ID: "i1", TenantID: "t1", Email: "r@acme.com"}
+	f.createUserErrOnce = domain.ErrConflict
+
+	p, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u6", Email: "r@acme.com"})
+	require.NoError(t, err)
+	require.Equal(t, "t1", p.Tenant.ID)
+	require.Equal(t, "t1", p.User.TenantID)
+	require.Equal(t, 1, f.createUserCalls, "second pass finds the winner's row")
+}
+
+func TestUserEnsureRetryConflictIsWrapped(t *testing.T) {
+	f := newFakeUsers()
+	f.createUserErrAlways = domain.ErrConflict // both passes miss and conflict
+
+	_, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u7", Email: "c@example.com"})
+	require.ErrorIs(t, err, domain.ErrConflict)
+	require.Contains(t, err.Error(), "u7")
+	require.Contains(t, err.Error(), "c@example.com")
+	require.Equal(t, 2, f.createUserCalls)
+}
+
+func TestUserEnsureDoesNotRetryNonConflict(t *testing.T) {
+	f := newFakeUsers()
+	f.createUserErrOnce = domain.ErrUnavailable
+
+	_, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u8", Email: "d@example.com"})
+	require.ErrorIs(t, err, domain.ErrUnavailable)
+	require.Equal(t, 1, f.createUserCalls)
+}
+
+func TestUserEnsureTruncatesLongNames(t *testing.T) {
+	f := newFakeUsers()
+	long := strings.Repeat("é", 250)
+
+	p, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u9", Email: "l@example.com", DisplayName: long})
+	require.NoError(t, err)
+	require.Equal(t, 200, utf8.RuneCountInString(p.User.DisplayName))
+	require.Equal(t, 200, utf8.RuneCountInString(p.Tenant.Name))
 }
 
 func TestUserEnsureRejectsBadEmail(t *testing.T) {

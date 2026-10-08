@@ -12,12 +12,20 @@ import (
 func TestDocumentsUpdate(t *testing.T) {
 	f := newFakeDocs()
 	s := NewDocuments(f)
-	d, _ := s.Create(context.Background(), CreateDocumentInput{TenantID: "t1", OwnerID: "u1", Title: "old"})
+	d, err := s.Create(context.Background(), CreateDocumentInput{TenantID: "t1", OwnerID: "u1", Title: "old"})
+	require.NoError(t, err)
+
+	title, desc := " new ", "about"
+	got, err := s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "u1", Title: &title, Description: &desc})
+	require.NoError(t, err)
+	require.Equal(t, "new", got.Title)
+	require.Equal(t, "about", got.Description)
+	require.Equal(t, domain.DocumentActive, got.State, "unset fields unchanged")
 
 	archived := domain.DocumentArchived
-	got, err := s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "u1", State: &archived})
+	got, err = s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "u1", State: &archived})
 	require.NoError(t, err)
-	require.Equal(t, "old", got.Title, "unset fields unchanged")
+	require.Equal(t, "new", got.Title, "unset fields unchanged")
 	require.Equal(t, domain.DocumentArchived, got.State)
 
 	_, err = s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "intruder", State: &archived})

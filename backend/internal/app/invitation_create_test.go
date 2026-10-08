@@ -33,5 +33,5 @@ func TestTenantsInvite(t *testing.T) {
 	require.Equal(t, "u1", inv.CreatedBy)
 
 	_, err = s.Invite(context.Background(), admin, "new@acme.com")
-	require.ErrorIs(t, err, domain.ErrConflict, "duplicate invitation")
+	require.ErrorIs(t, err, domain.ErrConflict, "duplicate invitation: documents the TenantRepo.CreateInvitation contract, enforced by the adapter")
 }

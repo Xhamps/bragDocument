@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -9,11 +10,13 @@ import (
 )
 
 type fakeUsers struct {
-	users             map[string]domain.User
-	tenants           map[string]domain.Tenant
-	invitations       map[string]domain.Invitation // by email
-	seq               int
-	createUserErrOnce error // returned by the first CreateUser, then cleared
+	users               map[string]domain.User
+	tenants             map[string]domain.Tenant
+	invitations         map[string]domain.Invitation // by email
+	seq                 int
+	createUserErrOnce   error // returned by the first CreateUser, then cleared; a conflict inserts the winner's row
+	createUserErrAlways error // returned by every CreateUser, no row inserted
+	createUserCalls     int
 }
 
 func newFakeUsers() *fakeUsers {
@@ -51,9 +54,21 @@ func (f *fakeUsers) CreateTenant(_ context.Context, name string) (domain.Tenant,
 	return t, nil
 }
 func (f *fakeUsers) CreateUser(_ context.Context, u domain.User) (domain.User, error) {
+	f.createUserCalls++
+	if f.createUserErrAlways != nil {
+		return domain.User{}, f.createUserErrAlways
+	}
 	if err := f.createUserErrOnce; err != nil {
 		f.createUserErrOnce = nil
-		f.users[u.ID] = domain.User{ID: u.ID, TenantID: "t9", Email: u.Email} // the concurrent winner's row
+		if errors.Is(err, domain.ErrConflict) {
+			// The concurrent winner's row: in the invited tenant if there is an invitation, else t9.
+			tenantID := "t9"
+			if inv, ok := f.invitations[u.Email]; ok {
+				tenantID = inv.TenantID
+				delete(f.invitations, u.Email) // the winner consumed it
+			}
+			f.users[u.ID] = domain.User{ID: u.ID, TenantID: tenantID, Email: u.Email}
+		}
 		return domain.User{}, err
 	}
 	f.users[u.ID] = u

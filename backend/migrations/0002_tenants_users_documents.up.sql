@@ -83,4 +83,5 @@ END $$;
 GRANT USAGE ON SCHEMA public TO bragdoc_app;
 GRANT SELECT ON app_meta TO bragdoc_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, users, tenant_invitations, documents TO bragdoc_app;
+-- Default privileges attach to the role running this migration: always migrate as the same owner role.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bragdoc_app;

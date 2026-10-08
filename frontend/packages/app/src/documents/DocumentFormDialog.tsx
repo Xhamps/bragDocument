@@ -3,6 +3,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -14,6 +15,8 @@ import type { DocumentForm } from "./useDocuments";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Remounts the form when it changes (e.g. document id), so reopening on another document never shows stale state. */
+  formKey: string;
   title: string;
   submitLabel: string;
   initial?: DocumentForm;
@@ -22,12 +25,17 @@ type Props = {
   onSubmit: (form: DocumentForm) => void;
 };
 
-export function DocumentFormDialog({ open, onOpenChange, ...rest }: Props) {
+export function DocumentFormDialog({
+  open,
+  onOpenChange,
+  formKey,
+  ...rest
+}: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* ponytail: DialogContent unmounts on close, so the form's state resets per open without an effect */}
       <DialogContent>
-        <Form onCancel={() => onOpenChange(false)} {...rest} />
+        <Form key={formKey} onCancel={() => onOpenChange(false)} {...rest} />
       </DialogContent>
     </Dialog>
   );
@@ -41,7 +49,9 @@ function Form({
   error,
   onSubmit,
   onCancel,
-}: Omit<Props, "open" | "onOpenChange"> & { onCancel: () => void }) {
+}: Omit<Props, "open" | "onOpenChange" | "formKey"> & {
+  onCancel: () => void;
+}) {
   const [form, setForm] = useState<DocumentForm>(
     initial ?? { title: "", description: "" },
   );
@@ -55,6 +65,9 @@ function Form({
     <form onSubmit={submit} className="flex flex-col gap-4">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>
+          A title is required; the description is optional.
+        </DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-1">
         <Label htmlFor="doc-title">Title</Label>

@@ -12,6 +12,7 @@ import type { Document } from "../lib/types";
 type Props = {
   doc: Document | null;
   busy?: boolean;
+  error?: string | null;
   onCancel: () => void;
   onConfirm: (doc: Document) => void;
 };
@@ -19,6 +20,7 @@ type Props = {
 export function DeleteDocumentDialog({
   doc,
   busy,
+  error,
   onCancel,
   onConfirm,
 }: Props) {
@@ -32,6 +34,11 @@ export function DeleteDocumentDialog({
             undone.
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancel

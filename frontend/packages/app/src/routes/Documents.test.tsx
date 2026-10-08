@@ -87,3 +87,51 @@ test("delete asks for confirmation and then calls the API", async () => {
     ).toBe(true),
   );
 });
+
+test("delete error keeps the dialog open and shows the message", async () => {
+  mockFetch({
+    "GET /me": me,
+    "GET /documents": { owned: [doc({})], shared: [] },
+    "DELETE /documents/d1": { status: 403, body: { message: "not allowed" } },
+  });
+  renderAt("/");
+  const card = (await screen.findByText("2026")).closest("[data-slot=card]")!;
+  await userEvent.click(
+    within(card as HTMLElement).getByRole("button", { name: /actions/i }),
+  );
+  await userEvent.click(
+    await screen.findByRole("menuitem", { name: /delete/i }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: /^delete$/i }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent("not allowed");
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+});
+
+test("rename prefills the dialog and PATCHes the new title", async () => {
+  const calls = mockFetch({
+    "GET /me": me,
+    "GET /documents": { owned: [doc({})], shared: [] },
+    "PATCH /documents/d1": doc({ title: "2027" }),
+  });
+  renderAt("/");
+  const card = (await screen.findByText("2026")).closest("[data-slot=card]")!;
+  await userEvent.click(
+    within(card as HTMLElement).getByRole("button", { name: /actions/i }),
+  );
+  await userEvent.click(
+    await screen.findByRole("menuitem", { name: /rename/i }),
+  );
+  const title = await screen.findByLabelText(/title/i);
+  expect(title).toHaveValue("2026");
+  await userEvent.clear(title);
+  await userEvent.type(title, "2027");
+  await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+  await vi.waitFor(() =>
+    expect(calls.find((c) => c.method === "PATCH")).toMatchObject({
+      path: "/documents/d1",
+      body: { title: "2027", description: "" },
+    }),
+  );
+});

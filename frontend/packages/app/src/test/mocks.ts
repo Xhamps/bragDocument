@@ -39,7 +39,10 @@ const supabaseMock = vi.hoisted(() => ({
 vi.mock("../lib/supabase", () => ({ supabase: supabaseMock }));
 export { supabaseMock };
 
-/** Route table for fetch: key "METHOD /path" → JSON body (or a function). */
+/**
+ * Route table for fetch: key "METHOD /path" → JSON body, `{ status, body }`,
+ * or a function of the request init returning any of those or a Response.
+ */
 export type Routes = Record<string, unknown>;
 
 export function mockFetch(table: Routes) {
@@ -60,11 +63,16 @@ export function mockFetch(table: Routes) {
           status: 404,
         });
       const v = table[key];
-      const body =
+      const r =
         typeof v === "function" ? (v as (i?: RequestInit) => unknown)(init) : v;
+      if (r instanceof Response) return r;
+      const { status, body } =
+        r !== null && typeof r === "object" && "status" in r
+          ? (r as { status: number; body?: unknown })
+          : { status: method === "POST" ? 201 : 200, body: r };
       if (body === undefined) return new Response(null, { status: 204 });
       return new Response(JSON.stringify(body), {
-        status: method === "POST" ? 201 : 200,
+        status,
         headers: { "Content-Type": "application/json" },
       });
     }),

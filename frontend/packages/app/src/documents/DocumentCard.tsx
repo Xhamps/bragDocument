@@ -18,6 +18,7 @@ import type { Document } from "../lib/types";
 
 type Props = {
   doc: Document;
+  readOnly?: boolean;
   onRename: (doc: Document) => void;
   onToggleArchive: (doc: Document) => void;
   onDelete: (doc: Document) => void;
@@ -25,6 +26,7 @@ type Props = {
 
 export function DocumentCard({
   doc,
+  readOnly,
   onRename,
   onToggleArchive,
   onDelete,
@@ -37,30 +39,32 @@ export function DocumentCard({
         {doc.description && (
           <CardDescription>{doc.description}</CardDescription>
         )}
-        <CardAction>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                <MoreHorizontalIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onRename(doc)}>
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onToggleArchive(doc)}>
-                {archived ? "Unarchive" : "Archive"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => onDelete(doc)}
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardAction>
+        {!readOnly && (
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                  <MoreHorizontalIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => onRename(doc)}>
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onToggleArchive(doc)}>
+                  {archived ? "Unarchive" : "Archive"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => onDelete(doc)}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent className="flex items-center gap-2 text-muted-foreground">
         <span>Updated {new Date(doc.updated_at).toLocaleDateString()}</span>

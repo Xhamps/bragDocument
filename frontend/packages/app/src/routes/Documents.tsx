@@ -23,14 +23,19 @@ const ARTICLE = "https://jvns.ca/blog/brag-documents/";
 
 function errorText(e: unknown) {
   if (e instanceof ApiError)
-    return e.fields ? Object.values(e.fields).join(", ") : e.message;
+    return e.fields
+      ? Object.entries(e.fields)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join(", ")
+      : e.message;
   return e instanceof Error ? e.message : null;
 }
 
 export function Component() {
   const { data, isPending, error } = useDocuments();
   const create = useCreateDocument();
-  const update = useUpdateDocument();
+  const rename = useUpdateDocument();
+  const archive = useUpdateDocument();
   const remove = useDeleteDocument();
   const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<Document | null>(null);
@@ -48,16 +53,19 @@ export function Component() {
   const owned = data.owned.filter((d) => showArchived || d.state === "active");
   const shared = data.shared;
 
-  const grid = (docs: Document[]) => (
+  const archiveError = errorText(archive.error);
+
+  const grid = (docs: Document[], readOnly = false) => (
     <div className="grid gap-4 sm:grid-cols-2">
       {docs.map((d) => (
         <DocumentCard
           key={d.id}
           doc={d}
+          readOnly={readOnly}
           onRename={setRenaming}
           onDelete={setDeleting}
           onToggleArchive={(doc) =>
-            update.mutate({
+            archive.mutate({
               id: doc.id,
               state: doc.state === "active" ? "archived" : "active",
             })
@@ -84,6 +92,12 @@ export function Component() {
         )}
       </div>
 
+      {archiveError && (
+        <p role="alert" className="text-sm text-destructive">
+          {archiveError}
+        </p>
+      )}
+
       {data.owned.length === 0 ? (
         <Card>
           <CardHeader>
@@ -108,6 +122,8 @@ export function Component() {
             </Button>
           </CardContent>
         </Card>
+      ) : owned.length === 0 ? (
+        <p className="text-muted-foreground">No active documents.</p>
       ) : (
         grid(owned)
       )}
@@ -115,13 +131,17 @@ export function Component() {
       {shared.length > 0 && (
         <section className="flex flex-col gap-4">
           <h2 className="text-xl font-semibold">Shared with you</h2>
-          {grid(shared)}
+          {grid(shared, true)}
         </section>
       )}
 
       <DocumentFormDialog
         open={creating}
-        onOpenChange={setCreating}
+        formKey="new"
+        onOpenChange={(o) => {
+          setCreating(o);
+          if (!o) create.reset();
+        }}
         title="New document"
         submitLabel="Create"
         busy={create.isPending}
@@ -132,7 +152,12 @@ export function Component() {
       />
       <DocumentFormDialog
         open={renaming !== null}
-        onOpenChange={(o) => !o && setRenaming(null)}
+        formKey={renaming?.id ?? "none"}
+        onOpenChange={(o) => {
+          if (o) return;
+          setRenaming(null);
+          rename.reset();
+        }}
         title="Rename document"
         submitLabel="Save"
         initial={
@@ -140,11 +165,11 @@ export function Component() {
             ? { title: renaming.title, description: renaming.description }
             : undefined
         }
-        busy={update.isPending}
-        error={errorText(update.error)}
+        busy={rename.isPending}
+        error={errorText(rename.error)}
         onSubmit={(form) =>
           renaming &&
-          update.mutate(
+          rename.mutate(
             { id: renaming.id, ...form },
             { onSuccess: () => setRenaming(null) },
           )
@@ -153,7 +178,11 @@ export function Component() {
       <DeleteDocumentDialog
         doc={deleting}
         busy={remove.isPending}
-        onCancel={() => setDeleting(null)}
+        error={errorText(remove.error)}
+        onCancel={() => {
+          setDeleting(null);
+          remove.reset();
+        }}
         onConfirm={(doc) =>
           remove.mutate(doc.id, { onSuccess: () => setDeleting(null) })
         }

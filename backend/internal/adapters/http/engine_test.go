@@ -1,0 +1,85 @@
+package http
+
+import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/require"
+
+	"github.com/xhamps/bragdocument/backend/internal/telemetry"
+)
+
+func newTestEngine(t *testing.T) (*gin.Engine, *bytes.Buffer) {
+	t.Helper()
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(telemetry.NewLogger("info", "json", &buf))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	return NewEngine(telemetry.NewRegistry()), &buf
+}
+
+func TestRequestIDIsEchoedAndGenerated(t *testing.T) {
+	e, _ := newTestEngine(t)
+	e.GET("/ping", func(c *gin.Context) { c.String(200, "pong") })
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	req.Header.Set(HeaderRequestID, "given-id")
+	e.ServeHTTP(rec, req)
+	require.Equal(t, "given-id", rec.Header().Get(HeaderRequestID))
+
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/ping", nil))
+	require.NotEmpty(t, rec.Header().Get(HeaderRequestID))
+}
+
+func TestRequestIsLoggedWithRequestID(t *testing.T) {
+	e, buf := newTestEngine(t)
+	e.GET("/ping", func(c *gin.Context) { c.String(200, "pong") })
+
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	req.Header.Set(HeaderRequestID, "log-me")
+	e.ServeHTTP(httptest.NewRecorder(), req)
+
+	require.Contains(t, buf.String(), `"request_id":"log-me"`)
+	require.Contains(t, buf.String(), `"status":200`)
+}
+
+func TestPanicBecomes500WithRequestID(t *testing.T) {
+	e, _ := newTestEngine(t)
+	e.GET("/boom", func(c *gin.Context) { panic("kaboom") })
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/boom", nil)
+	req.Header.Set(HeaderRequestID, "p-1")
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, 500, rec.Code)
+	var body ErrorResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "internal", body.Error)
+	require.Equal(t, "p-1", body.RequestID)
+}
+
+func TestMetricsAreExposed(t *testing.T) {
+	reg := telemetry.NewRegistry()
+	e := NewEngine(reg)
+	e.GET("/ping", func(c *gin.Context) { c.String(200, "pong") })
+
+	e.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/ping", nil))
+
+	n, err := testutil.GatherAndCount(reg, "http_requests_total")
+	require.NoError(t, err)
+	require.Equal(t, 1, n)
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	require.Equal(t, 200, rec.Code)
+	require.Contains(t, rec.Body.String(), `http_requests_total{method="GET",route="/ping",status="200"} 1`)
+}

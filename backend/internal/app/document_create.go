@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 )
@@ -20,5 +21,11 @@ func (s *Documents) Create(ctx context.Context, in CreateDocumentInput) (domain.
 	if err := d.Validate(); err != nil {
 		return domain.Document{}, err
 	}
-	return s.docs.Create(ctx, d, nil)
+	examples := domain.ExampleLogs(time.Now(), in.OwnerID)
+	for i := range examples {
+		if err := examples[i].Validate(); err != nil {
+			return domain.Document{}, err // a broken example is a bug; TestExampleLogsAreValid guards it
+		}
+	}
+	return s.docs.Create(ctx, d, examples)
 }

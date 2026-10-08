@@ -179,3 +179,64 @@ func (f *fakeTenants) DeleteInvitation(_ context.Context, id string) error {
 	delete(f.invitations, id)
 	return nil
 }
+
+type fakeLogs struct {
+	logs     map[string]domain.Log
+	filter   domain.LogFilter
+	examples int // DeleteExamples calls
+	seq      int
+}
+
+func newFakeLogs() *fakeLogs { return &fakeLogs{logs: map[string]domain.Log{}} }
+
+func (f *fakeLogs) List(_ context.Context, documentID string, fl domain.LogFilter) (domain.LogPage, error) {
+	f.filter = fl
+	p := domain.LogPage{Items: []domain.Log{}}
+	for _, l := range f.logs {
+		if l.DocumentID == documentID {
+			p.Items = append(p.Items, l)
+		}
+	}
+	p.Total = len(p.Items)
+	return p, nil
+}
+func (f *fakeLogs) Get(_ context.Context, documentID, id string) (domain.Log, error) {
+	l, ok := f.logs[id]
+	if !ok || l.DocumentID != documentID {
+		return domain.Log{}, domain.ErrNotFound
+	}
+	return l, nil
+}
+func (f *fakeLogs) Create(_ context.Context, l domain.Log) (domain.Log, error) {
+	f.seq++
+	l.ID = "l" + strconv.Itoa(f.seq)
+	f.logs[l.ID] = l
+	return l, nil
+}
+func (f *fakeLogs) Update(_ context.Context, l domain.Log) (domain.Log, error) {
+	if _, ok := f.logs[l.ID]; !ok {
+		return domain.Log{}, domain.ErrNotFound
+	}
+	f.logs[l.ID] = l
+	return l, nil
+}
+func (f *fakeLogs) Delete(ctx context.Context, documentID, id string) error {
+	if _, err := f.Get(ctx, documentID, id); err != nil {
+		return err
+	}
+	delete(f.logs, id)
+	return nil
+}
+func (f *fakeLogs) DeleteExamples(context.Context, string) error { f.examples++; return nil }
+func (f *fakeLogs) ListTags(context.Context) ([]string, error)   { return []string{"project"}, nil }
+
+type fakeImpact struct {
+	statement string
+	err       error
+	calls     int
+}
+
+func (f *fakeImpact) Extract(context.Context, string, string) (string, error) {
+	f.calls++
+	return f.statement, f.err
+}

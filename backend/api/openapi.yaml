@@ -1,0 +1,193 @@
+# Documentation only; nothing is generated from this file. Keep it in step with
+# the DTOs in internal/adapters/http/*_handler.go.
+openapi: 3.0.3
+info:
+  title: Brag Document API
+  version: 0.1.0
+  description: |
+    All routes except /healthz, /readyz and /metrics require a Supabase access
+    token as a Bearer token. The first authenticated request provisions the user:
+    an invitation for the token's email joins that tenant as `member`, otherwise
+    a new tenant is created with the user as `admin`.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /me:
+    get:
+      summary: The authenticated caller and their tenant
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /documents:
+    get:
+      summary: List the caller's documents (owned and shared, archived included)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DocumentList" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a document owned by the caller
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateDocument" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Document" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /documents/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      summary: Update title, description or state (owner only)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateDocument" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Document" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a document (owner only)
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tenant/members:
+    get:
+      summary: List tenant members (admin only)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Member" } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /tenant/members/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Remove a member (admin only; 422 for yourself, 409 if they still own documents)
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /tenant/invitations:
+    get:
+      summary: List pending invitations (admin only)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Invitation" } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Invite an email to the tenant (admin only; 409 if already a member or invited)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateInvitation" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Invitation" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /tenant/invitations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Revoke an invitation (admin only)
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Unauthorized: { description: Missing or invalid token, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Forbidden: { description: Not allowed, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    NotFound: { description: Resource not found (also for other tenants' rows), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Conflict: { description: Conflict with current state, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    TooLarge: { description: Request body exceeds 1 MiB, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Unprocessable: { description: Validation failed; `fields` names the offending inputs, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  schemas:
+    Tenant:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    Me:
+      type: object
+      required: [id, email, display_name, role, tenant]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [admin, member] }
+        tenant: { $ref: "#/components/schemas/Tenant" }
+    Document:
+      type: object
+      required: [id, owner_id, title, description, state, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        state: { type: string, enum: [active, archived] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    DocumentList:
+      type: object
+      required: [owned, shared]
+      properties:
+        owned: { type: array, items: { $ref: "#/components/schemas/Document" } }
+        shared: { type: array, items: { $ref: "#/components/schemas/Document" }, description: Always empty in v1 }
+    CreateDocument:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+    UpdateDocument:
+      type: object
+      description: Absent fields are unchanged.
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        state: { type: string, enum: [active, archived] }
+    Member:
+      type: object
+      required: [id, email, display_name, role, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [admin, member] }
+        created_at: { type: string, format: date-time }
+    Invitation:
+      type: object
+      required: [id, email, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        created_at: { type: string, format: date-time }
+    CreateInvitation:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    Error:
+      type: object
+      required: [error, message, request_id]
+      properties:
+        error: { type: string, enum: [unauthorized, too_large, validation, not_found, forbidden, conflict, timeout, unavailable, internal] }
+        message: { type: string }
+        request_id: { type: string }
+        fields: { type: object, additionalProperties: { type: string } }

@@ -15,6 +15,13 @@ import (
 // wrap maps driver errors to domain errors so the HTTP mapper and use cases
 // never import pgx. Repositories call it on every query error.
 func wrap(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && (pgErr.Code == "23505" || pgErr.Code == "23503") {
+		return fmt.Errorf("%w: %s", domain.ErrConflict, pgErr.ConstraintName)
+	}
+	if errors.As(err, &pgErr) && pgErr.Code == "42501" { // new row violates row-level security policy
+		return fmt.Errorf("%w: %s", domain.ErrForbidden, pgErr.Message)
+	}
 	var netErr net.Error
 	switch {
 	case err == nil:

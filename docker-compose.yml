@@ -40,6 +40,20 @@ services:
       timeout: 3s
       retries: 10
 
+  migrate:
+    profiles: ["app"]
+    build:
+      context: ./backend
+    command: ["migrate"]
+    env_file: .env
+    environment:
+      # config.Load requires DATABASE_URL; migrate never opens it. Same owner URL so the service is self-contained.
+      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      DATABASE_OWNER_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     profiles: ["app"]
     build:
@@ -47,12 +61,15 @@ services:
     command: ["api"]
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      SUPABASE_URL: ${SUPABASE_URL_COMPOSE:-http://host.docker.internal:54321}
       REDIS_URL: redis://redis:6379/0
       GOTENBERG_URL: http://gotenberg:3000
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -67,7 +84,7 @@ services:
     command: ["bot"]
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       TELEGRAM_MODE: polling
     depends_on:
@@ -83,7 +100,7 @@ services:
     command: ["worker"]
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
+      DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       GOTENBERG_URL: http://gotenberg:3000
     volumes:

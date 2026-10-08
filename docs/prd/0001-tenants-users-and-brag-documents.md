@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 owner: Product
 stakeholders: Engineering
@@ -81,10 +81,11 @@ Julia Evans' article describes the brag document as a personal, living file. Peo
 
 | Question | Owner | Due |
 |---|---|---|
-| Is a tenant created automatically from the email domain, or by invitation only? | Product | before build |
+| ~~Is a tenant created automatically from the email domain, or by invitation only?~~ Answered 2026-10-08: see decisions log. | Product | before build |
 
 ## 13. Decisions log
 
 | Date | Decision | Why |
 |---|---|---|
 | 2026-10-08 | One tenant per user | Keeps the authorization model simple for v1 |
+| 2026-10-08 | First sign-in without an invitation creates a tenant (user is admin); an invitation for the email joins that tenant instead | Zero-touch onboarding, admins control who joins |

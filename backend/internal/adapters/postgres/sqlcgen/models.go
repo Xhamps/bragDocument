@@ -4,7 +4,47 @@
 
 package sqlcgen
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 type AppMetum struct {
 	Key   string
 	Value string
+}
+
+type Document struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	OwnerID     uuid.UUID
+	Title       string
+	Description string
+	State       string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type Tenant struct {
+	ID        uuid.UUID
+	Name      string
+	CreatedAt time.Time
+}
+
+type TenantInvitation struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Email     string
+	CreatedBy uuid.UUID
+	CreatedAt time.Time
+}
+
+type User struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	Email       string
+	DisplayName string
+	Role        string
+	CreatedAt   time.Time
 }

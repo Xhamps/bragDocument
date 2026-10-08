@@ -6,10 +6,27 @@ package sqlcgen
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
+	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (TenantInvitation, error)
+	CreateTenant(ctx context.Context, name string) (Tenant, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteInvitation(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	GetDocument(ctx context.Context, id uuid.UUID) (Document, error)
+	GetInvitationByEmail(ctx context.Context, email string) (TenantInvitation, error)
 	GetMeta(ctx context.Context, key string) (string, error)
+	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
+	GetUser(ctx context.Context, id uuid.UUID) (User, error)
+	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]Document, error)
+	ListInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]TenantInvitation, error)
+	ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error)
+	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
 }
 
 var _ Querier = (*Queries)(nil)

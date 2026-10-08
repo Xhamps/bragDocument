@@ -89,3 +89,20 @@ func TestMetricsAreExposed(t *testing.T) {
 	require.Equal(t, 200, rec.Code)
 	require.Contains(t, rec.Body.String(), `http_requests_total{method="GET",route="/ping",status="200"} 1`)
 }
+
+func TestOversizedBodyIs413(t *testing.T) {
+	e, _ := newTestEngine(t)
+	e.POST("/echo", func(c *gin.Context) {
+		var v map[string]any
+		if bindJSON(c, &v) {
+			c.Status(200)
+		}
+	})
+
+	rec := httptest.NewRecorder()
+	body := append([]byte(`{"x":"`), bytes.Repeat([]byte("a"), 2<<20)...)
+	big := bytes.NewReader(append(body, '"', '}')) // valid JSON: only the size cap can reject it
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/echo", big))
+	require.Equal(t, 413, rec.Code)
+	require.Contains(t, rec.Body.String(), `"error":"too_large"`)
+}

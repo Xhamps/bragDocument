@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -66,9 +67,21 @@ func (d *DB) Close() { d.Pool.Close() }
 // for the duration of the transaction. Row-level-security policies read that
 // setting. Every tenant-scoped repository call goes through here.
 func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx context.Context, tx pgx.Tx) error) error {
-	if tenantID == "" {
-		return fmt.Errorf("postgres: %w: empty tenant id", domain.ErrForbidden)
+	if _, err := uuid.Parse(tenantID); err != nil {
+		return fmt.Errorf("postgres: %w: bad tenant id", domain.ErrForbidden)
 	}
+	return d.inTx(ctx, "app.tenant_id", tenantID, fn)
+}
+
+// WithProvisioning runs fn inside a transaction flagged app.provisioning = '1'.
+// RLS policies on tenants, users, and tenant_invitations open up under that
+// flag; documents is excluded and stays closed without app.tenant_id. Only
+// UserRepo.Provision (the sign-in path) calls this.
+func (d *DB) WithProvisioning(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
+	return d.inTx(ctx, "app.provisioning", "1", fn)
+}
+
+func (d *DB) inTx(ctx context.Context, setting, value string, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	ctx, cancel := context.WithTimeout(ctx, d.timeout)
 	defer cancel()
 
@@ -79,8 +92,8 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// SET LOCAL cannot take bind parameters; set_config with is_local=true is the equivalent.
-	if _, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", tenantID); err != nil {
-		return fmt.Errorf("postgres: set tenant: %w", wrap(err))
+	if _, err := tx.Exec(ctx, "SELECT set_config($1, $2, true)", setting, value); err != nil {
+		return fmt.Errorf("postgres: set %s: %w", setting, wrap(err))
 	}
 	if err := fn(ctx, tx); err != nil {
 		return err

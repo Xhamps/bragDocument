@@ -60,16 +60,28 @@ test("admin sees members and invitations, invites, removes", async () => {
   );
 });
 
-test("shows invite and withdraw errors, empty invitations message", async () => {
+test("explains 409s, clears invite error on edit, shows withdraw errors", async () => {
   mockFetch({
     "GET /me": me,
-    "GET /tenant/members": [],
+    "GET /tenant/members": [
+      {
+        id: "u2",
+        email: "b@acme.com",
+        display_name: "",
+        role: "member",
+        created_at: "2026-01-02T00:00:00Z",
+      },
+    ],
     "GET /tenant/invitations": [
       { id: "i1", email: "c@acme.com", created_at: "2026-01-03T00:00:00Z" },
     ],
     "POST /tenant/invitations": {
       status: 409,
-      body: { message: "already a member" },
+      body: { message: "conflict with current state" },
+    },
+    "DELETE /tenant/members/u2": {
+      status: 409,
+      body: { message: "conflict with current state" },
     },
     "DELETE /tenant/invitations/i1": {
       status: 404,
@@ -78,19 +90,47 @@ test("shows invite and withdraw errors, empty invitations message", async () => 
   });
   renderAt("/tenant");
   expect(await screen.findByText("c@acme.com")).toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText(/invite by email/i), "b@acme.com");
+
+  const input = screen.getByLabelText(/invite by email/i);
+  await userEvent.type(input, "b@acme.com");
   await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "already a member",
+  expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(
+    "This email is already a member or already invited.",
   );
+  await userEvent.type(input, "x");
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+  await userEvent.click(
+    screen.getByRole("button", { name: /remove b@acme\.com/i }),
+  );
+  expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(
+    "Cannot remove: this member still owns documents.",
+  );
+
   await userEvent.click(
     screen.getByRole("button", { name: /withdraw c@acme\.com/i }),
   );
-  expect(await screen.findByText("invitation not found")).toBeInTheDocument();
+  await vi.waitFor(() =>
+    expect(screen.getAllByRole("alert").map((a) => a.textContent)).toContain(
+      "invitation not found",
+    ),
+  );
+});
+
+test("shows empty invitations message", async () => {
+  mockFetch({
+    "GET /me": me,
+    "GET /tenant/members": [],
+    "GET /tenant/invitations": [],
+  });
+  renderAt("/tenant");
+  expect(
+    await screen.findByText("No pending invitations."),
+  ).toBeInTheDocument();
 });
 
 test("member is redirected home", async () => {
-  mockFetch({
+  const calls = mockFetch({
     "GET /me": { ...me, role: "member" },
     "GET /documents": { owned: [], shared: [] },
   });
@@ -98,4 +138,5 @@ test("member is redirected home", async () => {
   expect(
     await screen.findByText(/what is a brag document/i),
   ).toBeInTheDocument();
+  expect(calls.some((c) => c.path.startsWith("/tenant/"))).toBe(false);
 });

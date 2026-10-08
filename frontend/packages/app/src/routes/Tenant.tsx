@@ -3,7 +3,7 @@ import { Navigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Input, Label } from "@bragdoc/ui";
 import { useMe } from "../auth/useMe";
-import { api } from "../lib/api";
+import { api, ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { Invitation, Member } from "../lib/types";
 
@@ -13,10 +13,12 @@ export function Component() {
   const members = useQuery({
     queryKey: ["members"],
     queryFn: () => api<Member[]>("/tenant/members"),
+    enabled: me?.role === "admin",
   });
   const invitations = useQuery({
     queryKey: ["invitations"],
     queryFn: () => api<Invitation[]>("/tenant/invitations"),
+    enabled: me?.role === "admin",
   });
   const [email, setEmail] = useState("");
 
@@ -57,8 +59,15 @@ export function Component() {
     e.preventDefault();
     invite.mutate(email);
   };
-  const removeError = errorText(remove.error);
-  const inviteError = errorText(invite.error);
+  // ponytail: backend 409 body is generic; explain the one conflict each mutation can hit.
+  const removeError =
+    remove.error instanceof ApiError && remove.error.status === 409
+      ? "Cannot remove: this member still owns documents."
+      : errorText(remove.error);
+  const inviteError =
+    invite.error instanceof ApiError && invite.error.status === 409
+      ? "This email is already a member or already invited."
+      : errorText(invite.error);
   const withdrawError = errorText(withdraw.error);
 
   return (
@@ -109,7 +118,10 @@ export function Component() {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (invite.error) invite.reset();
+              }}
             />
           </div>
           <Button type="submit" disabled={invite.isPending}>

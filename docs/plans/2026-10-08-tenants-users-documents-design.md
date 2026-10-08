@@ -14,6 +14,10 @@ Date: 2026-10-08. Status: approved. Implements [PRD-0001](../prd/0001-tenants-us
 | Provisioning | Just-in-time in the auth middleware. No onboarding endpoint. |
 | Invitation email | Not sent. The admin shares the sign-in link; the invitee is matched by email on first sign-in. Email delivery belongs to PRD-0004 FR-6. |
 | Document card counters | `log_count` and `last_log_date` arrive with PRD-0002. |
+| Duplicate invitations | When several tenants invite the same email, the oldest invitation wins (`ORDER BY created_at LIMIT 1`); the others stay pending until withdrawn. |
+| Email uniqueness | `users.email` is unique across tenants. A Supabase account recreated with the same email but a new `sub` cannot be provisioned while the old row exists (409 on every request); an admin removes the old member first. |
+| Removed members | A removed member who signs in again is provisioned as the admin of a new tenant unless an invitation exists. |
+| API 401 in the frontend | Not handled yet: the error surfaces through `useMe`. Supabase-side sign-outs are handled by `onAuthStateChange`. A follow-up maps API 401 to sign-out. |
 
 ## 1. Schema
 
@@ -45,7 +49,7 @@ Two queries legitimately run outside a tenant: user lookup by id and invitation 
 1. Read `Authorization: Bearer <token>`. Missing or malformed: 401.
 2. Verify with `github.com/MicahParks/keyfunc/v3` (JWKS fetch, cache, refresh on unknown `kid`) and `github.com/golang-jwt/jwt/v5`. Require `exp`, `aud = "authenticated"`, and `sub`. Failure: 401, counter `auth_failures_total{reason}`.
 3. Call `app.UserEnsure(ctx, sub, email, name)`.
-4. Store the user and tenant id in the request context (`telemetry.WithTenantID`, new `telemetry.WithUser`).
+4. Store the principal in the Gin context and the tenant id in the request context (`telemetry.WithTenantID`). No `telemetry.WithUser`: the telemetry package stays free of domain types.
 
 `UserEnsure`:
 

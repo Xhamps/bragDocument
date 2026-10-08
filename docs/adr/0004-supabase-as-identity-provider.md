@@ -39,7 +39,7 @@ Chosen option: "Supabase Auth with JWT verification in the API", because it is t
 
 ### Confirmation
 
-Integration test: a token signed with the wrong key is rejected with 401; a valid token for a user without a tenant gets the onboarding response, not data.
+Integration test: a token signed with the wrong key is rejected with 401; a valid token for an unknown user provisions them (into the inviting tenant or a new one) before any data is returned.
 
 ## Pros and Cons of the Options
 

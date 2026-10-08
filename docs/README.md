@@ -85,7 +85,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 
 | # | Title | Status |
 |---|---|---|
-| [0001](prd/0001-tenants-users-and-brag-documents.md) | Tenants, users, and brag documents | proposed |
+| [0001](prd/0001-tenants-users-and-brag-documents.md) | Tenants, users, and brag documents | accepted |
 | [0002](prd/0002-logs.md) | Logs: fields, creation, and the filtered list page | proposed |
 | [0003](prd/0003-telegram-bot.md) | Adding logs through a Telegram bot | proposed |
 | [0004](prd/0004-sharing-and-rbac.md) | Sharing documents: invitations and roles | proposed |
@@ -103,7 +103,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0004](adr/0004-supabase-as-identity-provider.md) | Supabase as identity provider | accepted |
 | [0005](adr/0005-postgresql-as-primary-database.md) | PostgreSQL as primary database | accepted |
 | [0006](adr/0006-redis-as-cache.md) | Redis as cache | accepted |
-| [0007](adr/0007-multi-tenancy-strategy.md) | Multi-tenancy: shared schema with row-level security | proposed |
+| [0007](adr/0007-multi-tenancy-strategy.md) | Multi-tenancy: shared schema with row-level security | accepted |
 | [0008](adr/0008-docker-compose-for-local-provisioning.md) | Docker Compose for local provisioning | accepted |
 | [0009](adr/0009-telegram-bot-integration.md) | Telegram bot integration | proposed |
 | [0010](adr/0010-pdf-generation-with-gotenberg.md) | PDF generation with Gotenberg | proposed |

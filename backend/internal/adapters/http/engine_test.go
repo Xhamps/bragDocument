@@ -52,7 +52,7 @@ func TestRequestIsLoggedWithRequestID(t *testing.T) {
 }
 
 func TestPanicBecomes500WithRequestID(t *testing.T) {
-	e, _ := newTestEngine(t)
+	e, buf := newTestEngine(t)
 	e.GET("/boom", func(c *gin.Context) { panic("kaboom") })
 
 	rec := httptest.NewRecorder()
@@ -65,6 +65,12 @@ func TestPanicBecomes500WithRequestID(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, "internal", body.Error)
 	require.Equal(t, "p-1", body.RequestID)
+	require.NotContains(t, rec.Body.String(), "kaboom")
+	require.Contains(t, buf.String(), `"status":500`)
+
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	require.Contains(t, rec.Body.String(), `http_requests_total{method="GET",route="/boom",status="500"} 1`)
 }
 
 func TestMetricsAreExposed(t *testing.T) {

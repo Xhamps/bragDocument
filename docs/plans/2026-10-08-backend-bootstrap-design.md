@@ -65,7 +65,7 @@ Rule for features: a feature may fail because Postgres is down. It may never fai
 
 ## 2. Request lifecycle, errors, config
 
-Middleware order: recovery → request id (`X-Request-ID` in/out, UUID fallback) → slog request log (method, path, status, latency, request id, tenant id) → Prometheus (`http_requests_total`, `http_request_duration_seconds` by route template and status) → auth slot (next pass).
+Middleware order: request id (`X-Request-ID` in/out, UUID fallback) → slog request log (method, path, status, latency, request id, tenant id) → Prometheus (`http_requests_total`, `http_request_duration_seconds` by route template and status) → recovery (innermost, so panics are logged and counted as 500) → auth slot (next pass).
 
 Flow: handler binds and validates with Gin tags → converts to a plain input struct → calls one `app` use case → use case touches only `domain` and `ports` → adapters implement ports, Postgres repositories run inside the tenant-scoped Tx when a tenant is in context → handler maps result to a response DTO and error to HTTP via `adapters/http/errors.go`.
 

@@ -9,14 +9,15 @@ import (
 // NewEngine builds the Gin engine with the standard middleware chain and the
 // /metrics endpoint. Feature handlers register their routes on it afterwards.
 //
-// Middleware order: recovery → request id → logger → metrics. Recovery runs
-// outermost so it catches panics from everything below; the request id is
-// already in the context by the time a handler can panic.
+// Middleware order: request id → logger → metrics → recovery. Recovery runs
+// innermost: the three middleware outside it cannot realistically panic, and
+// placing recovery inside them means a recovered panic is still logged and
+// counted as a 500.
 func NewEngine(reg *prometheus.Registry) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	e := gin.New()
 	m := newMetrics(reg)
-	e.Use(Recovery(), RequestID(), Logger(), m.Middleware())
+	e.Use(RequestID(), Logger(), m.Middleware(), Recovery())
 	e.GET("/metrics", gin.WrapH(promhttp.HandlerFor(reg, promhttp.HandlerOpts{})))
 	return e
 }

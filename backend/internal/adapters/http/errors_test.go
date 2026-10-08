@@ -47,6 +47,9 @@ func TestRespondErrorMapping(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			require.Equal(t, tc.code, body.Error)
 			require.Equal(t, "req-7", body.RequestID)
+			if tc.code == "internal" {
+				require.NotContains(t, rec.Body.String(), "boom")
+			}
 			if tc.code == "validation" {
 				require.Equal(t, "required", body.Fields["name"])
 			}

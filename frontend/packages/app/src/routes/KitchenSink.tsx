@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -14,7 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
+  Label,
 } from "@bragdoc/ui";
 
 const variants = [
@@ -50,6 +57,24 @@ export function Component() {
         <Input aria-label="Invalid" placeholder="Invalid" aria-invalid />
       </section>
 
+      <section className="max-w-sm space-y-4">
+        <h2 className="text-xl font-semibold">Label</h2>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="ks-email">Email</Label>
+          <Input id="ks-email" type="email" placeholder="you@example.com" />
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Badge</h2>
+        <div className="flex flex-wrap gap-2">
+          <Badge>Default</Badge>
+          <Badge variant="secondary">Archived</Badge>
+          <Badge variant="destructive">Destructive</Badge>
+          <Badge variant="outline">Outline</Badge>
+        </div>
+      </section>
+
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Card</h2>
         <Card className="max-w-sm">
@@ -82,6 +107,21 @@ export function Component() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Dropdown menu</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Actions</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem>Rename</DropdownMenuItem>
+            <DropdownMenuItem>Archive</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </section>
     </div>
   );

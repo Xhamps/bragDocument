@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  Label,
 } from "@bragdoc/ui";
 import { useAuth } from "../auth/useAuth";
 import { supabase } from "../lib/supabase";
@@ -94,10 +95,7 @@ export function Component() {
         <CardContent>
           <form onSubmit={signIn} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              {/* ponytail: plain <label> until Task 10 adds Label to @bragdoc/ui */}
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -107,9 +105,7 @@ export function Component() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"

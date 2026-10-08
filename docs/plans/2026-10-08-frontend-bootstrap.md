@@ -353,7 +353,7 @@ Keep the `.dark` class block so a toggle can be added later without touching tok
 **Step 6: Verify**
 
 Run: `cd frontend && npm run build && npm run typecheck -w @bragdoc/ui`
-Expected: build succeeds; the CSS bundle in `packages/app/dist/assets/` contains `--color-background`. (`typecheck` for `ui` may fail on missing vitest types until Task 5; that is acceptable here.)
+Expected: build succeeds; the CSS bundle in `packages/app/dist/assets/` contains `--background:oklch(` (not `--color-background`: `@theme inline` substitutes the token variables at build time, only the `:root`/`.dark` source variables survive). (`typecheck` for `ui` may fail on missing vitest types until Task 5; that is acceptable here.)
 
 **Step 7: Commit**
 

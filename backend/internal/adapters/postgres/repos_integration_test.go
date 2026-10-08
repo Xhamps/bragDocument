@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -64,6 +65,8 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	list, err := docs.ListByOwner(ctxB, adminA.ID)
 	require.NoError(t, err)
 	require.Empty(t, list)
+	_, err = docs.Update(ctxB, domain.Document{ID: doc.ID, Title: "hijack", State: domain.DocumentActive})
+	require.ErrorIs(t, err, domain.ErrNotFound)
 	members, err := tenants.ListMembers(ctxB)
 	require.NoError(t, err)
 	require.Len(t, members, 1)
@@ -71,7 +74,23 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 
 	// Inserting into another tenant is rejected by WITH CHECK.
 	_, err = docs.Create(ctxB, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "x"})
-	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrForbidden)
+
+	// Provisioning reads users and tenants across tenants, but documents stays closed.
+	require.NoError(t, users.Provision(context.Background(), func(ctx context.Context, tx ports.ProvisionTx) error {
+		u, err := tx.GetUser(ctx, adminA.ID)
+		require.NoError(t, err)
+		require.Equal(t, adminA.ID, u.ID)
+		tn, err := tx.GetTenant(ctx, tenantA.ID)
+		require.NoError(t, err)
+		require.Equal(t, tenantA.ID, tn.ID)
+		return nil
+	}))
+	err = db.WithProvisioning(context.Background(), func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, "INSERT INTO documents (tenant_id, owner_id, title) VALUES ($1, $2, 'x')", tenantA.ID, adminA.ID)
+		return wrap(err)
+	})
+	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Tenant A sees its own document and can delete it.
 	got, err := docs.Get(ctxA, doc.ID)
@@ -88,6 +107,12 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	require.NoError(t, err)
 	_, err = tenants.CreateInvitation(ctxA, domain.Invitation{TenantID: tenantA.ID, Email: "c@example.com", CreatedBy: adminA.ID})
 	require.ErrorIs(t, err, domain.ErrConflict)
+	invsA, err := tenants.ListInvitations(ctxA)
+	require.NoError(t, err)
+	require.Len(t, invsA, 1)
+	invsB, err := tenants.ListInvitations(ctxB)
+	require.NoError(t, err)
+	require.Empty(t, invsB)
 	require.NoError(t, users.Provision(context.Background(), func(ctx context.Context, tx ports.ProvisionTx) error {
 		found, err := tx.FindInvitationByEmail(ctx, "c@example.com")
 		if err != nil {

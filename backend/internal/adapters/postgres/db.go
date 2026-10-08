@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -66,15 +67,16 @@ func (d *DB) Close() { d.Pool.Close() }
 // for the duration of the transaction. Row-level-security policies read that
 // setting. Every tenant-scoped repository call goes through here.
 func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx context.Context, tx pgx.Tx) error) error {
-	if tenantID == "" {
-		return fmt.Errorf("postgres: %w: empty tenant id", domain.ErrForbidden)
+	if _, err := uuid.Parse(tenantID); err != nil {
+		return fmt.Errorf("postgres: %w: bad tenant id", domain.ErrForbidden)
 	}
 	return d.inTx(ctx, "app.tenant_id", tenantID, fn)
 }
 
 // WithProvisioning runs fn inside a transaction flagged app.provisioning = '1'.
 // RLS policies on tenants, users, and tenant_invitations open up under that
-// flag. Only UserRepo.Provision (the sign-in path) calls this.
+// flag; documents is excluded and stays closed without app.tenant_id. Only
+// UserRepo.Provision (the sign-in path) calls this.
 func (d *DB) WithProvisioning(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	return d.inTx(ctx, "app.provisioning", "1", fn)
 }

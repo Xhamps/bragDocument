@@ -47,12 +47,13 @@ func TestMigrateAndTenantScopedTx(t *testing.T) {
 	defer db.Close()
 	require.NoError(t, db.Ping(ctx))
 
-	err = db.WithTenant(ctx, "tenant-a", func(ctx context.Context, tx pgx.Tx) error {
+	tenantA := "00000000-0000-0000-0000-00000000000a"
+	err = db.WithTenant(ctx, tenantA, func(ctx context.Context, tx pgx.Tx) error {
 		var tenant string
 		if err := tx.QueryRow(ctx, "SELECT current_setting('app.tenant_id', true)").Scan(&tenant); err != nil {
 			return err
 		}
-		require.Equal(t, "tenant-a", tenant)
+		require.Equal(t, tenantA, tenant)
 
 		v, err := sqlcgen.New(tx).GetMeta(ctx, "schema")
 		require.NoError(t, err)

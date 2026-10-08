@@ -34,6 +34,7 @@ paths:
       responses:
         "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Document" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /documents/{id}:
     parameters:
@@ -48,6 +49,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
       summary: Delete a document (owner only)
@@ -92,6 +94,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /tenant/invitations/{id}:
     parameters:
@@ -111,6 +114,7 @@ components:
     Forbidden: { description: Not allowed, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     NotFound: { description: Resource not found (also for other tenants' rows), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Conflict: { description: Conflict with current state, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    TooLarge: { description: Request body exceeds 1 MiB, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Unprocessable: { description: Validation failed; `fields` names the offending inputs, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
     Tenant:
@@ -183,7 +187,7 @@ components:
       type: object
       required: [error, message, request_id]
       properties:
-        error: { type: string, enum: [unauthorized, validation, not_found, forbidden, conflict, timeout, unavailable, internal] }
+        error: { type: string, enum: [unauthorized, too_large, validation, not_found, forbidden, conflict, timeout, unavailable, internal] }
         message: { type: string }
         request_id: { type: string }
         fields: { type: object, additionalProperties: { type: string } }

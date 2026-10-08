@@ -2497,6 +2497,8 @@ then add a one-shot migration service that the api depends on (only it gets the 
     command: ["migrate"]
     env_file: .env
     environment:
+      # config.Load requires DATABASE_URL; migrate never opens it. Same owner URL so the service is self-contained.
+      DATABASE_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
       DATABASE_OWNER_URL: postgres://${POSTGRES_USER:-brag}:${POSTGRES_PASSWORD:-brag}@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
     depends_on:
       postgres:

@@ -30,6 +30,7 @@ cd backend
 make migrate   # apply migrations to the compose Postgres
 make run       # api on :8080 → /healthz /readyz /metrics
 make run-all   # api + bot + worker in one process; no migrations
+make seed EMAIL=you@example.com  # dev data in your tenant; sign in once first; re-runnable
 make test      # unit tests
 make test-integration   # needs Docker (testcontainers)
 make lint      # run from backend/; uses backend/bin/golangci-lint when present

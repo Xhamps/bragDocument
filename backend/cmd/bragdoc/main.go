@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,21 +15,24 @@ import (
 )
 
 func main() {
+	// JSON before config loads, so a config error is JSON too (FR-8); boot replaces it.
+	slog.SetDefault(telemetry.NewLogger("info", "json", os.Stderr))
 	root := &cobra.Command{
 		Use:           "bragdoc",
 		Short:         "Brag Document backend",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(apiCmd(), migrateCmd(), botCmd(), workerCmd())
+	root.AddCommand(apiCmd(), migrateCmd(), botCmd(), workerCmd(), allCmd())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	// A second SIGINT/SIGTERM during shutdown terminates the process with Go's default handling instead of being swallowed.
 	context.AfterFunc(ctx, stop)
 	defer stop()
 
-	if err := root.ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+	// service is the subcommand, so a lone bot's fatal error filters with the rest of its lines.
+	if c, err := root.ExecuteContextC(ctx); err != nil {
+		slog.Error("exit", slog.String("service", c.Name()), slog.Any("err", err))
 		os.Exit(1)
 	}
 }

@@ -37,7 +37,8 @@ type Option = tg.Option
 func WithServerURL(u string) Option { return tg.WithServerURL(u) }
 
 // New builds the bot. It skips the getMe call so a Telegram outage never blocks startup.
-func New(token string, r Replier, opts ...Option) (*Bot, error) {
+// ctx carries log attributes (service) for errors the library reports without one.
+func New(ctx context.Context, token string, r Replier, opts ...Option) (*Bot, error) {
 	handler := func(ctx context.Context, b *tg.Bot, u *models.Update) {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), replyTimeout)
 		defer cancel()
@@ -62,7 +63,7 @@ func New(token string, r Replier, opts ...Option) (*Bot, error) {
 		// One worker, handlers inline: updates are handled in order, so /undo
 		// never races a capture still waiting on the LLM.
 		tg.WithNotAsyncHandlers(),
-		tg.WithErrorsHandler(func(err error) { slog.Error("telegram polling failed", slog.Any("err", err)) }),
+		tg.WithErrorsHandler(func(err error) { slog.ErrorContext(ctx, "telegram polling failed", slog.Any("err", err)) }),
 	}, opts...)...)
 	if err != nil {
 		return nil, err

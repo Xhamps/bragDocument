@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// NewLogger builds a slog.Logger that attaches request_id and tenant_id from
-// the context to every record. format is "json" or "text".
+// NewLogger builds a slog.Logger that attaches service, request_id and
+// tenant_id from the context to every record. format is "json" or "text".
 func NewLogger(level, format string, w io.Writer) *slog.Logger {
 	var lvl slog.Level
 	switch strings.ToLower(level) {
@@ -32,13 +32,16 @@ func NewLogger(level, format string, w io.Writer) *slog.Logger {
 	return slog.New(ctxHandler{h})
 }
 
-// ctxHandler injects request_id and tenant_id from the context into every
-// record. WithGroup nests those attributes inside the group, so callers must
+// ctxHandler injects service, request_id and tenant_id from the context into
+// every record. WithGroup nests those attributes inside the group, so callers must
 // not use WithGroup for request-scoped loggers; use attributes (With) instead.
 type ctxHandler struct{ slog.Handler }
 
 func (h ctxHandler) Handle(ctx context.Context, r slog.Record) error {
 	r = r.Clone()
+	if s := Service(ctx); s != "" {
+		r.AddAttrs(slog.String("service", s))
+	}
 	if id := RequestID(ctx); id != "" {
 		r.AddAttrs(slog.String("request_id", id))
 	}

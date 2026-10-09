@@ -110,8 +110,7 @@ func toLinks(in []LinkDTO) []domain.Link {
 // logFilter reads the list query string. Names match the frontend's URL, which
 // passes its search params through verbatim. Dates are YYYY-MM-DD in UTC; "to"
 // is inclusive. Enum and sort checks live in domain.LogFilter.Validate.
-func logFilter(c *gin.Context) (domain.LogFilter, error) {
-	q := c.Request.URL.Query()
+func logFilter(q url.Values) (domain.LogFilter, error) {
 	f := domain.LogFilter{Query: q.Get("q"), Tags: q["tag"], Statuses: q["status"], Impacts: q["impact"], Domain: q.Get("domain")}
 	if s := q.Get("sort"); s != "" {
 		f.Sort, f.Desc = strings.TrimPrefix(s, "-"), strings.HasPrefix(s, "-")
@@ -187,7 +186,7 @@ func toBuckets(bs []domain.Bucket) []BucketResponse {
 func RegisterLogs(r gin.IRouter, uc LogUseCases) {
 	g := r.Group("/documents/:id")
 	g.GET("/logs", func(c *gin.Context) {
-		f, err := logFilter(c)
+		f, err := logFilter(c.Request.URL.Query())
 		if err != nil {
 			RespondError(c, err)
 			return

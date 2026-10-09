@@ -58,6 +58,42 @@ func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) Bot
 	return BotReply{Text: t.command(ctx, link, telegramID, cmd, arg)}
 }
 
+// Callback handles a tapped inline button; only the impact buttons exist.
+// The tap is valid for the last no-impact log, within undoTTL, for the same user.
+func (t *Telegram) Callback(ctx context.Context, telegramID int64, data string) BotReply {
+	rest, ok := strings.CutPrefix(data, "impact:")
+	mode, logID, _ := strings.Cut(rest, ":")
+	if !ok || (mode != impactAdd && mode != impactReplace) {
+		return BotReply{Text: msgButtonExpired}
+	}
+	link, failure := t.lookup(ctx, telegramID)
+	if failure != "" {
+		return BotReply{Text: failure}
+	}
+	e, ok := t.pendingImpact(ctx, link, telegramID)
+	if !ok || e.LogID != logID {
+		return BotReply{Text: msgButtonExpired}
+	}
+	e.Mode = mode
+	v, _ := json.Marshal(e)
+	_ = t.undo.Set(ctx, impactKey(telegramID), v, undoTTL)
+	if mode == impactAdd {
+		return BotReply{Text: msgSendAddition}
+	}
+	return BotReply{Text: msgSendReplacement}
+}
+
+// pendingImpact reads the caller's impact entry; another user's (relinked
+// account) or an unreadable one counts as none.
+func (t *Telegram) pendingImpact(ctx context.Context, link domain.TelegramLink, telegramID int64) (impactEntry, bool) {
+	v, found, _ := t.undo.Get(ctx, impactKey(telegramID))
+	var e impactEntry
+	if !found || json.Unmarshal(v, &e) != nil || e.UserID != link.UserID {
+		return impactEntry{}, false
+	}
+	return e, true
+}
+
 // lookup finds the caller's link; a non-empty reply means stop and send it.
 func (t *Telegram) lookup(ctx context.Context, telegramID int64) (domain.TelegramLink, string) {
 	link, err := t.links.FindByTelegramID(ctx, telegramID)

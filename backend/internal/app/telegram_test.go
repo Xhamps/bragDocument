@@ -191,6 +191,24 @@ func TestTelegramNoImpactWarning(t *testing.T) {
 	require.Empty(t, r.Buttons)
 }
 
+func TestTelegramImpactCallback(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing")
+
+	require.Equal(t, msgSendAddition, f.tg.Callback(ctx, 42, "impact:add:l1").Text)
+	require.Contains(t, string(f.undo.data["tg:impact:42"]), `"mode":"add"`)
+	require.Equal(t, msgSendReplacement, f.tg.Callback(ctx, 42, "impact:replace:l1").Text, "a second tap switches mode")
+	require.Contains(t, string(f.undo.data["tg:impact:42"]), `"mode":"replace"`)
+
+	for _, data := range []string{"impact:add:l9", "impact:bogus:l1", "nope", ""} {
+		require.Equal(t, msgButtonExpired, f.tg.Callback(ctx, 42, data).Text, data)
+	}
+	require.Equal(t, msgNotLinked, f.tg.Callback(ctx, 43, "impact:add:l1").Text)
+}
+
 func TestTelegramMessageErrors(t *testing.T) {
 	f := newTGFixture()
 	f.linked("")

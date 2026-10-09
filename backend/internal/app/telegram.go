@@ -29,6 +29,10 @@ const (
 	msgNoAccess        = "You no longer have access to that document. Pick another with /docs."
 	msgArchived        = "That document is archived. Pick another with /docs."
 	msgNoImpact        = "No impact stated. What changed because of this?"
+	msgButtonExpired   = "That button has expired. Edit the log in the web app."
+	msgSendAddition    = "Send the text to add to the description."
+	msgSendReplacement = "Send the new description."
+	msgLogGone         = "That log is gone. Send it again to log it."
 	msgNothingToUndo   = "Nothing to undo. /undo removes the last log I created, within 5 minutes."
 	msgHelp            = `Send a message to log it: first line is the name, the rest the description.
 #tag adds a tag, !low !medium !high !critical sets impact (default medium), links are kept.

@@ -13,6 +13,7 @@ type matrixFixture struct {
 	docs    *Documents
 	logs    *Logs
 	sharing *Sharing
+	exports *Exports
 	logID   string
 	invID   string
 }
@@ -37,7 +38,9 @@ func newMatrixFixture(t *testing.T, role domain.Role) matrixFixture {
 	l, err := fl.Create(context.Background(), domain.Log{DocumentID: "d1", Name: "x", Impact: "low", Status: domain.StatusDone})
 	require.NoError(t, err)
 	return matrixFixture{docs: NewDocuments(fd), logs: NewLogs(fd, fl, &fakeImpact{}, newFakeCache()),
-		sharing: NewSharing(fd, repo, &fakeMailer{}, ""), logID: l.ID, invID: inv.ID}
+		sharing: NewSharing(fd, repo, &fakeMailer{}, ""), logID: l.ID, invID: inv.ID,
+		exports: NewExports(fd, fl, newFakeExports(), &fakeRenderer{}, newFakeFiles(), newFakeCache(),
+			func(ctx context.Context, _ string) context.Context { return ctx })}
 }
 
 func TestAccessMatrix(t *testing.T) {
@@ -89,6 +92,18 @@ func TestAccessMatrix(t *testing.T) {
 		{"cancel invitation", domain.PermShare, func(f matrixFixture, u domain.User) error { return f.sharing.CancelInvitation(ctx, u, "d1", f.invID) }},
 		{"document audit", domain.PermShare, func(f matrixFixture, u domain.User) error {
 			_, err := f.sharing.DocumentAudit(ctx, u, "d1")
+			return err
+		}},
+		{"export pdf", domain.PermRead, func(f matrixFixture, u domain.User) error {
+			_, err := f.exports.Create(ctx, CreateExportInput{DocumentID: "d1", UserID: u.ID})
+			return err
+		}},
+		{"export settings", domain.PermRead, func(f matrixFixture, u domain.User) error {
+			_, err := f.exports.Settings(ctx, "d1", u.ID)
+			return err
+		}},
+		{"export history", domain.PermRead, func(f matrixFixture, u domain.User) error {
+			_, err := f.exports.List(ctx, "d1", u.ID)
 			return err
 		}},
 		{"transfer", domain.PermTransfer, func(f matrixFixture, u domain.User) error { return f.sharing.Transfer(ctx, u, "d1", "u5") }},

@@ -13,10 +13,13 @@ import (
 type Querier interface {
 	// Turns every pending invitation for the email in the tenant into a grant.
 	AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error)
+	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
+	ClaimExportJob(ctx context.Context) (ExportJob, error)
 	// Copies the document's tenant and title so the entry outlives the document.
 	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
+	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	// The tenant comes from the document; the composite FKs keep the user in it.
 	CreateGrant(ctx context.Context, arg CreateGrantParams) (DocumentGrant, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (TenantInvitation, error)
@@ -30,6 +33,8 @@ type Querier interface {
 	DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
+	// Under app.provisioning.
+	DeleteExportJob(ctx context.Context, id uuid.UUID) error
 	DeleteGrant(ctx context.Context, arg DeleteGrantParams) (int64, error)
 	DeleteInvitation(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteLog(ctx context.Context, arg DeleteLogParams) (int64, error)
@@ -39,12 +44,17 @@ type Querier interface {
 	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
 	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error)
 	// Tenant and document invitations compete; the oldest picks the tenant.
 	FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error)
+	// Only a running job: a reclaimed job's late finish or fail must not overwrite a newer outcome.
+	FinishExportJob(ctx context.Context, arg FinishExportJobParams) (int64, error)
 	// role is '' when the user neither owns nor has a grant on the document.
 	GetDocumentForUser(ctx context.Context, arg GetDocumentForUserParams) (GetDocumentForUserRow, error)
+	GetExportJob(ctx context.Context, arg GetExportJobParams) (ExportJob, error)
 	GetLog(ctx context.Context, arg GetLogParams) (Log, error)
 	GetMeta(ctx context.Context, key string) (string, error)
+	GetReportSettings(ctx context.Context, documentID uuid.UUID) (DocumentReportSetting, error)
 	GetTelegramLink(ctx context.Context, userID uuid.UUID) (TelegramLink, error)
 	GetTelegramLinkByTelegramID(ctx context.Context, telegramUserID int64) (TelegramLink, error)
 	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
@@ -57,6 +67,10 @@ type Querier interface {
 	// last_log_at falls back to d.created_at so the column is never NULL; it is
 	// meaningful only when log_count > 0. Examples are not counted.
 	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
+	// Under app.provisioning.
+	ListExpiredExportJobs(ctx context.Context) ([]ExportJob, error)
+	// The dialog's history: the caller's live jobs on the document.
+	ListExportJobs(ctx context.Context, arg ListExportJobsParams) ([]ExportJob, error)
 	ListGrants(ctx context.Context, documentID uuid.UUID) ([]ListGrantsRow, error)
 	ListInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]TenantInvitation, error)
 	ListLinksForLogs(ctx context.Context, ids []uuid.UUID) ([]LogLink, error)
@@ -78,6 +92,7 @@ type Querier interface {
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
 	UpdateGrantRole(ctx context.Context, arg UpdateGrantRoleParams) (int64, error)
 	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)
+	UpsertReportSettings(ctx context.Context, arg UpsertReportSettingsParams) error
 	UpsertTags(ctx context.Context, arg UpsertTagsParams) error
 	// Re-linking the same Telegram account keeps the target document.
 	UpsertTelegramLink(ctx context.Context, arg UpsertTelegramLinkParams) error

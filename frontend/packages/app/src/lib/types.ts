@@ -130,3 +130,21 @@ export type Dashboard = {
   impacts: Bucket[];
   coverage: Bucket[];
 };
+
+export type ExportStatus = "queued" | "running" | "done" | "failed";
+
+export type ExportJob = {
+  id: string;
+  status: ExportStatus;
+  progress: number;
+  error: string;
+  created_at: string;
+  expires_at: string;
+  downloadable: boolean;
+};
+
+export type ReportSettings = {
+  goals_this_year: string;
+  goals_next_year: string;
+  section_map: Record<string, string>;
+};

@@ -15,6 +15,7 @@ import {
   type Range,
 } from "../dashboard/periods";
 import { useDashboard } from "../dashboard/useDashboard";
+import { ExportButton } from "../exports/ExportButton";
 
 const monthLabel = (key: string) =>
   new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", {
@@ -130,6 +131,12 @@ export function Component() {
               />
             </>
           )}
+          {/* The active range, preset or custom: the report covers exactly what's shown. */}
+          <ExportButton
+            docId={id}
+            role={doc.data.role}
+            params={new URLSearchParams(range)}
+          />
         </div>
       </div>
 

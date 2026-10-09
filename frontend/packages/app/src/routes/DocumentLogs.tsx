@@ -16,6 +16,7 @@ import { DocumentTabs } from "../documents/DocumentTabs";
 import { useDocument } from "../documents/useDocuments";
 import { ApiError } from "../lib/api";
 import { SharePanel } from "../sharing/SharePanel";
+import { ExportButton } from "../exports/ExportButton";
 import { LogFormDialog } from "../logs/LogFormDialog";
 import { ActiveFilters, LogFilters } from "../logs/LogFilters";
 import { LogRow } from "../logs/LogRow";
@@ -161,6 +162,7 @@ export function Component() {
           ) : (
             <Button onClick={() => setEditing("new")}>New log</Button>
           )}
+          <ExportButton docId={doc.id} role={doc.role} params={params} />
           {doc.role === "owner" && (
             <Button variant="outline" onClick={() => setSharing(true)}>
               Share

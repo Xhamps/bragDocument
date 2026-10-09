@@ -59,3 +59,21 @@ func TestLoadRejectsNonPositiveLLMTimeout(t *testing.T) {
 	_, err := Load()
 	require.ErrorContains(t, err, "LLM_TIMEOUT must be positive")
 }
+
+func TestExportKeyBytes(t *testing.T) {
+	k, err := Config{ExportKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}.ExportKeyBytes()
+	require.NoError(t, err)
+	require.Len(t, k, 32)
+	for _, bad := range []string{"", "AAAA", "not base64!"} {
+		_, err := Config{ExportKey: bad}.ExportKeyBytes()
+		require.ErrorContains(t, err, "EXPORT_KEY", bad)
+	}
+}
+
+func TestLoadRejectsNonPositiveGotenbergTimeout(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://u:p@localhost:5432/db")
+	t.Setenv("GOTENBERG_TIMEOUT", "0s")
+
+	_, err := Load()
+	require.ErrorContains(t, err, "GOTENBERG_TIMEOUT must be positive")
+}

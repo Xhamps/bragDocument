@@ -130,6 +130,55 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { description: Not found, or no role on the document }
         "422": { description: Bad date, empty period, or longer than 5 years }
+  /documents/{id}/report-settings:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: The document's report goals and tag-to-section mapping, defaults before the first export (PRD-0006); read access
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ReportSettings" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Not found, or no role on the document" }
+  /documents/{id}/exports:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: The caller's export jobs for this document, newest first (the dialog's history); read access
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ExportList" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Not found, or no role on the document" }
+    post:
+      summary: Queue a PDF report of the logs matching the list's filters (PRD-0006); read access. Editors and owners also save the settings sent; a viewer's are used for this report only
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateExportRequest" } } }
+      responses:
+        "202": { description: "Queued; poll GET /documents/{id}/exports/{jobId}", content: { application/json: { schema: { $ref: "#/components/schemas/ExportJob" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Not found, or no role on the document" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { description: "Bad query (`fields` names the parameter), or `fields.filters` when no log or more than 2,000 logs match (FR-7)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /documents/{id}/exports/{jobId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: One of the caller's export jobs, with progress; read access
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ExportJob" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Not found, another user's job, or no role on the document" }
+  /documents/{id}/exports/{jobId}/file:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Download the PDF (attachment, Cache-Control no-store); read access is checked again
+      responses:
+        "200": { description: The report, content: { application/pdf: { schema: { type: string, format: binary } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Not found, not done yet, failed, or expired (24 h after completion)" }
   /documents/{id}/logs/{logId}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -468,6 +517,35 @@ components:
         statuses: { type: array, items: { $ref: "#/components/schemas/Bucket" } }
         impacts: { type: array, items: { $ref: "#/components/schemas/Bucket" } }
         coverage: { type: array, items: { $ref: "#/components/schemas/Bucket" }, description: "The article's suggested tags, zeros included" }
+    ReportSettings:
+      type: object
+      required: [goals_this_year, goals_next_year, section_map]
+      properties:
+        goals_this_year: { type: string }
+        goals_next_year: { type: string }
+        section_map: { type: object, additionalProperties: { type: string }, description: "Tag to report section heading; untagged or unmapped logs go to Other" }
+    CreateExportRequest:
+      allOf:
+        - $ref: "#/components/schemas/ReportSettings"
+        - type: object
+          properties:
+            query: { type: string, description: "The logs list's URL query string, verbatim (FR-1), e.g. impact=high&from=2026-01-01; same parameters as GET /documents/{id}/logs, page and per_page ignored" }
+    ExportJob:
+      type: object
+      required: [id, status, progress, error, created_at, expires_at, downloadable]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [queued, running, done, failed] }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        error: { type: string, description: "User-facing reason when failed; empty otherwise" }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time, description: "When the job and its file are deleted (24 h)" }
+        downloadable: { type: boolean, description: "done and not expired; GET .../file serves it" }
+    ExportList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ExportJob" } }
     CreateLog:
       type: object
       required: [name, impact]

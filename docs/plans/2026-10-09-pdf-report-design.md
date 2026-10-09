@@ -12,7 +12,7 @@ Date: 2026-10-09. Status: approved. Implements [PRD-0006](../prd/0006-pdf-report
 | Multi-tag logs | A log appears once, in its first matching section in template order. Section counts add up to the summary. |
 | Tag→section mapping | Saved per document with the goals; the dialog prefills from it, falling back to the default mapping. |
 | Encryption at rest | App-level AES-GCM with `EXPORT_KEY` (32 bytes) for any storage backend (NFR-2). |
-| Accessibility | Gotenberg `pdfua=true` (NFR-3). |
+| Accessibility | Gotenberg `generateDocumentOutline=true`, which implies a tagged PDF (NFR-3). |
 
 ## 1. Backend
 

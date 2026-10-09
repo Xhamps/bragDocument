@@ -17,6 +17,7 @@ import { useDocument } from "../documents/useDocuments";
 import { ApiError } from "../lib/api";
 import { SharePanel } from "../sharing/SharePanel";
 import { Activity } from "../audit/Activity";
+import { useMe } from "../auth/useMe";
 import { ExportButton } from "../exports/ExportButton";
 import { LogFormDialog } from "../logs/LogFormDialog";
 import { ActiveFilters, LogFilters } from "../logs/LogFilters";
@@ -37,6 +38,7 @@ export function Component() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const docQuery = useDocument(id);
+  const { data: me } = useMe();
   const [sharing, setSharing] = useState(false);
   // The bot's deep link (PRD-0003 FR-6): `edit` is a UI param, not a filter.
   const editId = params.get("edit");
@@ -323,7 +325,10 @@ export function Component() {
         </DialogContent>
       </Dialog>
 
-      {doc.role === "owner" && <Activity docId={doc.id} />}
+      {/* Owners, and tenant admins who can open the page (FR-11). */}
+      {(doc.role === "owner" || me?.role === "admin") && (
+        <Activity docId={doc.id} />
+      )}
 
       <SharePanel doc={doc} open={sharing} onOpenChange={setSharing} />
     </div>

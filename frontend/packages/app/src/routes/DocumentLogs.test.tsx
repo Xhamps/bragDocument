@@ -322,10 +322,13 @@ test("owner sees Activity with a View all link", async () => {
   );
 });
 
+const editorDoc = doc({ role: "editor", owner_id: "u2", owner_name: "Bob" });
+
 test("editor does not see Activity", async () => {
-  const calls = mockFetch(
-    routes([log()], doc({ role: "editor", owner_id: "u2", owner_name: "Bob" })),
-  );
+  const calls = mockFetch({
+    ...routes([log()], editorDoc),
+    "GET /me": { ...me, role: "member" },
+  });
   renderAt("/documents/d1");
   await screen.findByText("Moved billing jobs");
   expect(
@@ -349,5 +352,14 @@ test("Activity refetches after a log edit", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Actions" }));
   await userEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
   await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
+});
+
+test("a tenant admin with an editor grant sees Activity", async () => {
+  mockFetch({
+    ...routes([log()], editorDoc),
+    "GET /documents/d1/audit": { entries: [edited], next_before: null },
+  });
+  renderAt("/documents/d1");
   expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
 });

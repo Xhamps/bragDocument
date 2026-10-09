@@ -28,11 +28,8 @@ export function useAudit(filters: AuditQuery) {
 }
 
 /** The document page's Activity section: the latest few. */
-export function useDocumentActivity(docId: string, enabled: boolean) {
-  return useInfiniteQuery({
-    ...pages(`/documents/${docId}/audit`, {}, 10),
-    enabled,
-  });
+export function useDocumentActivity(docId: string) {
+  return useInfiniteQuery(pages(`/documents/${docId}/audit`, {}, 10));
 }
 
 export function useAuditFilters() {

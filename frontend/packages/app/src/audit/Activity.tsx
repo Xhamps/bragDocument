@@ -7,7 +7,7 @@ import { When } from "./When";
 
 /** The document page's Activity (FR-11): owners only; "View all" opens the Audit log filtered. */
 export function Activity({ docId }: { docId: string }) {
-  const q = useDocumentActivity(docId, true);
+  const q = useDocumentActivity(docId);
   const entries = q.data?.pages[0]?.entries ?? [];
   return (
     <section className="flex flex-col gap-2">

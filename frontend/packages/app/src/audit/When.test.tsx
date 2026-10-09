@@ -9,6 +9,8 @@ const ago = (s: number) => new Date(NOW - s * 1000).toISOString();
 const fmt = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 test.each([
+  [-120, fmt.format(-0, "minute")],
+  [20, fmt.format(-0, "minute")],
   [3540, fmt.format(-59, "minute")],
   [3570, fmt.format(-1, "hour")],
   [84500, fmt.format(-23, "hour")],

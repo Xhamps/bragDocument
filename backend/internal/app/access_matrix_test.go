@@ -36,7 +36,7 @@ func newMatrixFixture(t *testing.T, role domain.Role) matrixFixture {
 	fl := newFakeLogs()
 	l, err := fl.Create(context.Background(), domain.Log{DocumentID: "d1", Name: "x", Impact: "low", Status: domain.StatusDone})
 	require.NoError(t, err)
-	return matrixFixture{docs: NewDocuments(fd), logs: NewLogs(fd, fl, &fakeImpact{}),
+	return matrixFixture{docs: NewDocuments(fd), logs: NewLogs(fd, fl, &fakeImpact{}, newFakeCache()),
 		sharing: NewSharing(fd, repo, &fakeMailer{}, ""), logID: l.ID, invID: inv.ID}
 }
 
@@ -64,6 +64,10 @@ func TestAccessMatrix(t *testing.T) {
 		}},
 		{"delete log", domain.PermWriteLogs, func(f matrixFixture, u domain.User) error { return f.logs.Delete(ctx, "d1", f.logID, u.ID) }},
 		{"delete examples", domain.PermWriteLogs, func(f matrixFixture, u domain.User) error { return f.logs.DeleteExamples(ctx, "d1", u.ID) }},
+		{"dashboard", domain.PermRead, func(f matrixFixture, u domain.User) error {
+			_, err := f.logs.Dashboard(ctx, "d1", u.ID, nil, nil)
+			return err
+		}},
 		{"rename", domain.PermManage, func(f matrixFixture, u domain.User) error {
 			_, err := f.docs.Update(ctx, UpdateDocumentInput{ID: "d1", UserID: u.ID, Title: &name})
 			return err

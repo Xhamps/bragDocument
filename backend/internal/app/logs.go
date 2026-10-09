@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -17,12 +18,27 @@ type Logs struct {
 	docs   ports.DocumentRepo
 	logs   ports.LogRepo
 	impact ports.ImpactExtractor
+	cache  ports.Cache
 	now    func() time.Time
 }
 
 // NewLogs wires the use cases.
-func NewLogs(docs ports.DocumentRepo, logs ports.LogRepo, impact ports.ImpactExtractor) *Logs {
-	return &Logs{docs: docs, logs: logs, impact: impact, now: time.Now}
+func NewLogs(docs ports.DocumentRepo, logs ports.LogRepo, impact ports.ImpactExtractor, cache ports.Cache) *Logs {
+	return &Logs{docs: docs, logs: logs, impact: impact, cache: cache, now: time.Now}
+}
+
+const (
+	dashboardTTL  = 60 * time.Second // PRD-0005 NFR-1, ADR-0006
+	docVersionTTL = 24 * time.Hour   // outlives every entry keyed on it
+)
+
+func docVersionKey(docID string) string { return "doc:" + docID + ":v" }
+
+// touch invalidates the document's cached aggregates (ADR-0006): a fresh
+// version makes every older entry unreachable. The cache is Degrading, so a
+// failed write costs at most one TTL of staleness, never the request.
+func (s *Logs) touch(ctx context.Context, docID string) {
+	_ = s.cache.Set(ctx, docVersionKey(docID), []byte(rand.Text()), docVersionTTL)
 }
 
 // writable checks PermWriteLogs plus the archive rule: archived documents are read-only.

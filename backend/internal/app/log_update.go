@@ -64,5 +64,9 @@ func (s *Logs) Update(ctx context.Context, in UpdateLogInput) (domain.Log, error
 	if l.Name != oldName || l.Description != oldDesc {
 		l.ImpactStatement = s.extract(ctx, l)
 	}
-	return s.logs.Update(ctx, l)
+	out, err := s.logs.Update(ctx, l)
+	if err == nil {
+		s.touch(ctx, in.DocumentID)
+	}
+	return out, err
 }

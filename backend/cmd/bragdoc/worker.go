@@ -77,7 +77,10 @@ func runWorker(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	host, _ := os.Hostname()
+	host, err := os.Hostname()
+	if err != nil || host == "" {
+		host = "worker" // a consumer name is required
+	}
 	var g errgroup.Group
 	g.Go(func() error { runOutbox(ctx, db, redis.NewStream(rc, "bragdoc", host)); return nil })
 	slog.InfoContext(ctx, "worker started")

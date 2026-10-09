@@ -81,3 +81,4 @@ The article's central advice is to state the impact, not the activity. A separat
 |---|---|---|
 | 2026-10-08 | Synchronous on save, not async | The warning must appear while the user is still in the form |
 | 2026-10-08 | OpenAI ([ADR-0013](../adr/0013-openai-for-impact-extraction.md)) | Team choice |
+| 2026-10-09 | The bot asks too: inline buttons to add to or replace the description (PRD-0003 FR-11) | FR-4's warning, for logs written in Telegram |

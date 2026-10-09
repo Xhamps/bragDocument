@@ -53,6 +53,7 @@ The article's main advice is to record things as they happen. The moment of "I j
 | FR-8 | `/undo` SHOULD delete the last log created via the bot within 5 minutes. | Should |
 | FR-9 | Messages from unlinked accounts MUST receive only instructions on how to link; nothing is stored. | Must |
 | FR-10 | Logs created via the bot MUST respect the user's role on the target document; if the user lost write access, the bot MUST say so. | Must |
+| FR-11 | When a created log states no impact (PRD-0007), the reply MUST offer "Add to description" and "Replace description"; after a tap, the user's next message updates the description and the impact is re-extracted. Valid for 5 minutes. | Must |
 
 ## 8. Non-functional requirements
 
@@ -87,3 +88,4 @@ The article's main advice is to record things as they happen. The moment of "I j
 | 2026-10-08 | One-shot messages with inline markers; no follow-up questions, `/edit` later | Lowest capture cost, matches the "write it down now" goal |
 | 2026-10-08 | Link codes and the `/undo` pointer live in Redis; linking needs Redis ([ADR-0009](../adr/0009-telegram-bot-integration.md)) | Short-lived state with TTLs; no table for throwaway data |
 | 2026-10-08 | The bot caps impact extraction at 2 s | Keeps replies within NFR-1 |
+| 2026-10-09 | No-impact follow-up via inline buttons, then the next message | Keeps plain messages as new logs unless the user explicitly chose to answer |

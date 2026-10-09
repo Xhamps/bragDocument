@@ -34,7 +34,7 @@ func TestSharing(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	users, docs, sharing, tenants := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db)
+	users, docs, sharing, tenants, logs := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db), NewLogRepo(db)
 	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
 	zed, tb := provisionTenant(t, users, "B", "zed@example.com")
 	bob := addMember(t, users, ta, "bob@example.com")
@@ -199,15 +199,23 @@ func TestSharing(t *testing.T) {
 	})
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
-	// Removing a member cascades their grants.
+	// Removing a member cascades their grants; logs they wrote in others' documents stay.
 	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil)
 	require.NoError(t, err)
-	require.NoError(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc2.ID, UserID: bob.ID, Role: domain.RoleViewer, GrantedBy: ada.ID},
-		domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleViewer}))
+	require.NoError(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc2.ID, UserID: bob.ID, Role: domain.RoleEditor, GrantedBy: ada.ID},
+		domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))
+	l := domain.Log{TenantID: ta.ID, DocumentID: doc2.ID, Name: "Shipped", Impact: "high", Status: "done",
+		CreatedAt: time.Now().UTC(), CreatedBy: bob.ID, UpdatedBy: bob.ID}
+	require.NoError(t, l.Validate())
+	_, err = logs.Create(ctxA, l)
+	require.NoError(t, err)
 	require.NoError(t, tenants.DeleteMember(ctxA, bob.ID))
 	sh, err = sharing.Get(ctxA, doc2.ID)
 	require.NoError(t, err)
 	require.Empty(t, sh.Grants)
+	page, err := logs.List(ctxA, doc2.ID, domain.LogFilter{Sort: "created_at", Desc: true, Page: 1, PerPage: 50})
+	require.NoError(t, err)
+	require.Equal(t, 1, page.Total)
 }
 
 func actions(es []domain.AuditEntry) []string {

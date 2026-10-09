@@ -76,3 +76,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON document_grants, document_invitations TO
 -- The default privilege from 0002 granted all four; take back the rewrite rights.
 REVOKE UPDATE, DELETE ON audit_entries FROM bragdoc_app;
 GRANT SELECT, INSERT ON audit_entries TO bragdoc_app;
+
+-- created_by/updated_by are provenance, like granted_by: they outlive the user now that editors write into others' documents.
+ALTER TABLE logs DROP CONSTRAINT logs_created_by_fkey;
+ALTER TABLE logs DROP CONSTRAINT logs_updated_by_fkey;

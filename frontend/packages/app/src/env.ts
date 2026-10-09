@@ -7,5 +7,5 @@ function required(name: keyof ImportMetaEnv): string {
 export const env = {
   apiUrl: required("VITE_API_URL"),
   supabaseUrl: required("VITE_SUPABASE_URL"),
-  supabaseAnonKey: required("VITE_SUPABASE_ANON_KEY"),
+  supabasePublishableKey: required("VITE_SUPABASE_PUBLISHABLE_KEY"),
 };

@@ -13,7 +13,7 @@ export default defineConfig({
     env: {
       VITE_API_URL: "http://api.test",
       VITE_SUPABASE_URL: "http://supabase.test",
-      VITE_SUPABASE_ANON_KEY: "anon",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
     },
   },
 });

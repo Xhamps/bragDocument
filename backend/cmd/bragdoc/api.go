@@ -72,7 +72,7 @@ func apiCmd() *cobra.Command {
 			} else {
 				impact = llm.NewOpenAIExtractor(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.LLMTimeout, reg)
 			}
-			_ = redis.NewDegrading(rc, reg) // ponytail: wired now so the counter exists; use cases take it in the next pass
+			cache := redis.NewDegrading(rc, reg)
 
 			engine := httpadapter.NewEngine(reg)
 			httpadapter.RegisterHealth(engine, []httpadapter.Check{
@@ -83,7 +83,11 @@ func apiCmd() *cobra.Command {
 			httpadapter.RegisterMe(authed)
 			docRepo := postgres.NewDocumentRepo(db)
 			httpadapter.RegisterDocuments(authed, app.NewDocuments(docRepo))
-			httpadapter.RegisterLogs(authed, app.NewLogs(docRepo, postgres.NewLogRepo(db), impact))
+			logs := app.NewLogs(docRepo, postgres.NewLogRepo(db), impact)
+			httpadapter.RegisterLogs(authed, logs)
+			// codes: raw rc so a Redis outage surfaces as 503; undo: Degrading (a miss is harmless).
+			tgUC := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docRepo, logs, rc, cache, cfg.AppURL, telemetry.WithTenantID)
+			httpadapter.RegisterTelegram(authed, tgUC, cfg.TelegramBotUsername)
 			httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
 
 			srv := &http.Server{

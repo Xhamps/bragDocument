@@ -19,6 +19,15 @@ func TestLoadDefaults(t *testing.T) {
 	require.Equal(t, 15*time.Second, cfg.ShutdownTimeout)
 }
 
+func TestLoadTrimsAppURL(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://u:p@localhost:5432/db")
+	t.Setenv("APP_URL", "https://brag.example.com/")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.Equal(t, "https://brag.example.com", cfg.AppURL)
+}
+
 func TestLoadRequiresDatabaseURL(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 

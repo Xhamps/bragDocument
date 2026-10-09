@@ -22,7 +22,7 @@ func main() {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(apiCmd(), migrateCmd(), daemonCmd("bot"), daemonCmd("worker"))
+	root.AddCommand(apiCmd(), migrateCmd(), botCmd(), daemonCmd("worker"))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	// A second SIGINT/SIGTERM during shutdown terminates the process with Go's default handling instead of being swallowed.

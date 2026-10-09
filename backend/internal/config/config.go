@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -22,8 +23,10 @@ type Config struct {
 	RedisURL         string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
 	GotenbergURL     string `env:"GOTENBERG_URL" envDefault:"http://localhost:3000"`
 
-	TelegramToken string `env:"TELEGRAM_BOT_TOKEN"`
-	TelegramMode  string `env:"TELEGRAM_MODE" envDefault:"polling"`
+	TelegramToken       string `env:"TELEGRAM_BOT_TOKEN"`
+	TelegramMode        string `env:"TELEGRAM_MODE" envDefault:"polling"`
+	TelegramBotUsername string `env:"TELEGRAM_BOT_USERNAME"`                      // for the t.me link in Settings; optional
+	AppURL              string `env:"APP_URL" envDefault:"http://localhost:5173"` // bot deep links; "" disables them
 
 	OpenAIAPIKey string        `env:"OPENAI_API_KEY"` // empty: impact extraction disabled (PRD-0007)
 	OpenAIModel  string        `env:"OPENAI_MODEL" envDefault:"gpt-4.1-mini"`
@@ -46,6 +49,7 @@ func Load() (Config, error) {
 	if c.LLMTimeout <= 0 {
 		return Config{}, fmt.Errorf("config: LLM_TIMEOUT must be positive, got %s", c.LLMTimeout)
 	}
+	c.AppURL = strings.TrimRight(c.AppURL, "/")
 	if c.DatabaseOwnerURL == "" {
 		c.DatabaseOwnerURL = c.DatabaseURL
 	}

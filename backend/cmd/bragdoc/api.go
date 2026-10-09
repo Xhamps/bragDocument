@@ -91,6 +91,7 @@ func runAPI(ctx context.Context, cfg config.Config) error {
 	cache := redis.NewDegrading(rc, reg)
 
 	engine := httpadapter.NewEngine(reg)
+	engine.Use(httpadapter.CORS(strings.TrimRight(cfg.AppURL, "/")))
 	httpadapter.RegisterHealth(engine, []httpadapter.Check{
 		{Name: "postgres", Required: true, Ping: db.Ping},
 		{Name: "cache", Ping: rc.Ping},

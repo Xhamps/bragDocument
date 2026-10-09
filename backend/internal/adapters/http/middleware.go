@@ -68,3 +68,26 @@ func Recovery() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// CORS lets the web app at origin (APP_URL) call the api cross-origin and
+// answers preflights with 204. An empty origin disables it.
+func CORS(origin string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if origin == "" || c.GetHeader("Origin") != origin {
+			c.Next()
+			return
+		}
+		h := c.Writer.Header()
+		h.Set("Access-Control-Allow-Origin", origin)
+		h.Add("Vary", "Origin")
+		h.Set("Access-Control-Expose-Headers", HeaderRequestID+", Content-Disposition")
+		if c.Request.Method == http.MethodOptions {
+			h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
+			h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, "+HeaderRequestID)
+			h.Set("Access-Control-Max-Age", "600")
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}

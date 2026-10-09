@@ -19,6 +19,9 @@ type LogRepo interface {
 	DeleteExamples(ctx context.Context, documentID string) error
 	// ListTags returns the tenant's tag vocabulary, sorted.
 	ListTags(ctx context.Context) ([]string, error)
+	// Dashboard returns sparse aggregates of the document's non-example logs
+	// for p; the caller runs Normalize.
+	Dashboard(ctx context.Context, documentID string, p domain.Period) (domain.Dashboard, error)
 }
 
 // ImpactExtractor finds the impact stated in a log's text (PRD-0007).

@@ -68,3 +68,14 @@ func TestNormalizeEmpty(t *testing.T) {
 	require.NotNil(t, d.Tags)
 	require.Empty(t, d.Tags)
 }
+
+func TestNormalizeCoverageCountsCutTags(t *testing.T) {
+	d := Dashboard{From: day(2026, 3, 1), To: day(2026, 4, 1), Tags: []Bucket{{"project", 1}}}
+	for _, k := range []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"} {
+		d.Tags = append(d.Tags, Bucket{k, 2})
+	}
+	d.Normalize()
+	require.Len(t, d.Tags, 10)
+	require.NotContains(t, d.Tags, Bucket{"project", 1}, "ranked 11th, cut from the top tags")
+	require.Equal(t, Bucket{"project", 1}, d.Coverage[0], "still counted in coverage")
+}

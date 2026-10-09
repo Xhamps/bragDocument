@@ -234,10 +234,11 @@ func (f *fakeTenants) DeleteInvitation(_ context.Context, id string) error {
 }
 
 type fakeLogs struct {
-	logs     map[string]domain.Log
-	filter   domain.LogFilter
-	examples int // DeleteExamples calls
-	seq      int
+	logs      map[string]domain.Log
+	filter    domain.LogFilter
+	examples  int // DeleteExamples calls
+	seq       int
+	dashCalls int
 }
 
 func newFakeLogs() *fakeLogs { return &fakeLogs{logs: map[string]domain.Log{}} }
@@ -289,6 +290,16 @@ func (f *fakeLogs) Delete(ctx context.Context, documentID, id string) error {
 }
 func (f *fakeLogs) DeleteExamples(context.Context, string) error { f.examples++; return nil }
 func (f *fakeLogs) ListTags(context.Context) ([]string, error)   { return []string{"project"}, nil }
+func (f *fakeLogs) Dashboard(_ context.Context, documentID string, p domain.Period) (domain.Dashboard, error) {
+	f.dashCalls++
+	d := domain.Dashboard{From: p.From, To: p.To}
+	for _, l := range f.logs {
+		if l.DocumentID == documentID && !l.IsExample {
+			d.Total++
+		}
+	}
+	return d, nil
+}
 
 type fakeImpact struct {
 	statement string

@@ -66,7 +66,7 @@ func (s *ReportSettings) Validate() error {
 	m := make(map[string]string, len(s.SectionMap))
 	for tag, sec := range s.SectionMap {
 		if !slices.Contains(ReportSections, sec) {
-			fields["section_map"] = "unknown section " + fmt.Sprintf("%q", sec)
+			fields["section_map"] = fmt.Sprintf("unknown section %q", sec)
 			continue
 		}
 		if tag = strings.ToLower(strings.TrimSpace(tag)); tag != "" && sec != SectionOther {
@@ -112,7 +112,7 @@ func (j ExportJob) Downloadable(now time.Time) bool {
 	return j.Status == ExportDone && now.Before(j.ExpiresAt)
 }
 
-// ReportSection is one heading of the report and its logs, oldest first.
+// ReportSection is one heading of the report and its logs in input order (the worker passes them oldest first).
 type ReportSection struct {
 	Name string
 	Logs []Log
@@ -154,8 +154,8 @@ func NewReport(logs []Log, s ReportSettings) Report {
 	for _, l := range logs {
 		best := len(ReportSections) - 1 // Other
 		for _, t := range l.Tags {
-			if sec, ok := s.SectionMap[t]; ok && rank[sec] < best {
-				best = rank[sec]
+			if i, ok := rank[s.SectionMap[t]]; ok && i < best {
+				best = i
 			}
 		}
 		buckets[best] = append(buckets[best], l)

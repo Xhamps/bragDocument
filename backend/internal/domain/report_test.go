@@ -3,6 +3,7 @@ package domain
 import (
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,6 +50,9 @@ func TestNewReportCustomMapReplacesDefault(t *testing.T) {
 	require.Equal(t, []string{"b"}, names(r.Sections[0]))
 	require.Equal(t, "Other", r.Sections[1].Name)
 	require.Equal(t, []string{"a"}, names(r.Sections[1]))
+
+	r = NewReport(logs[:1], ReportSettings{SectionMap: map[string]string{"project": "Nope"}})
+	require.Equal(t, "Other", r.Sections[0].Name, "unknown section falls back to Other")
 }
 
 func TestReportSettingsValidate(t *testing.T) {
@@ -61,6 +65,9 @@ func TestReportSettingsValidate(t *testing.T) {
 	require.ErrorAs(t, bad.Validate(), &ve)
 	require.Contains(t, ve.Fields, "section_map")
 	require.Contains(t, ve.Fields, "goals_next_year")
+
+	runes := ReportSettings{GoalsThisYear: strings.Repeat("é", maxGoalsLen)}
+	require.NoError(t, runes.Validate(), "limit counts runes, not bytes")
 
 	empty := ReportSettings{}
 	require.NoError(t, empty.Validate())

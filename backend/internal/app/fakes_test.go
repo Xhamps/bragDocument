@@ -600,7 +600,10 @@ func (f *fakeRenderer) Render(_ context.Context, r domain.Report) ([]byte, error
 	return []byte("%PDF"), f.err
 }
 
-type fakeFiles struct{ files map[string][]byte }
+type fakeFiles struct {
+	files     map[string][]byte
+	deleteErr map[string]error // per key
+}
 
 func newFakeFiles() *fakeFiles                                       { return &fakeFiles{files: map[string][]byte{}} }
 func (f *fakeFiles) Put(_ context.Context, k string, b []byte) error { f.files[k] = b; return nil }
@@ -611,4 +614,10 @@ func (f *fakeFiles) Get(_ context.Context, k string) ([]byte, error) {
 	}
 	return b, nil
 }
-func (f *fakeFiles) Delete(_ context.Context, k string) error { delete(f.files, k); return nil }
+func (f *fakeFiles) Delete(_ context.Context, k string) error {
+	if err := f.deleteErr[k]; err != nil {
+		return err
+	}
+	delete(f.files, k)
+	return nil
+}

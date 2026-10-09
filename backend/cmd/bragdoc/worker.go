@@ -42,6 +42,11 @@ func workerCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cfg.ExportKey == "" {
+				slog.WarnContext(ctx, "EXPORT_KEY not set; worker idle")
+				<-ctx.Done()
+				return nil
+			}
 			db, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.DBTimeout)
 			if err != nil {
 				return err

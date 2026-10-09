@@ -63,6 +63,12 @@ func TestCreateExportParsesFiltersAndSettings(t *testing.T) {
 
 	rec = do(exportsEngine(t, uc), http.MethodPost, "/documents/d1/exports", `{"query":"from=nope"}`)
 	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	rec = do(exportsEngine(t, uc), http.MethodPost, "/documents/d1/exports", `{"query":"%zz"}`)
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+
+	rec = do(exportsEngine(t, uc), http.MethodPost, "/documents/d1/exports", `{"query":"?impact=low"}`)
+	require.Equal(t, http.StatusAccepted, rec.Code)
+	require.Equal(t, []string{"low"}, uc.created.Filter.Impacts, "leading ? from location.search")
 }
 
 func TestExportFileServesPDF(t *testing.T) {
@@ -72,6 +78,7 @@ func TestExportFileServesPDF(t *testing.T) {
 	require.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
 	require.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
 	require.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+	require.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"))
 	require.Equal(t, "%PDF-1.7", rec.Body.String())
 
 	uc.err = domain.ErrNotFound

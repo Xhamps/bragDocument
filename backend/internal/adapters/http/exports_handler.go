@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,7 +72,7 @@ func RegisterExports(r gin.IRouter, uc ExportUseCases) {
 		if !bindJSON(c, &req) {
 			return
 		}
-		q, err := url.ParseQuery(req.Query)
+		q, err := url.ParseQuery(strings.TrimPrefix(req.Query, "?"))
 		if err != nil {
 			RespondError(c, domain.NewValidationError(map[string]string{"query": "must be a URL query string"}))
 			return
@@ -119,6 +120,7 @@ func RegisterExports(r gin.IRouter, uc ExportUseCases) {
 		}
 		c.Header("Content-Disposition", `attachment; filename="brag-report.pdf"`)
 		c.Header("Cache-Control", "no-store")
+		c.Header("X-Content-Type-Options", "nosniff")
 		c.Data(http.StatusOK, "application/pdf", pdf)
 	})
 }

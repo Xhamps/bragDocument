@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -242,4 +243,20 @@ func TestExportRunNextShutdownLeavesJobRunning(t *testing.T) {
 	require.True(t, ran)
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, domain.ExportRunning, f.jobs.jobs[j.ID].Status, "reclaimed later, not failed")
+}
+
+func TestExportCleanupContinuesPastFileDeleteError(t *testing.T) {
+	f := newExportsFixture(t)
+	past := time.Now().Add(-time.Second)
+	for _, id := range []string{"j1", "j2"} {
+		f.jobs.jobs[id] = domain.ExportJob{ID: id, Status: domain.ExportDone, FileKey: "t1/" + id + ".pdf", ExpiresAt: past}
+		f.jobs.order = append(f.jobs.order, id)
+		f.files.files["t1/"+id+".pdf"] = []byte("x")
+	}
+	f.files.deleteErr = map[string]error{"t1/j1.pdf": errors.New("disk")}
+
+	require.NoError(t, f.uc.Cleanup(context.Background()))
+	require.Contains(t, f.jobs.jobs, "j1", "row kept so the next tick retries")
+	require.NotContains(t, f.jobs.jobs, "j2", "a failing job does not block the next")
+	require.NotContains(t, f.files.files, "t1/j2.pdf")
 }

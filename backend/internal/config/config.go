@@ -27,7 +27,7 @@ type Config struct {
 
 	GotenbergTimeout time.Duration `env:"GOTENBERG_TIMEOUT" envDefault:"60s"`
 	ExportDir        string        `env:"EXPORT_DIR" envDefault:"data/exports"`
-	ExportKey        string        `env:"EXPORT_KEY"` // base64 of 32 bytes; required by api and worker (PRD-0006 NFR-2)
+	ExportKey        string        `env:"EXPORT_KEY"` // base64 of 32 bytes (PRD-0006 NFR-2); empty: PDF export disabled
 
 	TelegramToken       string `env:"TELEGRAM_BOT_TOKEN"`
 	TelegramMode        string `env:"TELEGRAM_MODE" envDefault:"polling"`
@@ -58,6 +58,9 @@ func Load() (Config, error) {
 	}
 	if c.LLMTimeout <= 0 {
 		return Config{}, fmt.Errorf("config: LLM_TIMEOUT must be positive, got %s", c.LLMTimeout)
+	}
+	if c.GotenbergTimeout <= 0 {
+		return Config{}, fmt.Errorf("config: GOTENBERG_TIMEOUT must be positive, got %s", c.GotenbergTimeout)
 	}
 	c.AppURL = strings.TrimRight(c.AppURL, "/")
 	if c.DatabaseOwnerURL == "" {

@@ -102,6 +102,7 @@ func failReason(err error) string {
 
 // Cleanup deletes expired jobs and their files (FR-5, NFR-2). The file goes
 // first: a crash in between leaves a row the next tick retries, never an orphan file.
+// A failing job is logged and skipped so it cannot block the others.
 func (s *Exports) Cleanup(ctx context.Context) error {
 	jobs, err := s.jobs.Expired(ctx)
 	if err != nil {
@@ -110,11 +111,12 @@ func (s *Exports) Cleanup(ctx context.Context) error {
 	for _, j := range jobs {
 		if j.FileKey != "" {
 			if err := s.files.Delete(ctx, j.FileKey); err != nil {
-				return err
+				slog.WarnContext(ctx, "export cleanup: delete file", slog.String("job_id", j.ID), slog.Any("err", err))
+				continue // keep the row so the next tick retries the file
 			}
 		}
 		if err := s.jobs.Delete(ctx, j.ID); err != nil {
-			return err
+			slog.WarnContext(ctx, "export cleanup: delete job", slog.String("job_id", j.ID), slog.Any("err", err))
 		}
 	}
 	return nil

@@ -69,3 +69,11 @@ func TestExportKeyBytes(t *testing.T) {
 		require.ErrorContains(t, err, "EXPORT_KEY", bad)
 	}
 }
+
+func TestLoadRejectsNonPositiveGotenbergTimeout(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://u:p@localhost:5432/db")
+	t.Setenv("GOTENBERG_TIMEOUT", "0s")
+
+	_, err := Load()
+	require.ErrorContains(t, err, "GOTENBERG_TIMEOUT must be positive")
+}

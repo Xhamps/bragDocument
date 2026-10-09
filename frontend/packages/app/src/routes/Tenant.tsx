@@ -179,6 +179,9 @@ export function Component() {
           </p>
         ) : (
           <ul className="divide-y rounded-xl ring-1 ring-foreground/10">
+            {audit.isPending && (
+              <li className="p-3 text-sm text-muted-foreground">Loading…</li>
+            )}
             {audit.data?.length === 0 && (
               <li className="p-3 text-sm text-muted-foreground">
                 No sharing changes yet.
@@ -186,7 +189,7 @@ export function Component() {
             )}
             {audit.data?.map((a) => (
               <li key={a.id} className="p-3 text-sm">
-                <time className="text-muted-foreground">
+                <time dateTime={a.at} className="text-muted-foreground">
                   {new Date(a.at).toLocaleString()}
                 </time>{" "}
                 {describeAudit(a)}

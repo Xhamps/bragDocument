@@ -1,6 +1,8 @@
 -- PRD-0006 export jobs and per-document report settings. RLS per ADR-0007.
 -- The worker claims and expires jobs before it knows the tenant, under
--- app.provisioning (ADR-0010); the rows hold no secrets beyond their params.
+-- app.provisioning (ADR-0010); the rows hold no credentials. WITH CHECK opens
+-- under provisioning too, because Claim's UPDATE re-checks the new row, where
+-- app_tenant_id() is NULL.
 -- No FK to documents: a deleted document's jobs fail on access and expire
 -- with their files, so no file is ever orphaned.
 CREATE TABLE export_jobs (

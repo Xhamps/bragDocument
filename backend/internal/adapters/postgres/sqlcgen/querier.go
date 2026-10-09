@@ -44,10 +44,11 @@ type Querier interface {
 	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
 	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
-	FailExportJob(ctx context.Context, arg FailExportJobParams) error
+	FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error)
 	// Tenant and document invitations compete; the oldest picks the tenant.
 	FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error)
-	FinishExportJob(ctx context.Context, arg FinishExportJobParams) error
+	// Only a running job: a reclaimed job's late finish or fail must not overwrite a newer outcome.
+	FinishExportJob(ctx context.Context, arg FinishExportJobParams) (int64, error)
 	// role is '' when the user neither owns nor has a grant on the document.
 	GetDocumentForUser(ctx context.Context, arg GetDocumentForUserParams) (GetDocumentForUserRow, error)
 	GetExportJob(ctx context.Context, arg GetExportJobParams) (ExportJob, error)

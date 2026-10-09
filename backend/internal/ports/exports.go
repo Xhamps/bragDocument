@@ -15,6 +15,8 @@ type ExportRepo interface {
 	List(ctx context.Context, documentID, userID string) ([]domain.ExportJob, error)
 	// Claim marks the oldest runnable job running, across tenants. domain.ErrNotFound: queue empty.
 	Claim(ctx context.Context) (domain.ExportJob, error)
+	// Finish and Fail settle a running job only; otherwise domain.ErrNotFound
+	// (reclaimed or already settled), so a late outcome never overwrites a newer one.
 	Finish(ctx context.Context, id, fileKey string) error
 	Fail(ctx context.Context, id, reason string) error
 	// Expired and Delete look across tenants (worker cleanup).

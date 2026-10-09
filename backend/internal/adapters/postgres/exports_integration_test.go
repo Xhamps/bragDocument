@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -79,23 +80,56 @@ func TestExports(t *testing.T) {
 	require.Equal(t, 1, ok)
 	require.Equal(t, 1, empty)
 
+	// A running job whose worker died 6 minutes ago is claimed again.
+	owner, err := Connect(context.Background(), ownerURL, 5*time.Second)
+	require.NoError(t, err)
+	defer owner.Close()
+	_, err = owner.Pool.Exec(context.Background(), "UPDATE export_jobs SET started_at = now() - interval '6 minutes'")
+	require.NoError(t, err)
+	re, err := exports.Claim(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, j.ID, re.ID)
+
 	require.NoError(t, exports.Finish(ctx, j.ID, ta.ID+"/"+j.ID+".pdf"))
 	done, err := exports.Get(ctx, doc.ID, j.ID)
 	require.NoError(t, err)
 	require.Equal(t, domain.ExportDone, done.Status)
 	require.Equal(t, ta.ID+"/"+j.ID+".pdf", done.FileKey)
+	// A late outcome on a settled job changes nothing.
+	require.ErrorIs(t, exports.Finish(ctx, j.ID, "other.pdf"), domain.ErrNotFound)
+	require.ErrorIs(t, exports.Fail(ctx, j.ID, "late"), domain.ErrNotFound)
+
+	// Another user's job: claimed, failed, and kept out of admin's list.
+	other := uuid.NewString() // requested_by has no FK
+	jf, err := exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: other, Params: params})
+	require.NoError(t, err)
+	claimed, err := exports.Claim(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, jf.ID, claimed.ID)
+	require.NoError(t, exports.Fail(ctx, jf.ID, "renderer down"))
+	failed, err := exports.Get(ctx, doc.ID, jf.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.ExportFailed, failed.Status)
+	require.Equal(t, "renderer down", failed.Error)
+	list, err = exports.List(ctx, doc.ID, admin.ID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	require.Equal(t, j.ID, list[0].ID)
 
 	// Expiry: force it into the past through the owner connection, then clean up.
-	owner, err := Connect(context.Background(), ownerURL, 5*time.Second)
-	require.NoError(t, err)
-	defer owner.Close()
 	_, err = owner.Pool.Exec(context.Background(), "UPDATE export_jobs SET expires_at = now() - interval '1 second'")
 	require.NoError(t, err)
 	expired, err := exports.Expired(context.Background())
 	require.NoError(t, err)
-	require.Len(t, expired, 1)
-	require.Equal(t, done.FileKey, expired[0].FileKey)
-	require.NoError(t, exports.Delete(context.Background(), j.ID))
+	require.Len(t, expired, 2)
+	keys := map[string]string{}
+	for _, e := range expired {
+		keys[e.ID] = e.FileKey
+	}
+	require.Equal(t, done.FileKey, keys[j.ID])
+	for id := range keys {
+		require.NoError(t, exports.Delete(context.Background(), id))
+	}
 	_, err = exports.Get(ctx, doc.ID, j.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }

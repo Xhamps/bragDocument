@@ -24,13 +24,14 @@ WHERE id = (
     FOR UPDATE SKIP LOCKED)
 RETURNING *;
 
--- name: FinishExportJob :exec
+-- Only a running job: a reclaimed job's late finish or fail must not overwrite a newer outcome.
+-- name: FinishExportJob :execrows
 UPDATE export_jobs
 SET status = 'done', file_key = $2, error = '', finished_at = now(), expires_at = now() + interval '24 hours'
-WHERE id = $1;
+WHERE id = $1 AND status = 'running';
 
--- name: FailExportJob :exec
-UPDATE export_jobs SET status = 'failed', error = $2, finished_at = now() WHERE id = $1;
+-- name: FailExportJob :execrows
+UPDATE export_jobs SET status = 'failed', error = $2, finished_at = now() WHERE id = $1 AND status = 'running';
 
 -- Under app.provisioning.
 -- name: ListExpiredExportJobs :many

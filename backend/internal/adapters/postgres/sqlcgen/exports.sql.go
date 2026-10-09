@@ -91,8 +91,8 @@ func (q *Queries) DeleteExportJob(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const failExportJob = `-- name: FailExportJob :exec
-UPDATE export_jobs SET status = 'failed', error = $2, finished_at = now() WHERE id = $1
+const failExportJob = `-- name: FailExportJob :execrows
+UPDATE export_jobs SET status = 'failed', error = $2, finished_at = now() WHERE id = $1 AND status = 'running'
 `
 
 type FailExportJobParams struct {
@@ -100,15 +100,18 @@ type FailExportJobParams struct {
 	Error string
 }
 
-func (q *Queries) FailExportJob(ctx context.Context, arg FailExportJobParams) error {
-	_, err := q.db.Exec(ctx, failExportJob, arg.ID, arg.Error)
-	return err
+func (q *Queries) FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, failExportJob, arg.ID, arg.Error)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const finishExportJob = `-- name: FinishExportJob :exec
+const finishExportJob = `-- name: FinishExportJob :execrows
 UPDATE export_jobs
 SET status = 'done', file_key = $2, error = '', finished_at = now(), expires_at = now() + interval '24 hours'
-WHERE id = $1
+WHERE id = $1 AND status = 'running'
 `
 
 type FinishExportJobParams struct {
@@ -116,9 +119,13 @@ type FinishExportJobParams struct {
 	FileKey string
 }
 
-func (q *Queries) FinishExportJob(ctx context.Context, arg FinishExportJobParams) error {
-	_, err := q.db.Exec(ctx, finishExportJob, arg.ID, arg.FileKey)
-	return err
+// Only a running job: a reclaimed job's late finish or fail must not overwrite a newer outcome.
+func (q *Queries) FinishExportJob(ctx context.Context, arg FinishExportJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, finishExportJob, arg.ID, arg.FileKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getExportJob = `-- name: GetExportJob :one

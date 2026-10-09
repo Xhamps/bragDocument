@@ -124,7 +124,7 @@ func (r *ExportRepo) Finish(ctx context.Context, id, fileKey string) error {
 		return err
 	}
 	return withQueries(ctx, r.db, func(ctx context.Context, q *sqlcgen.Queries) error {
-		return wrap(q.FinishExportJob(ctx, sqlcgen.FinishExportJobParams{ID: jid, FileKey: fileKey}))
+		return oneRow(q.FinishExportJob(ctx, sqlcgen.FinishExportJobParams{ID: jid, FileKey: fileKey}))
 	})
 }
 
@@ -134,7 +134,7 @@ func (r *ExportRepo) Fail(ctx context.Context, id, reason string) error {
 		return err
 	}
 	return withQueries(ctx, r.db, func(ctx context.Context, q *sqlcgen.Queries) error {
-		return wrap(q.FailExportJob(ctx, sqlcgen.FailExportJobParams{ID: jid, Error: reason}))
+		return oneRow(q.FailExportJob(ctx, sqlcgen.FailExportJobParams{ID: jid, Error: reason}))
 	})
 }
 
@@ -181,7 +181,10 @@ func (r *ExportRepo) Settings(ctx context.Context, documentID string) (domain.Re
 			return wrap(err)
 		}
 		out = domain.ReportSettings{GoalsThisYear: row.GoalsThisYear, GoalsNextYear: row.GoalsNextYear}
-		return json.Unmarshal(row.SectionMap, &out.SectionMap)
+		if err := json.Unmarshal(row.SectionMap, &out.SectionMap); err != nil {
+			return fmt.Errorf("postgres: section map: %w", err)
+		}
+		return nil
 	})
 	return out, err
 }
@@ -203,6 +206,18 @@ func (r *ExportRepo) SaveSettings(ctx context.Context, tenantID, documentID stri
 		return wrap(q.UpsertReportSettings(ctx, sqlcgen.UpsertReportSettingsParams{DocumentID: did, TenantID: tid,
 			GoalsThisYear: s.GoalsThisYear, GoalsNextYear: s.GoalsNextYear, SectionMap: m}))
 	})
+}
+
+// oneRow maps "no running job changed" to domain.ErrNotFound: the job was
+// reclaimed or already settled, and a late outcome must not overwrite it.
+func oneRow(n int64, err error) error {
+	if err != nil {
+		return wrap(err)
+	}
+	if n == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 // orEmptyMap keeps jsonb a JSON object: nil marshals to null.

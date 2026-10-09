@@ -1,6 +1,6 @@
 // mocks first: it registers the supabase mock before ./api loads the client
 import { mockFetch, supabaseMock } from "../test/mocks";
-import { api, ApiError } from "./api";
+import { api, ApiError, download } from "./api";
 
 test("attaches the bearer token from the session", async () => {
   mockFetch({ "GET /me": { id: "u1" } });
@@ -40,4 +40,23 @@ test("error body becomes an ApiError with status, message and fields", async () 
     message: "invalid",
     fields: { title: "required" },
   });
+});
+
+test("download fetches with the bearer token and clicks a link", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response("pdf")),
+  );
+  // jsdom has no object URLs
+  URL.createObjectURL = vi.fn(() => "blob:x");
+  URL.revokeObjectURL = vi.fn();
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  await download("/documents/d1/exports/j1/file", "r.pdf");
+  const [url, init] = vi.mocked(fetch).mock.calls[0];
+  expect(String(url)).toMatch(/\/documents\/d1\/exports\/j1\/file$/);
+  expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer tok");
+  expect(click).toHaveBeenCalled();
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:x");
 });

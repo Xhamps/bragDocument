@@ -140,6 +140,7 @@ type DashboardTotalsRow struct {
 }
 
 // PRD-0005: examples never count. Total is all-time, the rest is [from, to).
+// impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
 func (q *Queries) DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error) {
 	row := q.db.QueryRow(ctx, dashboardTotals, arg.FromAt, arg.ToAt, arg.DocumentID)
 	var i DashboardTotalsRow

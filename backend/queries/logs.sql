@@ -88,6 +88,7 @@ SELECT name FROM tags ORDER BY name;
 
 -- name: DashboardTotals :one
 -- PRD-0005: examples never count. Total is all-time, the rest is [from, to).
+-- impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
 SELECT count(*)::int AS total,
        count(*) FILTER (WHERE created_at >= @from_at AND created_at < @to_at)::int AS in_period,
        count(*) FILTER (WHERE created_at >= @from_at AND created_at < @to_at

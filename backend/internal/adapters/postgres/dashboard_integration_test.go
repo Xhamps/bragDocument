@@ -72,6 +72,12 @@ func TestDashboard(t *testing.T) {
 	require.Equal(t, d.Tags[0].Count, count(domain.LogFilter{Tags: []string{"project"}}))
 	require.Equal(t, d.HighImpact, count(domain.LogFilter{Impacts: []string{"high", "critical"}}))
 	require.Equal(t, d.InProgress, count(domain.LogFilter{Statuses: []string{"in_progress"}}))
+	marFrom, marTo := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC), p.To
+	mar := domain.LogFilter{From: &marFrom, To: &marTo, HideExamples: true}
+	require.NoError(t, mar.Validate())
+	marPage, err := logs.List(ctx, doc.ID, mar)
+	require.NoError(t, err)
+	require.Equal(t, d.Months[2].Count, marPage.Total, "the March bar links to March's list")
 	all := domain.LogFilter{}
 	require.NoError(t, all.Validate())
 	page, err := logs.List(ctx, doc.ID, all)

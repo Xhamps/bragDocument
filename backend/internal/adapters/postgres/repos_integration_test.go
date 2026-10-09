@@ -60,7 +60,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	require.NoError(t, err)
 
 	// Tenant B sees nothing of A, by id or by list, on every table.
-	_, err = docs.Get(ctxB, doc.ID)
+	_, err = docs.GetForUser(ctxB, doc.ID, adminA.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	list, err := docs.ListByOwner(ctxB, adminA.ID)
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Tenant A sees its own document and can delete it.
-	got, err := docs.Get(ctxA, doc.ID)
+	got, err := docs.GetForUser(ctxA, doc.ID, adminA.ID)
 	require.NoError(t, err)
 	require.Equal(t, "2026", got.Title)
 
@@ -119,8 +119,10 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 			return err
 		}
 		require.Equal(t, inv.ID, found.ID)
-		return tx.DeleteInvitation(ctx, found.ID)
+		require.False(t, found.ForDocument)
+		return nil
 	}))
+	require.NoError(t, tenants.DeleteInvitation(ctxA, inv.ID))
 	invs, err := tenants.ListInvitations(ctxA)
 	require.NoError(t, err)
 	require.Empty(t, invs)

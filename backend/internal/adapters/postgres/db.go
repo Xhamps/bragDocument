@@ -75,8 +75,10 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 
 // WithProvisioning runs fn inside a transaction flagged app.provisioning = '1'.
 // RLS policies on tenants, users, and tenant_invitations open up under that
-// flag (and telegram_links, read-only); documents is excluded and stays closed
-// without app.tenant_id. Only UserRepo.Provision (the sign-in path) and
+// flag (telegram_links and document_invitations read-only); documents, grants,
+// and audit entries are excluded and stay closed without app.tenant_id, so
+// provisionTx.AcceptInvitations sets app.tenant_id before writing them.
+// Only UserRepo.Provision (the sign-in path) and
 // TelegramLinkRepo.FindByTelegramID (the bot) call this.
 func (d *DB) WithProvisioning(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	return d.inTx(ctx, "app.provisioning", "1", fn)

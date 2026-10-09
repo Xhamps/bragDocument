@@ -17,8 +17,11 @@ type UserRepo interface {
 type ProvisionTx interface {
 	GetUser(ctx context.Context, id string) (domain.User, error)
 	GetTenant(ctx context.Context, id string) (domain.Tenant, error)
+	// FindInvitationByEmail returns the oldest pending tenant or document invitation.
 	FindInvitationByEmail(ctx context.Context, email string) (domain.Invitation, error)
 	CreateTenant(ctx context.Context, name string) (domain.Tenant, error)
 	CreateUser(ctx context.Context, u domain.User) (domain.User, error)
-	DeleteInvitation(ctx context.Context, id string) error
+	// AcceptInvitations removes the user's tenant invitation and turns their
+	// pending document invitations in the user's tenant into grants, audited.
+	AcceptInvitations(ctx context.Context, u domain.User) error
 }

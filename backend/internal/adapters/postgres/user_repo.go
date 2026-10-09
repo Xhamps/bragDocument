@@ -19,11 +19,14 @@ func NewUserRepo(db *DB) *UserRepo { return &UserRepo{db: db} }
 // Provision runs fn in the provisioning transaction (see DB.WithProvisioning).
 func (r *UserRepo) Provision(ctx context.Context, fn func(ctx context.Context, tx ports.ProvisionTx) error) error {
 	return r.db.WithProvisioning(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		return fn(ctx, provisionTx{q: sqlcgen.New(tx)})
+		return fn(ctx, provisionTx{tx: tx, q: sqlcgen.New(tx)})
 	})
 }
 
-type provisionTx struct{ q *sqlcgen.Queries }
+type provisionTx struct {
+	tx pgx.Tx
+	q  *sqlcgen.Queries
+}
 
 func (p provisionTx) GetUser(ctx context.Context, id string) (domain.User, error) {
 	uid, err := parseID(id)
@@ -50,11 +53,12 @@ func (p provisionTx) GetTenant(ctx context.Context, id string) (domain.Tenant, e
 }
 
 func (p provisionTx) FindInvitationByEmail(ctx context.Context, email string) (domain.Invitation, error) {
-	inv, err := p.q.GetInvitationByEmail(ctx, email)
+	row, err := p.q.FindOldestInvitationByEmail(ctx, email)
 	if err != nil {
 		return domain.Invitation{}, wrap(err)
 	}
-	return toInvitation(inv), nil
+	return domain.Invitation{ID: row.ID.String(), TenantID: row.TenantID.String(), Email: email,
+		CreatedAt: row.CreatedAt, ForDocument: row.ForDocument}, nil
 }
 
 func (p provisionTx) CreateTenant(ctx context.Context, name string) (domain.Tenant, error) {
@@ -83,17 +87,33 @@ func (p provisionTx) CreateUser(ctx context.Context, u domain.User) (domain.User
 	return toUser(row), nil
 }
 
-func (p provisionTx) DeleteInvitation(ctx context.Context, id string) error {
-	iid, err := parseID(id)
+func (p provisionTx) AcceptInvitations(ctx context.Context, u domain.User) error {
+	tid, err := parseID(u.TenantID)
 	if err != nil {
 		return err
 	}
-	n, err := p.q.DeleteInvitation(ctx, iid)
+	uid, err := parseID(u.ID)
+	if err != nil {
+		return err
+	}
+	// Grants and audit entries are closed to provisioning; scope the rest of
+	// this transaction to the user's tenant so their tenant policies apply.
+	if _, err := p.tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", u.TenantID); err != nil {
+		return wrap(err)
+	}
+	if err := p.q.DeleteTenantInvitationByEmail(ctx, sqlcgen.DeleteTenantInvitationByEmailParams{TenantID: tid, Email: u.Email}); err != nil {
+		return wrap(err)
+	}
+	rows, err := p.q.AcceptDocumentInvitations(ctx, sqlcgen.AcceptDocumentInvitationsParams{TenantID: tid, Email: u.Email, UserID: uid})
 	if err != nil {
 		return wrap(err)
 	}
-	if n == 0 {
-		return domain.ErrNotFound
+	for _, row := range rows {
+		a := domain.AuditEntry{ActorID: u.ID, ActorEmail: u.Email, Action: domain.AuditInviteAccept,
+			DocumentID: row.DocumentID.String(), Target: u.Email, Role: domain.Role(row.Role)}
+		if err := audit(ctx, p.q, a); err != nil {
+			return err
+		}
 	}
 	return nil
 }

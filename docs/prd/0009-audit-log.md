@@ -47,7 +47,7 @@ Every action that changes data (documents, logs, sharing, Telegram linking, PDF 
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-1 | Every action in the action list below MUST write one audit entry in the same transaction as the change; if the entry cannot be written, the action MUST fail. | Must |
+| FR-1 | Every action in the action list below MUST commit its audit message in the same transaction as the change; if the message cannot be written, the action MUST fail. The entry becomes readable within seconds ([ADR-0015](../adr/0015-transactional-outbox-with-redis-streams.md)). | Must |
 | FR-2 | Actions from the web UI, the Telegram bot, and background jobs MUST all be audited; the entry records the source (`web`, `telegram`, `system`). | Must |
 | FR-3 | An entry MUST show the actor (name and email), the action, the target (document and, when relevant, log or user), and the time. | Must |
 | FR-4 | Audit entries MUST be append-only: no user, including tenant admins, can edit or delete them. | Must |
@@ -82,7 +82,7 @@ Read permission:
 ## 8. Non-functional requirements
 
 - NFR-1: Audit entries are tenant-scoped and protected by row-level security ([ADR-0007](../adr/0007-multi-tenancy-strategy.md)); the application role cannot update or delete them ([ADR-0011](../adr/0011-rbac-model.md)).
-- NFR-2: Writing an entry adds under 5 ms p95 to the audited action.
+- NFR-2: Writing the audit message adds under 5 ms p95 to the audited action.
 - NFR-3: The Audit log page returns the first page in under 500 ms p95 for a tenant with 1 million entries, with any filter combination.
 - NFR-4: Times are stored in UTC and shown in the viewer's local time zone, with the exact timestamp on hover.
 
@@ -122,3 +122,4 @@ Read permission:
 | 2026-10-09 | `document.edited` added for description-only changes | Every state change is audited, and "renamed" would mislead |
 | 2026-10-09 | Source set per service (web, telegram, system) as a domain context value | No extra plumbing; each service tags its root context once |
 | 2026-10-09 | Owners see entries on documents they own; Telegram link/unlink entries (no document) are visible to tenant admins only | FR-6 scopes owners to documents |
+| 2026-10-09 | Audit entries delivered through a transactional outbox and Redis Streams (ADR-0015) | No loss, audit off the write path, a queue for future consumers; entries are eventually consistent (about 1–2 s) |

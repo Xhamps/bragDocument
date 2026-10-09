@@ -40,7 +40,7 @@ Migration `0007_audit_log` alters `audit_entries`:
 
 `AuditFilter{ActorID, DocumentID, Action, From, To, OwnerID, Before, Limit}` with `Validate()`.
 
-**Writes (FR-1).** `DocumentRepo.Create/Update/Delete`, `LogRepo.Create/Update/Delete/DeleteExamples`, `TelegramLinkRepo.Link/Delete`, and `ExportRepo.Create` take `a domain.AuditEntry` and call the shared `audit()` helper inside their transaction. An insert failure rolls back the action. `audit()` copies the document title from `documents` when `DocumentID` is set, and skips it otherwise. Document delete writes its entry before deleting, in the same transaction.
+**Writes (FR-1).** *Superseded by the outbox: see `2026-10-09-audit-outbox-design.md` and ADR-0015. The original direct-insert design follows.* `DocumentRepo.Create/Update/Delete`, `LogRepo.Create/Update/Delete/DeleteExamples`, `TelegramLinkRepo.Link/Delete`, and `ExportRepo.Create` take `a domain.AuditEntry` and call the shared `audit()` helper inside their transaction. An insert failure rolls back the action. `audit()` copies the document title from `documents` when `DocumentID` is set, and skips it otherwise. Document delete writes its entry before deleting, in the same transaction.
 
 **Building entries (app layer).** The app layer holds the old and new values, so it picks the action and `changed_fields`:
 

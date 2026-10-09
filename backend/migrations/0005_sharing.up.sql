@@ -1,6 +1,11 @@
 -- PRD-0004 sharing: grants, document invitations, audit. RLS per ADR-0007, roles per ADR-0011.
 -- The owner stays in documents.owner_id; grants hold editor and viewer only.
 -- granted_by and invited_by are provenance, not references: they outlive the user.
+
+-- Transfer writes owner_id from a caller-supplied id and FKs ignore RLS: keep the owner in the tenant.
+ALTER TABLE documents ADD CONSTRAINT documents_owner_tenant_fkey
+    FOREIGN KEY (owner_id, tenant_id) REFERENCES users (id, tenant_id);
+
 CREATE TABLE document_grants (
     document_id uuid NOT NULL,
     tenant_id   uuid NOT NULL REFERENCES tenants (id),
@@ -25,9 +30,11 @@ CREATE TABLE document_invitations (
     invited_by  uuid NOT NULL,
     created_at  timestamptz NOT NULL DEFAULT now(),
     accepted_at timestamptz,
-    UNIQUE (document_id, email),
     FOREIGN KEY (document_id, tenant_id) REFERENCES documents (id, tenant_id) ON DELETE CASCADE
 );
+-- One pending invitation per (document, email); accepted ones are history.
+CREATE UNIQUE INDEX document_invitations_pending_key ON document_invitations (document_id, email) WHERE accepted_at IS NULL;
+CREATE INDEX document_invitations_document_idx ON document_invitations (document_id);
 CREATE INDEX document_invitations_pending_email_idx ON document_invitations (email) WHERE accepted_at IS NULL;
 CREATE INDEX document_invitations_tenant_id_idx ON document_invitations (tenant_id);
 
@@ -53,11 +60,12 @@ ALTER TABLE document_grants FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON document_grants
     USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 
--- Sign-in looks up pending invitations by email before the tenant is known.
 ALTER TABLE document_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_invitations FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON document_invitations
-    USING (tenant_id = app_tenant_id() OR app_provisioning()) WITH CHECK (tenant_id = app_tenant_id());
+    USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+-- Sign-in looks up pending invitations by email before the tenant is known; it only reads.
+CREATE POLICY provisioning_read ON document_invitations FOR SELECT USING (app_provisioning());
 
 ALTER TABLE audit_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_entries FORCE ROW LEVEL SECURITY;

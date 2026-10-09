@@ -30,6 +30,7 @@ WITH accepted AS (
 )
 INSERT INTO document_grants (document_id, tenant_id, user_id, role, granted_by)
 SELECT a.document_id, a.tenant_id, sqlc.arg(user_id)::uuid, a.role, a.invited_by FROM accepted a
+ON CONFLICT (document_id, user_id) DO NOTHING
 RETURNING document_id, role;
 
 -- name: ListPendingDocumentInvitationsByTenant :many

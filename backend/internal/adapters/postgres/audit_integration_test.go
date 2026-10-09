@@ -33,7 +33,7 @@ func TestAuditInsert(t *testing.T) {
 		return err
 	}))
 	ctx := telemetry.WithTenantID(context.Background(), ta.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: bob.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: bob.ID, Title: "2026"}, nil, docCreated(bob.ID))
 	require.NoError(t, err)
 
 	write := func(a domain.AuditEntry) error {
@@ -64,9 +64,9 @@ func TestAuditInsert(t *testing.T) {
 		}
 		return rs.Err()
 	}))
-	require.Len(t, rows, 2, "rejected entries wrote nothing")
+	require.Len(t, rows, 3, "document.created plus two; rejected entries wrote nothing")
 
-	linked, export := rows[0], rows[1]
+	linked, export := rows[1], rows[2]
 	require.Equal(t, bob.ID, *linked.actorID)
 	require.Equal(t, "Bob", *linked.name, "copied from users")
 	require.Equal(t, "bob@example.com", *linked.email)

@@ -11,5 +11,5 @@ func (s *Documents) Delete(ctx context.Context, id, userID string) error {
 	if _, err := access(ctx, s.docs, id, userID, domain.PermDelete); err != nil {
 		return err
 	}
-	return s.docs.Delete(ctx, id)
+	return s.docs.Delete(ctx, id, entry(ctx, userID, domain.AuditDocumentDeleted, id))
 }

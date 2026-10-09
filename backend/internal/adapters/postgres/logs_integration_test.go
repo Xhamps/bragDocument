@@ -32,7 +32,7 @@ func TestLogRepo(t *testing.T) {
 	for i := range examples {
 		require.NoError(t, examples[i].Validate())
 	}
-	doc, err := docs.Create(ctx, domain.Document{TenantID: tenantA.ID, OwnerID: admin.ID, Title: "2026"}, examples)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: tenantA.ID, OwnerID: admin.ID, Title: "2026"}, examples, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	page, err := logs.List(ctx, doc.ID, domain.LogFilter{Sort: "created_at", Desc: true, Page: 1, PerPage: 50})
@@ -155,7 +155,7 @@ func TestLogRepo(t *testing.T) {
 	// Delete and cascade.
 	require.NoError(t, logs.Delete(ctx, doc.ID, c.ID))
 	require.ErrorIs(t, logs.Delete(ctx, doc.ID, c.ID), domain.ErrNotFound)
-	require.NoError(t, docs.Delete(ctx, doc.ID))
+	require.NoError(t, docs.Delete(ctx, doc.ID, docDeleted(admin.ID, doc.ID)))
 	_, err = logs.Get(ctx, doc.ID, a.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }
@@ -188,7 +188,7 @@ func seedTenThousand(t *testing.T) (context.Context, domain.Document, *LogRepo) 
 	users, docs, logs := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db)
 	admin, tn := provisionTenant(t, users, "A", "a@example.com")
 	ctx := telemetry.WithTenantID(context.Background(), tn.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: tn.ID, OwnerID: admin.ID, Title: "big"}, nil)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: tn.ID, OwnerID: admin.ID, Title: "big"}, nil, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	owner, err := Connect(context.Background(), ownerURL, 60*time.Second)

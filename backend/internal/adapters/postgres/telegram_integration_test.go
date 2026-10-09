@@ -51,7 +51,7 @@ func TestTelegramLinks(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrConflict)
 
 	// Target document; re-linking the same account keeps it; deleting the document clears the target only.
-	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: a.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: a.ID, Title: "2026"}, nil, docCreated(a.ID))
 	require.NoError(t, err)
 	require.NoError(t, links.SetDocument(ctxA, a.ID, doc.ID))
 	require.NoError(t, links.Link(context.Background(), domain.TelegramLink{UserID: a.ID, TenantID: ta.ID, TelegramUserID: 42, LinkedAt: time.Now()}))
@@ -67,7 +67,7 @@ func TestTelegramLinks(t *testing.T) {
 	require.Empty(t, got.DocumentID)
 
 	require.NoError(t, links.SetDocument(ctxA, a.ID, doc.ID))
-	require.NoError(t, docs.Delete(ctxA, doc.ID))
+	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(a.ID, doc.ID)))
 	got, err = links.Get(ctxA, a.ID)
 	require.NoError(t, err)
 	require.Empty(t, got.DocumentID)

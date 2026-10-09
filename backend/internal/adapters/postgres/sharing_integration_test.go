@@ -41,7 +41,7 @@ func TestSharing(t *testing.T) {
 	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
 
-	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
 	require.NoError(t, err)
 	audit := func(action, target string, role domain.Role) domain.AuditEntry {
 		return domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: action, DocumentID: doc.ID, Target: target, Role: role}
@@ -71,7 +71,8 @@ func TestSharing(t *testing.T) {
 		audit(domain.AuditGrant, zed.Email, domain.RoleViewer)), domain.ErrConflict)
 	entries, err := sharing.Audit(ctxA, doc.ID)
 	require.NoError(t, err)
-	require.Len(t, entries, 1, "the failed grant wrote no audit row")
+	require.Len(t, entries, 2, "created and granted; the failed grant wrote no audit row")
+	require.Equal(t, domain.AuditGrant, entries[0].Action)
 	require.Equal(t, "ada@example.com", entries[0].ActorEmail, "copied from users")
 	require.Equal(t, "2026", entries[0].DocumentTitle)
 	_, err = sharing.Member(ctxA, zed.ID)
@@ -188,13 +189,15 @@ func TestSharing(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, actions(entries), domain.AuditInviteCancel)
 	require.Equal(t, domain.AuditRevoke, entries[0].Action)
-	require.Equal(t, domain.AuditGrant, entries[len(entries)-1].Action)
+	require.Equal(t, domain.AuditDocumentCreated, entries[len(entries)-1].Action)
 	require.Equal(t, "2026", entries[0].DocumentTitle)
 	require.Contains(t, actions(entries), domain.AuditInviteAccept)
-	require.NoError(t, docs.Delete(ctxA, doc.ID))
+	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)))
 	all, err := sharing.Audit(ctxA, "")
 	require.NoError(t, err)
-	require.Len(t, all, len(entries))
+	require.Len(t, all, len(entries)+1)
+	require.Equal(t, domain.AuditDocumentDeleted, all[0].Action)
+	require.Equal(t, "2026", all[0].DocumentTitle, "written before the delete")
 	err = db.WithTenant(ctxA, ta.ID, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "DELETE FROM audit_entries")
 		return wrap(err)
@@ -202,7 +205,7 @@ func TestSharing(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Removing a member cascades their grants; logs they wrote in others' documents stay.
-	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil)
+	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil, docCreated(ada.ID))
 	require.NoError(t, err)
 	require.NoError(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc2.ID, UserID: bob.ID, Role: domain.RoleEditor, GrantedBy: ada.ID},
 		domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))

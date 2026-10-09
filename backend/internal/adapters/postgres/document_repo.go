@@ -136,7 +136,7 @@ func (r *DocumentRepo) MarkSeen(ctx context.Context, id, userID string) error {
 	})
 }
 
-func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
+func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples []domain.Log, a domain.AuditEntry) (domain.Document, error) {
 	tid, err := parseID(d.TenantID)
 	if err != nil {
 		return domain.Document{}, err
@@ -158,12 +158,13 @@ func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples [
 			}
 		}
 		out = toDocument(row)
-		return nil
+		a.DocumentID = out.ID
+		return audit(ctx, q, a)
 	})
 	return out, err
 }
 
-func (r *DocumentRepo) Update(ctx context.Context, d domain.Document) (domain.Document, error) {
+func (r *DocumentRepo) Update(ctx context.Context, d domain.Document, a domain.AuditEntry) (domain.Document, error) {
 	did, err := parseID(d.ID)
 	if err != nil {
 		return domain.Document{}, err
@@ -175,24 +176,20 @@ func (r *DocumentRepo) Update(ctx context.Context, d domain.Document) (domain.Do
 			return wrap(err)
 		}
 		out = toDocument(row)
-		return nil
+		return audit(ctx, q, a) // after the update: copies the new title
 	})
 	return out, err
 }
 
-func (r *DocumentRepo) Delete(ctx context.Context, id string) error {
+func (r *DocumentRepo) Delete(ctx context.Context, id string, a domain.AuditEntry) error {
 	did, err := parseID(id)
 	if err != nil {
 		return err
 	}
 	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		n, err := q.DeleteDocument(ctx, did)
-		if err != nil {
-			return wrap(err)
+		if err := audit(ctx, q, a); err != nil { // before the delete: copies the title
+			return err
 		}
-		if n == 0 {
-			return domain.ErrNotFound
-		}
-		return nil
+		return rowsOrNotFound(q.DeleteDocument(ctx, did))
 	})
 }

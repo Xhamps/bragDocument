@@ -27,7 +27,7 @@ func TestExports(t *testing.T) {
 	_, tb := provisionTenant(t, users, "B", "b@example.com")
 	ctx := telemetry.WithTenantID(context.Background(), ta.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, nil, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	// Settings round trip.

@@ -25,6 +25,15 @@ func appRoleURL(t *testing.T, ownerURL string) string {
 	return u.String()
 }
 
+// docCreated and docDeleted are the audit entries the app passes for a document.
+func docCreated(ownerID string) domain.AuditEntry {
+	return domain.AuditEntry{ActorID: ownerID, Source: domain.SourceWeb, Action: domain.AuditDocumentCreated}
+}
+
+func docDeleted(actorID, docID string) domain.AuditEntry {
+	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceWeb, Action: domain.AuditDocumentDeleted, DocumentID: docID}
+}
+
 // provisionTenant creates a tenant with one admin through the real provisioning path.
 func provisionTenant(t *testing.T, users *UserRepo, name, email string) (domain.User, domain.Tenant) {
 	t.Helper()
@@ -56,7 +65,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	ctxA := telemetry.WithTenantID(context.Background(), tenantA.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tenantB.ID)
 
-	doc, err := docs.Create(ctxA, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "2026"}, nil, docCreated(adminA.ID))
 	require.NoError(t, err)
 
 	// Tenant B sees nothing of A, by id or by list, on every table.
@@ -65,7 +74,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	list, err := docs.ListByOwner(ctxB, adminA.ID)
 	require.NoError(t, err)
 	require.Empty(t, list)
-	_, err = docs.Update(ctxB, domain.Document{ID: doc.ID, Title: "hijack", State: domain.DocumentActive})
+	_, err = docs.Update(ctxB, domain.Document{ID: doc.ID, Title: "hijack", State: domain.DocumentActive}, domain.AuditEntry{ActorID: adminA.ID, Source: domain.SourceWeb, Action: domain.AuditDocumentRenamed, DocumentID: doc.ID})
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	members, err := tenants.ListMembers(ctxB)
 	require.NoError(t, err)
@@ -73,7 +82,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	require.NotEqual(t, adminA.ID, members[0].ID)
 
 	// Inserting into another tenant is rejected by WITH CHECK.
-	_, err = docs.Create(ctxB, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "x"}, nil)
+	_, err = docs.Create(ctxB, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "x"}, nil, docCreated(adminA.ID))
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Provisioning reads users and tenants across tenants, but documents stays closed.
@@ -99,8 +108,8 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 
 	// A member who owns documents cannot be removed; after delete they can.
 	require.ErrorIs(t, tenants.DeleteMember(ctxA, adminA.ID), domain.ErrConflict)
-	require.NoError(t, docs.Delete(ctxA, doc.ID))
-	require.ErrorIs(t, docs.Delete(ctxA, doc.ID), domain.ErrNotFound)
+	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(adminA.ID, doc.ID)))
+	require.ErrorIs(t, docs.Delete(ctxA, doc.ID, docDeleted(adminA.ID, doc.ID)), domain.ErrNotFound)
 
 	// Invitations: create, duplicate conflicts, provisioning finds it across tenants.
 	inv, err := tenants.CreateInvitation(ctxA, domain.Invitation{TenantID: tenantA.ID, Email: "c@example.com", CreatedBy: adminA.ID})

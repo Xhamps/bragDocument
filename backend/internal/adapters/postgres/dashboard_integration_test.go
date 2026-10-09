@@ -27,7 +27,7 @@ func TestDashboard(t *testing.T) {
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
 
 	examples := domain.ExampleLogs(time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC), admin.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, examples)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, examples, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	mk := func(name, impact, status string, at time.Time, tags ...string) {

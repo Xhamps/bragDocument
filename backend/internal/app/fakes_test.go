@@ -91,6 +91,7 @@ type fakeDocs struct {
 	grants   map[string]map[string]domain.Role // document → user → role
 	seen     []string                          // "doc/user" passed to MarkSeen
 	examples []domain.Log
+	audit    []domain.AuditEntry
 	seq      int
 }
 
@@ -161,25 +162,29 @@ func (f *fakeDocs) MarkSeen(_ context.Context, id, userID string) error {
 	f.seen = append(f.seen, id+"/"+userID)
 	return nil
 }
-func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
+func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log, a domain.AuditEntry) (domain.Document, error) {
 	f.examples = examples
 	f.seq++
 	d.ID = "d" + strconv.Itoa(f.seq)
 	f.docs[d.ID] = d
+	a.DocumentID = d.ID
+	f.audit = append(f.audit, a)
 	return d, nil
 }
-func (f *fakeDocs) Update(_ context.Context, d domain.Document) (domain.Document, error) {
+func (f *fakeDocs) Update(_ context.Context, d domain.Document, a domain.AuditEntry) (domain.Document, error) {
 	if _, ok := f.docs[d.ID]; !ok {
 		return domain.Document{}, domain.ErrNotFound
 	}
 	f.docs[d.ID] = d
+	f.audit = append(f.audit, a)
 	return d, nil
 }
-func (f *fakeDocs) Delete(_ context.Context, id string) error {
+func (f *fakeDocs) Delete(_ context.Context, id string, a domain.AuditEntry) error {
 	if _, ok := f.docs[id]; !ok {
 		return domain.ErrNotFound
 	}
 	delete(f.docs, id)
+	f.audit = append(f.audit, a)
 	return nil
 }
 

@@ -54,8 +54,11 @@ func (s *Sharing) grantOf(ctx context.Context, docID, userID string) (domain.Gra
 func (s *Sharing) notify(ctx context.Context, actor domain.User, d domain.Document, to string, role domain.Role, link string) {
 	from := cmp.Or(actor.DisplayName, actor.Email)
 	subject := fmt.Sprintf("%s shared “%s” with you", from, d.Title)
-	body := fmt.Sprintf(`<p>%s shared the brag document <strong>%s</strong> with you as %s.</p><p><a href="%s">Open it</a></p>`,
-		html.EscapeString(from), html.EscapeString(d.Title), role, html.EscapeString(link))
+	body := fmt.Sprintf(`<p>%s shared the brag document <strong>%s</strong> with you as %s.</p>`,
+		html.EscapeString(from), html.EscapeString(d.Title), role)
+	if s.appURL != "" { // APP_URL unset: a relative href would be useless in an inbox
+		body += fmt.Sprintf(`<p><a href="%s">Open it</a></p>`, html.EscapeString(link))
+	}
 	err := s.mail.Send(ctx, to, subject, body)
 	if err != nil && !errors.Is(err, domain.ErrUnavailable) { // unavailable: disabled, logged at startup
 		slog.WarnContext(ctx, "share email failed; access was granted anyway",

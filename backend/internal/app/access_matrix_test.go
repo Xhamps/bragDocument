@@ -112,3 +112,13 @@ func TestAccessMatrix(t *testing.T) {
 		}
 	}
 }
+
+// FR-9: the tenant admin role grants no document access; reads need a grant.
+func TestTenantAdminWithoutGrantCannotRead(t *testing.T) {
+	f := newMatrixFixture(t, "")
+	admin := domain.User{ID: "u2", TenantID: "t1", Email: "u2@acme.com", Role: domain.RoleAdmin}
+	_, err := f.docs.Get(context.Background(), "d1", admin.ID)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	_, err = f.logs.List(context.Background(), "d1", admin.ID, domain.LogFilter{})
+	require.ErrorIs(t, err, domain.ErrNotFound)
+}

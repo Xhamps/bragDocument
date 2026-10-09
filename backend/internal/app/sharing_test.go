@@ -158,3 +158,12 @@ func TestGetAndAudit(t *testing.T) {
 	_, err = f.s.TenantAudit(ctx, ada)
 	require.ErrorIs(t, err, domain.ErrForbidden, "admins only")
 }
+
+func TestShareEmailWithoutAppURLHasNoLink(t *testing.T) {
+	f := newSharingFixture()
+	f.s = NewSharing(f.docs, f.repo, f.mail, "")
+	_, err := f.s.Share(context.Background(), ShareInput{Actor: ada, DocumentID: "d1", Email: "bob@acme.com", Role: domain.RoleViewer})
+	require.NoError(t, err)
+	require.NotEmpty(t, f.mail.html)
+	require.NotContains(t, f.mail.html, "href")
+}

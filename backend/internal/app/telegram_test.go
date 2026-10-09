@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +35,11 @@ func (f *tgFixture) linked(doc string) {
 	f.links.byUser["u1"] = domain.TelegramLink{UserID: "u1", TenantID: "t1", TelegramUserID: 42, DocumentID: doc}
 }
 
+// say sends text as Telegram user id and returns the reply text.
+func (f *tgFixture) say(id int64, text string) string {
+	return f.tg.Reply(context.Background(), id, text).Text
+}
+
 func TestTelegramNewCode(t *testing.T) {
 	f := newTGFixture()
 	c, err := f.tg.NewCode(context.Background(), "u1", "t1")
@@ -60,30 +66,30 @@ func TestTelegramStartLinks(t *testing.T) {
 	_, err := f.tg.NewCode(context.Background(), "u1", "t1")
 	require.NoError(t, err)
 
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/start abcd2345"), "Linked")
+	require.Contains(t, f.say(42, "/start abcd2345"), "Linked")
 	l, err := f.links.Get(context.Background(), "u1")
 	require.NoError(t, err)
 	require.Equal(t, int64(42), l.TelegramUserID)
 	require.Equal(t, "t1", l.TenantID)
 
 	// Single use.
-	require.Contains(t, f.tg.Reply(context.Background(), 43, "/start ABCD2345"), "invalid or expired")
+	require.Contains(t, f.say(43, "/start ABCD2345"), "invalid or expired")
 }
 
 func TestTelegramStartFailures(t *testing.T) {
 	f := newTGFixture()
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/start NOPE"), "invalid or expired")
+	require.Contains(t, f.say(42, "/start NOPE"), "invalid or expired")
 
 	f.links.byUser["u2"] = domain.TelegramLink{UserID: "u2", TenantID: "t1", TelegramUserID: 42}
 	_, _ = f.tg.NewCode(context.Background(), "u1", "t1")
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/start ABCD2345"), "already linked to another account")
+	require.Contains(t, f.say(42, "/start ABCD2345"), "already linked to another account")
 
 	_, _ = f.tg.NewCode(context.Background(), "u1", "t1")
 	f.links.err = errors.New("db down")
-	require.Equal(t, msgTryAgain, f.tg.Reply(context.Background(), 7, "/start ABCD2345"))
+	require.Equal(t, msgTryAgain, f.say(7, "/start ABCD2345"))
 
 	f.codes.err = errors.New("redis down")
-	require.Contains(t, f.tg.Reply(context.Background(), 7, "/start ABCD2345"), "temporarily unavailable")
+	require.Contains(t, f.say(7, "/start ABCD2345"), "temporarily unavailable")
 }
 
 func TestTelegramStatusAndUnlink(t *testing.T) {
@@ -98,7 +104,7 @@ func TestTelegramStatusAndUnlink(t *testing.T) {
 	require.Equal(t, "d1", l.DocumentID)
 	require.NoError(t, f.tg.Unlink(context.Background(), "u1"))
 	require.NoError(t, f.tg.Unlink(context.Background(), "u1"))
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "hello"), "/start")
+	require.Contains(t, f.say(42, "hello"), "/start")
 }
 
 // titled titles the logs fixture's documents: d1 and d3 active, d2 archived.
@@ -113,7 +119,7 @@ func (f *tgFixture) titled() {
 func TestTelegramUnlinkedStoresNothing(t *testing.T) {
 	f := newTGFixture()
 	for _, msg := range []string{"Shipped X", "/docs", "/use 1", "/last", "/undo", "/help"} {
-		require.Equal(t, msgNotLinked, f.tg.Reply(context.Background(), 42, msg), msg)
+		require.Equal(t, msgNotLinked, f.say(42, msg), msg)
 	}
 	require.Empty(t, f.lf.logs.logs)
 	require.Empty(t, f.undo.data)
@@ -123,35 +129,35 @@ func TestTelegramUnlinkedStoresNothing(t *testing.T) {
 func TestTelegramHelp(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
-	require.Equal(t, msgHelp, f.tg.Reply(context.Background(), 42, "/help"))
-	require.Equal(t, msgHelp, f.tg.Reply(context.Background(), 42, "/start"))
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/nope"), "/help")
+	require.Equal(t, msgHelp, f.say(42, "/help"))
+	require.Equal(t, msgHelp, f.say(42, "/start"))
+	require.Contains(t, f.say(42, "/nope"), "/help")
 }
 
 func TestTelegramDocsAndUse(t *testing.T) {
 	f := newTGFixture()
 	f.titled()
 	f.linked("d3")
-	out := f.tg.Reply(context.Background(), 42, "/docs")
+	out := f.say(42, "/docs")
 	require.Equal(t, "t1", f.scope)
 	require.Contains(t, out, "1. Alpha\n2. Gamma ✓\n")
 	require.NotContains(t, out, "Beta", "archived excluded")
 
 	for _, bad := range []string{"/use", "/use 0", "/use 3", "/use x"} {
-		require.Contains(t, f.tg.Reply(context.Background(), 42, bad), "/docs", bad)
+		require.Contains(t, f.say(42, bad), "/docs", bad)
 	}
 	require.Equal(t, "d3", f.links.byUser["u1"].DocumentID, "unchanged")
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/use@BragBot 1"), "Now writing to “Alpha”")
+	require.Contains(t, f.say(42, "/use@BragBot 1"), "Now writing to “Alpha”")
 	require.Equal(t, "d1", f.links.byUser["u1"].DocumentID)
 
 	f.lf.docs.docs = map[string]domain.Document{}
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/docs"), "no active documents")
+	require.Contains(t, f.say(42, "/docs"), "no active documents")
 }
 
 func TestTelegramMessageCreatesLog(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
-	out := f.tg.Reply(context.Background(), 42, "Shipped SSO #auth !high https://github.com/x/pr/1\nCut tickets by 40%")
+	out := f.say(42, "Shipped SSO #auth !high https://github.com/x/pr/1\nCut tickets by 40%")
 	require.Len(t, f.lf.logs.logs, 1)
 	l := f.lf.logs.logs["l1"]
 	require.Equal(t, "Shipped SSO", l.Name)
@@ -172,27 +178,129 @@ func TestTelegramNoImpactWarning(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
 	f.lf.impact.statement = ""
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "Did a thing"), "No impact stated")
+	r := f.tg.Reply(context.Background(), 42, "Did a thing")
+	require.Contains(t, r.Text, msgNoImpact)
+	require.Equal(t, []BotButton{
+		{Label: "Add to description", Data: "impact:add:l1"},
+		{Label: "Replace description", Data: "impact:replace:l1"},
+	}, r.Buttons)
+	require.Equal(t, undoTTL, f.undo.ttl["tg:impact:42"])
 
 	f.lf.impact.err = domain.ErrUnavailable // extraction off: nil statement, no nagging
-	require.NotContains(t, f.tg.Reply(context.Background(), 42, "Did a thing"), "No impact stated")
+	r = f.tg.Reply(context.Background(), 42, "Did a thing")
+	require.NotContains(t, r.Text, msgNoImpact)
+	require.Empty(t, r.Buttons)
+}
+
+func TestTelegramImpactCallback(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing")
+
+	require.Equal(t, msgSendAddition, f.tg.Callback(ctx, 42, "impact:add:l1").Text)
+	require.Contains(t, string(f.undo.data["tg:impact:42"]), `"mode":"add"`)
+	require.Equal(t, msgSendReplacement, f.tg.Callback(ctx, 42, "impact:replace:l1").Text, "a second tap switches mode")
+	require.Contains(t, string(f.undo.data["tg:impact:42"]), `"mode":"replace"`)
+
+	for _, data := range []string{"impact:add:l9", "impact:bogus:l1", "nope", ""} {
+		require.Equal(t, msgButtonExpired, f.tg.Callback(ctx, 42, data).Text, data)
+	}
+	require.Equal(t, msgNotLinked, f.tg.Callback(ctx, 43, "impact:add:l1").Text)
+}
+
+func TestTelegramImpactAnswerAdds(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Migrated CI\nMoved to GitHub Actions")
+
+	f.tg.Callback(ctx, 42, "impact:add:l1")
+	f.lf.impact.statement = "Build time dropped from 20 to 6 min"
+	require.Equal(t, "Updated: Migrated CI\nImpact found: Build time dropped from 20 to 6 min",
+		f.say(42, "Build time dropped from 20 to 6 min"))
+	require.Equal(t, "Moved to GitHub Actions\n\nBuild time dropped from 20 to 6 min", f.lf.logs.logs["l1"].Description)
+	require.Len(t, f.lf.logs.logs, 1, "the answer is not a new log")
+
+	require.Contains(t, f.say(42, "Another thing"), "Logged: Another thing", "the answer was consumed")
+	require.Len(t, f.lf.logs.logs, 2)
+}
+
+func TestTelegramImpactAnswerReplacesAndAsksAgain(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Migrated CI\nMoved to GitHub Actions")
+
+	f.tg.Callback(ctx, 42, "impact:replace:l1")
+	r := f.tg.Reply(ctx, 42, "Still vague")
+	require.Equal(t, "Updated: Migrated CI\n\n"+msgNoImpact, r.Text)
+	require.Equal(t, impactButtons("l1"), r.Buttons, "still none: ask again")
+	require.Equal(t, "Still vague", f.lf.logs.logs["l1"].Description)
+
+	f.tg.Callback(ctx, 42, "impact:add:l1")
+	f.lf.impact.err = domain.ErrUnavailable
+	require.Equal(t, "Updated: Migrated CI", f.say(42, "Saved a day"), "not checked: no impact line")
+	require.Equal(t, "Still vague\n\nSaved a day", f.lf.logs.logs["l1"].Description)
+}
+
+func TestTelegramImpactAnswerRetriesAfterFailure(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing")
+
+	f.tg.Callback(ctx, 42, "impact:replace:l1")
+	require.Equal(t, msgSendReplacement, f.say(42, "   "), "blank answer: ask again")
+	require.Contains(t, f.say(42, strings.Repeat("x", 20001)), "Not saved.")
+	require.Contains(t, f.say(42, "Saved a day"), "Updated: Did a thing", "the answer is still pending")
+	require.Equal(t, "Saved a day", f.lf.logs.logs["l1"].Description)
+	require.Len(t, f.lf.logs.logs, 1)
+}
+
+func TestTelegramImpactAnswerIgnoredOrGone(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing") // l1
+
+	require.Contains(t, f.say(42, "Second"), "Logged: Second", "no tap: a plain message is a new log") // l2
+
+	f.say(42, "Third") // l3
+	f.tg.Callback(ctx, 42, "impact:add:l3")
+	f.say(42, "/undo")
+	require.Equal(t, msgLogGone, f.say(42, "Saved a day"))
+	require.Len(t, f.lf.logs.logs, 2)
+
+	f.say(42, "Fourth") // l4
+	f.tg.Callback(ctx, 42, "impact:add:l4")
+	require.NoError(t, f.tg.Unlink(ctx, "u1"))
+	f.lf.docs.docs["d7"] = domain.Document{ID: "d7", TenantID: "t2", OwnerID: "u2", State: domain.DocumentActive}
+	f.links.byUser["u2"] = domain.TelegramLink{UserID: "u2", TenantID: "t2", TelegramUserID: 42, DocumentID: "d7"}
+	require.Contains(t, f.say(42, "Mine now"), "Logged: Mine now", "relinked: u1's pending answer is ignored")
+	require.Equal(t, "", f.lf.logs.logs["l4"].Description)
 }
 
 func TestTelegramMessageErrors(t *testing.T) {
 	f := newTGFixture()
 	f.linked("")
-	require.Equal(t, msgPickDoc, f.tg.Reply(context.Background(), 42, "X"))
+	require.Equal(t, msgPickDoc, f.say(42, "X"))
 	f.linked("d2") // archived
-	require.Equal(t, msgArchived, f.tg.Reply(context.Background(), 42, "X"))
+	require.Equal(t, msgArchived, f.say(42, "X"))
 	f.lf.docs.docs["d9"] = domain.Document{ID: "d9", TenantID: "t1", OwnerID: "u9", State: domain.DocumentActive}
 	f.linked("d9") // someone else's
-	require.Equal(t, msgNoAccess, f.tg.Reply(context.Background(), 42, "X"))
+	require.Equal(t, msgNoAccess, f.say(42, "X"))
 	f.linked("gone")
-	require.Equal(t, msgNoAccess, f.tg.Reply(context.Background(), 42, "X"))
+	require.Equal(t, msgNoAccess, f.say(42, "X"))
 	f.linked("d1")
 	require.Equal(t, "Not saved. name: first line needs some text besides tags and links",
-		f.tg.Reply(context.Background(), 42, "#only"))
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "X !huge"), "Logged", "unknown impact token stays in the name")
+		f.say(42, "#only"))
+	require.Contains(t, f.say(42, "X !huge"), "Logged", "unknown impact token stays in the name")
 	require.Equal(t, msgTryAgain, f.tg.failed(context.Background(), errors.New("boom")))
 	require.Len(t, f.lf.logs.logs, 1)
 }
@@ -200,42 +308,42 @@ func TestTelegramMessageErrors(t *testing.T) {
 func TestTelegramLastAndUndo(t *testing.T) {
 	f := newTGFixture()
 	f.linked("")
-	require.Equal(t, msgPickDoc, f.tg.Reply(context.Background(), 42, "/last"))
+	require.Equal(t, msgPickDoc, f.say(42, "/last"))
 	f.linked("d1")
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/last"), "No logs yet")
-	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"))
-	f.tg.Reply(context.Background(), 42, "First")
-	f.tg.Reply(context.Background(), 42, "Second")
-	require.Equal(t, "• Second (medium, Oct 8)\n• First (medium, Oct 8)", f.tg.Reply(context.Background(), 42, "/last"))
+	require.Contains(t, f.say(42, "/last"), "No logs yet")
+	require.Equal(t, msgNothingToUndo, f.say(42, "/undo"))
+	f.say(42, "First")
+	f.say(42, "Second")
+	require.Equal(t, "• Second (medium, Oct 8)\n• First (medium, Oct 8)", f.say(42, "/last"))
 	require.Equal(t, 5, f.lf.logs.filter.PerPage)
 
-	require.Equal(t, "Removed: Second", f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Equal(t, "Removed: Second", f.say(42, "/undo"))
 	require.Len(t, f.lf.logs.logs, 1)
-	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"), "only the last one")
+	require.Equal(t, msgNothingToUndo, f.say(42, "/undo"), "only the last one")
 
 	// Already deleted on the web: nothing removed, pointer cleared.
-	f.tg.Reply(context.Background(), 42, "Third")
+	f.say(42, "Third")
 	delete(f.lf.logs.logs, "l3")
-	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Equal(t, msgNothingToUndo, f.say(42, "/undo"))
 	require.NotContains(t, f.undo.data, "tg:undo:42")
 
 	// Archived since: refused, pointer kept.
-	f.tg.Reply(context.Background(), 42, "Fourth")
+	f.say(42, "Fourth")
 	d := f.lf.docs.docs["d1"]
 	d.State = domain.DocumentArchived
 	f.lf.docs.docs["d1"] = d
-	require.Equal(t, msgArchived, f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Equal(t, msgArchived, f.say(42, "/undo"))
 	require.Contains(t, f.undo.data, "tg:undo:42")
 }
 
 func TestTelegramUndoIsPerUser(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
-	f.tg.Reply(context.Background(), 42, "Secret of u1")
+	f.say(42, "Secret of u1")
 	require.NoError(t, f.tg.Unlink(context.Background(), "u1"))
 	f.lf.docs.docs["d7"] = domain.Document{ID: "d7", TenantID: "t2", OwnerID: "u2", State: domain.DocumentActive}
 	f.links.byUser["u2"] = domain.TelegramLink{UserID: "u2", TenantID: "t2", TelegramUserID: 42, DocumentID: "d7"}
-	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Equal(t, msgNothingToUndo, f.say(42, "/undo"))
 	require.Len(t, f.lf.logs.logs, 1)
 }
 
@@ -244,10 +352,10 @@ func TestTelegramCommandParsing(t *testing.T) {
 	for _, msg := range []string{"/start\nabcd2345", "/start abcd-2345", "/start ABCD 2345"} {
 		_, err := f.tg.NewCode(context.Background(), "u1", "t1")
 		require.NoError(t, err)
-		require.Contains(t, f.tg.Reply(context.Background(), 42, msg), "Linked", msg)
+		require.Contains(t, f.say(42, msg), "Linked", msg)
 	}
 	f.titled()
-	require.Contains(t, f.tg.Reply(context.Background(), 42, "/use\n2"), "Gamma")
+	require.Contains(t, f.say(42, "/use\n2"), "Gamma")
 	require.Equal(t, "d3", f.links.byUser["u1"].DocumentID)
 }
 
@@ -255,7 +363,7 @@ func TestTelegramLookupFailureStoresNothing(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
 	f.links.findErr = errors.New("db down")
-	require.Equal(t, msgTryAgain, f.tg.Reply(context.Background(), 42, "Shipped X"))
+	require.Equal(t, msgTryAgain, f.say(42, "Shipped X"))
 	require.Empty(t, f.lf.logs.logs)
 	require.Empty(t, f.undo.data)
 }
@@ -268,7 +376,7 @@ func TestTelegramDocsIncludesEditorShares(t *testing.T) {
 	f.lf.docs.grant("d8", "u1", domain.RoleEditor)
 	f.lf.docs.grant("d9", "u1", domain.RoleViewer)
 
-	out := f.tg.Reply(context.Background(), 42, "/docs")
+	out := f.say(42, "/docs")
 	require.Contains(t, out, "Team wins")
 	require.NotContains(t, out, "Read only")
 }

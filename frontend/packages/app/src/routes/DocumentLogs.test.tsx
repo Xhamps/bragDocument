@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { me, mockFetch, renderAt } from "../test/mocks";
 import type { Document, Log } from "../lib/types";
@@ -130,6 +130,12 @@ test("Cmd+Enter creates; the dialog stays open when no impact was found", async 
     tags: ["docs"],
     links: [],
   });
+  await userEvent.click(
+    within(screen.getByRole("status")).getByRole("button", { name: "Close" }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
 });
 
 test("no-impact warning only follows a save that re-extracted", async () => {

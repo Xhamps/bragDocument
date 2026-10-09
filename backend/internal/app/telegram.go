@@ -14,6 +14,9 @@ const (
 	// No 0/O/1/I/L: codes are read off a screen and typed.
 	linkCodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 	linkCodeLen      = 8
+
+	impactAdd     = "add"
+	impactReplace = "replace"
 )
 
 const (
@@ -25,6 +28,11 @@ const (
 	msgPickDoc         = "Pick a document first: /docs, then /use <number>."
 	msgNoAccess        = "You no longer have access to that document. Pick another with /docs."
 	msgArchived        = "That document is archived. Pick another with /docs."
+	msgNoImpact        = "No impact stated. What changed because of this?"
+	msgButtonExpired   = "That button has expired. Edit the log in the web app."
+	msgSendAddition    = "Send the text to add to the description."
+	msgSendReplacement = "Send the new description."
+	msgLogGone         = "I can't find that log anymore. Nothing was changed."
 	msgNothingToUndo   = "Nothing to undo. /undo removes the last log I created, within 5 minutes."
 	msgHelp            = `Send a message to log it: first line is the name, the rest the description.
 #tag adds a tag, !low !medium !high !critical sets impact (default medium), links are kept.
@@ -35,6 +43,16 @@ Cut login support tickets by 40%.
 
 /docs list documents · /use <n> pick one · /last last 5 · /undo remove the last one`
 )
+
+// BotReply is what the bot sends back: text, plus inline buttons when the
+// user can act on it.
+type BotReply struct {
+	Text    string
+	Buttons []BotButton
+}
+
+// BotButton is one inline button; Data comes back to Callback when tapped.
+type BotButton struct{ Label, Data string }
 
 // Telegram is the bot's use cases (PRD-0003, ADR-0009) and the web side of
 // linking. Reply returns the text to send back; the adapter only transports it.

@@ -121,6 +121,8 @@ func runAPI(ctx context.Context, cfg config.Config) error {
 		ReadHeaderTimeout: 5 * time.Second,
 		// Requests inherit service (FR-7) but not cancellation: Shutdown drains them.
 		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
+		// net/http logs without a ctx; tag its lines too.
+		ErrorLog: slog.NewLogLogger(slog.Default().With(slog.String("service", "api")).Handler(), slog.LevelError),
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()

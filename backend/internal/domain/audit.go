@@ -168,7 +168,7 @@ func LogChange(old, l Log) (string, []string) {
 		"description": old.Description != l.Description,
 		"impact":      old.Impact != l.Impact,
 		"status":      old.Status != l.Status,
-		"tags":        !slices.Equal(old.Tags, l.Tags),
+		"tags":        !slices.Equal(slices.Sorted(slices.Values(old.Tags)), slices.Sorted(slices.Values(l.Tags))), // stored sorted
 		"links":       !slices.Equal(old.Links, l.Links),
 		"created_at":  !old.CreatedAt.Equal(l.CreatedAt),
 	}

@@ -68,6 +68,12 @@ func TestLogChangeAction(t *testing.T) {
 	a, f = LogChange(old, old)
 	require.Empty(t, a)
 	require.Nil(t, f)
+
+	reordered := Log{Name: "n", Status: StatusDone, Tags: []string{"b", "a"}}
+	a, f = LogChange(Log{Name: "n", Status: StatusDone, Tags: []string{"a", "b"}}, reordered)
+	require.Empty(t, a, "tag order is not a change")
+	require.Nil(t, f)
+	require.Equal(t, []string{"b", "a"}, reordered.Tags, "inputs not mutated")
 }
 
 func TestSourceOf(t *testing.T) {

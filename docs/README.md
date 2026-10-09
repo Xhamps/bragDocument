@@ -96,6 +96,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0006](prd/0006-pdf-report.md) | PDF report for sharing with the team | accepted |
 | [0007](prd/0007-impact-extraction.md) | Impact statement extracted from the description | accepted |
 | [0008](prd/0008-run-all-services-and-service-tagged-logs.md) | Run all backend services with one command, with service-tagged JSON logs | proposed |
+| [0009](prd/0009-audit-log.md) | Audit log for every action | proposed |
 
 ### ADRs
 

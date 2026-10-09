@@ -43,6 +43,8 @@ linters:
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
               desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
         adapter-postgres:
           files:
             - "**/internal/adapters/postgres/**"
@@ -54,6 +56,8 @@ linters:
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
               desc: adapters must not import each other; share code through ports, domain, or telemetry
         adapter-redis:
           files:
@@ -67,6 +71,8 @@ linters:
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
               desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
         adapter-llm:
           files:
             - "**/internal/adapters/llm/**"
@@ -79,6 +85,8 @@ linters:
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
               desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
         adapter-telegram:
           files:
             - "**/internal/adapters/telegram/**"
@@ -90,6 +98,22 @@ linters:
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/llm
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+        adapter-email:
+          files:
+            - "**/internal/adapters/email/**"
+          deny:
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/http
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/postgres
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/llm
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
               desc: adapters must not import each other; share code through ports, domain, or telemetry
 
 formatters:

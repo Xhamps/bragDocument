@@ -32,6 +32,10 @@ type Config struct {
 	OpenAIModel  string        `env:"OPENAI_MODEL" envDefault:"gpt-4.1-mini"`
 	LLMTimeout   time.Duration `env:"LLM_TIMEOUT" envDefault:"5s"`
 
+	ResendAPIKey string        `env:"RESEND_API_KEY"` // empty: share emails disabled (PRD-0004 FR-6, ADR-0014)
+	MailFrom     string        `env:"MAIL_FROM" envDefault:"Brag Document <onboarding@resend.dev>"`
+	MailTimeout  time.Duration `env:"MAIL_TIMEOUT" envDefault:"5s"`
+
 	DBTimeout       time.Duration `env:"DB_TIMEOUT" envDefault:"5s"`
 	CacheTimeout    time.Duration `env:"CACHE_TIMEOUT" envDefault:"200ms"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`

@@ -61,6 +61,30 @@ type DocumentInvitation struct {
 	AcceptedAt pgtype.Timestamptz
 }
 
+type DocumentReportSetting struct {
+	DocumentID    uuid.UUID
+	TenantID      uuid.UUID
+	GoalsThisYear string
+	GoalsNextYear string
+	SectionMap    []byte
+	UpdatedAt     time.Time
+}
+
+type ExportJob struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	DocumentID  uuid.UUID
+	RequestedBy uuid.UUID
+	Params      []byte
+	Status      string
+	Error       string
+	FileKey     string
+	CreatedAt   time.Time
+	StartedAt   pgtype.Timestamptz
+	FinishedAt  pgtype.Timestamptz
+	ExpiresAt   time.Time
+}
+
 type Log struct {
 	ID              uuid.UUID
 	TenantID        uuid.UUID

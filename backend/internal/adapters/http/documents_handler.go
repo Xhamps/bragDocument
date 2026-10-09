@@ -17,6 +17,7 @@ type DocumentUseCases interface {
 	Create(ctx context.Context, in app.CreateDocumentInput) (domain.Document, error)
 	Update(ctx context.Context, in app.UpdateDocumentInput) (domain.Document, error)
 	Delete(ctx context.Context, id, userID string) error
+	Get(ctx context.Context, id, userID string) (domain.Document, error)
 }
 
 // DocumentResponse is one document.
@@ -30,6 +31,9 @@ type DocumentResponse struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	LogCount    int        `json:"log_count"`
 	LastLogAt   *time.Time `json:"last_log_at"`
+	Role        string     `json:"role"`
+	OwnerName   string     `json:"owner_name,omitempty"`
+	IsNew       bool       `json:"is_new"`
 }
 
 // DocumentListResponse separates owned from shared documents (FR-9).
@@ -54,7 +58,8 @@ type UpdateDocumentRequest struct {
 func toDocument(d domain.Document) DocumentResponse {
 	return DocumentResponse{ID: d.ID, OwnerID: d.OwnerID, Title: d.Title, Description: d.Description,
 		State: d.State, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt,
-		LogCount: d.LogCount, LastLogAt: d.LastLogAt}
+		LogCount: d.LogCount, LastLogAt: d.LastLogAt,
+		Role: string(d.Role), OwnerName: d.OwnerName, IsNew: d.IsNew}
 }
 
 func toDocuments(ds []domain.Document) []DocumentResponse {
@@ -90,6 +95,14 @@ func RegisterDocuments(r gin.IRouter, uc DocumentUseCases) {
 			return
 		}
 		c.JSON(http.StatusCreated, toDocument(d))
+	})
+	g.GET("/:id", func(c *gin.Context) {
+		d, err := uc.Get(c.Request.Context(), c.Param("id"), principal(c).User.ID)
+		if err != nil {
+			RespondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, toDocument(d))
 	})
 	g.PATCH("/:id", func(c *gin.Context) {
 		var req UpdateDocumentRequest

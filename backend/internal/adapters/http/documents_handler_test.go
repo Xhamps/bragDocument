@@ -19,6 +19,8 @@ type fakeDocUC struct {
 	updated   app.UpdateDocumentInput
 	deletedID string
 	deletedBy string
+	getID     string
+	getBy     string
 	doc       domain.Document
 	err       error
 }
@@ -40,6 +42,11 @@ func (f *fakeDocUC) Update(_ context.Context, in app.UpdateDocumentInput) (domai
 func (f *fakeDocUC) Delete(_ context.Context, id, userID string) error {
 	f.deletedID, f.deletedBy = id, userID
 	return f.err
+}
+
+func (f *fakeDocUC) Get(_ context.Context, id, userID string) (domain.Document, error) {
+	f.getID, f.getBy = id, userID
+	return f.doc, f.err
 }
 
 func docsEngine(t *testing.T, uc *fakeDocUC) *gin.Engine {
@@ -107,4 +114,15 @@ func TestDocumentsUpdateInvalidJSON(t *testing.T) {
 	rec := do(docsEngine(t, uc), http.MethodPatch, "/documents/d1", `{not json`)
 	require.Equal(t, 422, rec.Code)
 	require.Empty(t, uc.updated.ID, "use case never called")
+}
+
+func TestDocumentsGet(t *testing.T) {
+	uc := &fakeDocUC{doc: domain.Document{ID: "d1", OwnerID: "u9", Title: "Q3", Role: domain.RoleViewer, OwnerName: "Bob", IsNew: true}}
+	rec := do(docsEngine(t, uc), http.MethodGet, "/documents/d1", "")
+	require.Equal(t, 200, rec.Code)
+	require.Equal(t, "d1", uc.getID)
+	require.Equal(t, "u1", uc.getBy)
+	require.Contains(t, rec.Body.String(), `"role":"viewer"`)
+	require.Contains(t, rec.Body.String(), `"owner_name":"Bob"`)
+	require.Contains(t, rec.Body.String(), `"is_new":true`)
 }

@@ -35,11 +35,14 @@ func errorBody(c *gin.Context, code, msg string, fields map[string]string) Error
 // error returned by a use case; no handler maps errors itself.
 func RespondError(c *gin.Context, err error) {
 	var ve *domain.ValidationError
+	var ae *domain.AccessError
 	switch {
 	case errors.As(err, &ve):
 		c.AbortWithStatusJSON(http.StatusUnprocessableEntity, errorBody(c, "validation", "validation failed", ve.Fields))
 	case errors.Is(err, domain.ErrNotFound):
 		c.AbortWithStatusJSON(http.StatusNotFound, errorBody(c, "not_found", "resource not found", nil))
+	case errors.As(err, &ae):
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody(c, "forbidden", ae.Error(), nil))
 	case errors.Is(err, domain.ErrForbidden):
 		c.AbortWithStatusJSON(http.StatusForbidden, errorBody(c, "forbidden", "not allowed", nil))
 	case errors.Is(err, domain.ErrConflict):

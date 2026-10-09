@@ -259,3 +259,16 @@ func TestTelegramLookupFailureStoresNothing(t *testing.T) {
 	require.Empty(t, f.lf.logs.logs)
 	require.Empty(t, f.undo.data)
 }
+
+func TestTelegramDocsIncludesEditorShares(t *testing.T) {
+	f := newTGFixture()
+	f.linked("")
+	f.lf.docs.docs["d8"] = domain.Document{ID: "d8", TenantID: "t1", OwnerID: "u9", Title: "Team wins", State: domain.DocumentActive}
+	f.lf.docs.docs["d9"] = domain.Document{ID: "d9", TenantID: "t1", OwnerID: "u9", Title: "Read only", State: domain.DocumentActive}
+	f.lf.docs.grant("d8", "u1", domain.RoleEditor)
+	f.lf.docs.grant("d9", "u1", domain.RoleViewer)
+
+	out := f.tg.Reply(context.Background(), 42, "/docs")
+	require.Contains(t, out, "Team wins")
+	require.NotContains(t, out, "Read only")
+}

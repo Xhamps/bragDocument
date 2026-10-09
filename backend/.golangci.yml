@@ -115,6 +115,24 @@ linters:
               desc: adapters must not import each other; share code through ports, domain, or telemetry
             - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
               desc: adapters must not import each other; share code through ports, domain, or telemetry
+        adapter-files:
+          files:
+            - "**/internal/adapters/files/**"
+          deny:
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/http
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/postgres
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/llm
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/redis
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/telegram
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/email
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
+            - pkg: github.com/xhamps/bragdocument/backend/internal/adapters/gotenberg
+              desc: adapters must not import each other; share code through ports, domain, or telemetry
 
 formatters:
   enable:

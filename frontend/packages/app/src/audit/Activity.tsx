@@ -5,7 +5,7 @@ import { actorName, describeAction } from "./describe";
 import { useDocumentActivity } from "./useAudit";
 import { When } from "./When";
 
-/** The document page's Activity (FR-11): owners only; "View all" opens the Audit log filtered. */
+/** The document page's Activity (FR-11): owners and tenant admins; "View all" opens the Audit log filtered. */
 export function Activity({ docId }: { docId: string }) {
   const q = useDocumentActivity(docId);
   const entries = q.data?.pages[0]?.entries ?? [];

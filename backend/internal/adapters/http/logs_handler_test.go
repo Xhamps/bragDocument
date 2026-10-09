@@ -20,6 +20,7 @@ type fakeLogUC struct {
 	created app.CreateLogInput
 	updated app.UpdateLogInput
 	deleted []string // docID, id, userID
+	got     []string // docID, id, userID
 	exDoc   string
 	log     domain.Log
 	err     error
@@ -35,6 +36,10 @@ func (f *fakeLogUC) Create(_ context.Context, in app.CreateLogInput) (domain.Log
 }
 func (f *fakeLogUC) Update(_ context.Context, in app.UpdateLogInput) (domain.Log, error) {
 	f.updated = in
+	return f.log, f.err
+}
+func (f *fakeLogUC) Get(_ context.Context, docID, id, userID string) (domain.Log, error) {
+	f.got = []string{docID, id, userID}
 	return f.log, f.err
 }
 func (f *fakeLogUC) Delete(_ context.Context, docID, id, userID string) error {
@@ -105,6 +110,14 @@ func TestLogsUpdateDistinguishesAbsentFromEmpty(t *testing.T) {
 	require.Empty(t, *uc.updated.Tags, "[] clears the tags")
 	require.Nil(t, uc.updated.Links, "absent links are unchanged")
 	require.Nil(t, uc.updated.Name)
+}
+
+func TestLogsGet(t *testing.T) {
+	uc := &fakeLogUC{log: domain.Log{ID: "l1", Name: "X"}}
+	rec := do(logsEngine(t, uc), http.MethodGet, "/documents/d1/logs/l1", "")
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	require.Equal(t, []string{"d1", "l1", "u1"}, uc.got)
+	require.Contains(t, rec.Body.String(), `"name":"X"`)
 }
 
 func TestLogsDelete(t *testing.T) {

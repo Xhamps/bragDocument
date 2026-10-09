@@ -18,6 +18,7 @@ type LogUseCases interface {
 	List(ctx context.Context, docID, userID string, f domain.LogFilter) (domain.LogPage, error)
 	Create(ctx context.Context, in app.CreateLogInput) (domain.Log, error)
 	Update(ctx context.Context, in app.UpdateLogInput) (domain.Log, error)
+	Get(ctx context.Context, docID, id, userID string) (domain.Log, error)
 	Delete(ctx context.Context, docID, id, userID string) error
 	DeleteExamples(ctx context.Context, docID, userID string) error
 	Tags(ctx context.Context) ([]string, error)
@@ -177,6 +178,14 @@ func RegisterLogs(r gin.IRouter, uc LogUseCases) {
 			return
 		}
 		c.JSON(http.StatusCreated, toLog(l))
+	})
+	g.GET("/logs/:logId", func(c *gin.Context) {
+		l, err := uc.Get(c.Request.Context(), c.Param("id"), c.Param("logId"), principal(c).User.ID)
+		if err != nil {
+			RespondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, toLog(l))
 	})
 	g.PATCH("/logs/:logId", func(c *gin.Context) {
 		var req UpdateLogRequest

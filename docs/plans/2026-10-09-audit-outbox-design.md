@@ -82,9 +82,9 @@ Redelivery covers entries lost inside Redis (restart, failover, flush): until th
 
 **Consumer** (`redis.Stream.Consume`): consumer group `bragdoc` on `stream:audit.entry`; `XREADGROUP … BLOCK 5s`; call the handler; on success `XACK` and `XDEL` in one transaction (one group per stream, so the stream only holds unacked work). A failed handler leaves the message pending; `XAUTOCLAIM` retakes messages idle for over a minute. Transient errors (`domain.ErrUnavailable`, context cancelled or deadline exceeded: Postgres down, shutdown) stay pending however often they were delivered. After 5 deliveries failing otherwise, the message is copied to `stream:<topic>:dead`, acked, deleted, and logged at error. The consumer name is `host:pid`.
 
-**Audit handler** (in `cmd`): `AuditRepo.Store` decodes `auditMessage`, then `WithTenant(msg.TenantID)` and `INSERT INTO audit_entries … ON CONFLICT (outbox_id) DO NOTHING` (`StoreAuditEntry`). `at` comes from the payload. The payload format is the `auditMessage` struct on both ends. Then `OutboxRepo.MarkDelivered(id)`; if that fails the handler returns the error and the message is retried (Store is idempotent).
+**Audit handler** (in `cmd`, wrapped in `confirmed(handle)`, which every topic's handler goes through): `AuditRepo.Store` decodes `auditMessage`, then `WithTenant(msg.TenantID)` and `INSERT INTO audit_entries … ON CONFLICT (outbox_id) DO NOTHING` (`StoreAuditEntry`). `at` comes from the payload. The payload format is the `auditMessage` struct on both ends. Then the wrapper calls `OutboxRepo.MarkDelivered(id)`; if that fails the handler returns the error and the message is retried (Store is idempotent).
 
-No new ports: no use case calls the relay or the consumer; `cmd` wires the adapter functions together (`outbox.Relay(ctx, stream.Publish)`, `stream.Consume(ctx, "audit.entry", store)` where `store` is `audits.Store` then `outbox.MarkDelivered`).
+No new ports: no use case calls the relay or the consumer; `cmd` wires the adapter functions together (`outbox.Relay(ctx, stream.Publish)`, `stream.Consume(ctx, "audit.entry", confirmed(audits.Store))`, where `confirmed` runs the handler then `outbox.MarkDelivered`).
 
 ## Frontend
 

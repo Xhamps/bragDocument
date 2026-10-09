@@ -129,17 +129,20 @@ func runExports(ctx context.Context, uc *app.Exports) {
 // cfg.DatabaseURL works as it does for exports.
 func runOutbox(ctx context.Context, db *postgres.DB, stream *redis.Stream) {
 	outbox, audits := postgres.NewOutboxRepo(db), postgres.NewAuditRepo(db)
-	// Store, then confirm delivery. If the confirmation fails the message stays
-	// pending and is handled again; Store is idempotent.
-	store := func(ctx context.Context, m domain.OutboxMessage) error {
-		if err := audits.Store(ctx, m); err != nil {
-			return err
+	// confirmed runs handle, then confirms delivery so the relay stops
+	// republishing. Every topic's handler goes through it. If the confirmation
+	// fails the message stays pending and is handled again; handlers are idempotent.
+	confirmed := func(handle func(context.Context, domain.OutboxMessage) error) func(context.Context, domain.OutboxMessage) error {
+		return func(ctx context.Context, m domain.OutboxMessage) error {
+			if err := handle(ctx, m); err != nil {
+				return err
+			}
+			return outbox.MarkDelivered(ctx, m.ID)
 		}
-		return outbox.MarkDelivered(ctx, m.ID)
 	}
 	var wg sync.WaitGroup
 	defer wg.Wait()
-	wg.Go(func() { _ = stream.Consume(ctx, domain.TopicAudit, store) }) // always nil: it logs and retries
+	wg.Go(func() { _ = stream.Consume(ctx, domain.TopicAudit, confirmed(audits.Store)) }) // always nil: it logs and retries
 	tick := time.NewTicker(outboxPoll)
 	defer tick.Stop()
 	var lastRelayWarn, lastPurgeWarn, lastPurge time.Time

@@ -15,6 +15,9 @@ const (
 	// redeliverAfter: a published row the consumer has not confirmed
 	// (MarkDelivered) is published again this long after its last publish,
 	// which covers entries lost with Redis (restart, failover, flush).
+	// ponytail: a consumer backlog older than this is republished too
+	// (duplicates, harmless; the stuck-row query may show false positives).
+	// Raise it, or skip rows still in the stream, if volume grows.
 	redeliverAfter = 10 * time.Minute
 	// maxAttempts caps publishes per row. ponytail: a row that reaches it
 	// undelivered stays in the outbox for an operator (ADR-0015, Operations);

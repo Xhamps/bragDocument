@@ -16,6 +16,19 @@ type AppMetum struct {
 	Value string
 }
 
+type AuditEntry struct {
+	ID            int64
+	TenantID      uuid.UUID
+	ActorID       uuid.UUID
+	ActorEmail    string
+	Action        string
+	DocumentID    uuid.UUID
+	DocumentTitle string
+	Target        string
+	Role          string
+	At            time.Time
+}
+
 type Document struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
@@ -25,6 +38,27 @@ type Document struct {
 	State       string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type DocumentGrant struct {
+	DocumentID uuid.UUID
+	TenantID   uuid.UUID
+	UserID     uuid.UUID
+	Role       string
+	GrantedBy  uuid.UUID
+	GrantedAt  time.Time
+	SeenAt     pgtype.Timestamptz
+}
+
+type DocumentInvitation struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	DocumentID uuid.UUID
+	Email      string
+	Role       string
+	InvitedBy  uuid.UUID
+	CreatedAt  time.Time
+	AcceptedAt pgtype.Timestamptz
 }
 
 type Log struct {

@@ -7,9 +7,53 @@ package sqlcgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const acceptDocumentInvitations = `-- name: AcceptDocumentInvitations :many
+WITH accepted AS (
+    UPDATE document_invitations i SET accepted_at = now()
+    WHERE i.tenant_id = $2 AND i.email = $3 AND i.accepted_at IS NULL
+    RETURNING i.document_id, i.tenant_id, i.role, i.invited_by
+)
+INSERT INTO document_grants (document_id, tenant_id, user_id, role, granted_by)
+SELECT a.document_id, a.tenant_id, $1::uuid, a.role, a.invited_by FROM accepted a
+RETURNING document_id, role
+`
+
+type AcceptDocumentInvitationsParams struct {
+	UserID   uuid.UUID
+	TenantID uuid.UUID
+	Email    string
+}
+
+type AcceptDocumentInvitationsRow struct {
+	DocumentID uuid.UUID
+	Role       string
+}
+
+// Turns every pending invitation for the email in the tenant into a grant.
+func (q *Queries) AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, acceptDocumentInvitations, arg.UserID, arg.TenantID, arg.Email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AcceptDocumentInvitationsRow
+	for rows.Next() {
+		var i AcceptDocumentInvitationsRow
+		if err := rows.Scan(&i.DocumentID, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const createInvitation = `-- name: CreateInvitation :one
 INSERT INTO tenant_invitations (tenant_id, email, created_by)
@@ -47,19 +91,46 @@ func (q *Queries) DeleteInvitation(ctx context.Context, id uuid.UUID) (int64, er
 	return result.RowsAffected(), nil
 }
 
-const getInvitationByEmail = `-- name: GetInvitationByEmail :one
-SELECT id, tenant_id, email, created_by, created_at FROM tenant_invitations WHERE email = $1 ORDER BY created_at LIMIT 1
+const deleteTenantInvitationByEmail = `-- name: DeleteTenantInvitationByEmail :exec
+DELETE FROM tenant_invitations WHERE tenant_id = $1 AND email = $2
 `
 
-func (q *Queries) GetInvitationByEmail(ctx context.Context, email string) (TenantInvitation, error) {
-	row := q.db.QueryRow(ctx, getInvitationByEmail, email)
-	var i TenantInvitation
+type DeleteTenantInvitationByEmailParams struct {
+	TenantID uuid.UUID
+	Email    string
+}
+
+func (q *Queries) DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error {
+	_, err := q.db.Exec(ctx, deleteTenantInvitationByEmail, arg.TenantID, arg.Email)
+	return err
+}
+
+const findOldestInvitationByEmail = `-- name: FindOldestInvitationByEmail :one
+SELECT t.id, t.tenant_id, t.created_at, false::boolean AS for_document
+FROM tenant_invitations t WHERE t.email = $1
+UNION ALL
+SELECT i.id, i.tenant_id, i.created_at, true::boolean
+FROM document_invitations i WHERE i.email = $1 AND i.accepted_at IS NULL
+ORDER BY created_at
+LIMIT 1
+`
+
+type FindOldestInvitationByEmailRow struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	ForDocument bool
+}
+
+// Tenant and document invitations compete; the oldest picks the tenant.
+func (q *Queries) FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error) {
+	row := q.db.QueryRow(ctx, findOldestInvitationByEmail, email)
+	var i FindOldestInvitationByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
-		&i.Email,
-		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.ForDocument,
 	)
 	return i, err
 }
@@ -83,6 +154,46 @@ func (q *Queries) ListInvitationsByTenant(ctx context.Context, tenantID uuid.UUI
 			&i.Email,
 			&i.CreatedBy,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingDocumentInvitationsByTenant = `-- name: ListPendingDocumentInvitationsByTenant :many
+SELECT i.id, i.email, i.created_at, d.title AS document_title
+FROM document_invitations i
+JOIN documents d ON d.id = i.document_id
+WHERE i.tenant_id = $1 AND i.accepted_at IS NULL
+ORDER BY i.created_at
+`
+
+type ListPendingDocumentInvitationsByTenantRow struct {
+	ID            uuid.UUID
+	Email         string
+	CreatedAt     time.Time
+	DocumentTitle string
+}
+
+func (q *Queries) ListPendingDocumentInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]ListPendingDocumentInvitationsByTenantRow, error) {
+	rows, err := q.db.Query(ctx, listPendingDocumentInvitationsByTenant, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingDocumentInvitationsByTenantRow
+	for rows.Next() {
+		var i ListPendingDocumentInvitationsByTenantRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.CreatedAt,
+			&i.DocumentTitle,
 		); err != nil {
 			return nil, err
 		}

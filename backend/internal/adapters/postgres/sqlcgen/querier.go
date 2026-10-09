@@ -11,43 +11,67 @@ import (
 )
 
 type Querier interface {
+	// Turns every pending invitation for the email in the tenant into a grant.
+	AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error)
+	// Copies the document's tenant and title so the entry outlives the document.
+	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
+	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
+	// The tenant comes from the document; the composite FKs keep the user in it.
+	CreateGrant(ctx context.Context, arg CreateGrantParams) (DocumentGrant, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (TenantInvitation, error)
 	CreateLog(ctx context.Context, arg CreateLogParams) (Log, error)
 	CreateTenant(ctx context.Context, name string) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
+	DeleteGrant(ctx context.Context, arg DeleteGrantParams) (int64, error)
 	DeleteInvitation(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteLog(ctx context.Context, arg DeleteLogParams) (int64, error)
 	DeleteLogLinks(ctx context.Context, logID uuid.UUID) error
 	DeleteLogTags(ctx context.Context, logID uuid.UUID) error
+	DeletePendingDocumentInvitation(ctx context.Context, arg DeletePendingDocumentInvitationParams) (int64, error)
 	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
+	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
-	GetDocument(ctx context.Context, id uuid.UUID) (Document, error)
-	GetInvitationByEmail(ctx context.Context, email string) (TenantInvitation, error)
+	// Tenant and document invitations compete; the oldest picks the tenant.
+	FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error)
+	// role is '' when the user neither owns nor has a grant on the document.
+	GetDocumentForUser(ctx context.Context, arg GetDocumentForUserParams) (GetDocumentForUserRow, error)
 	GetLog(ctx context.Context, arg GetLogParams) (Log, error)
 	GetMeta(ctx context.Context, key string) (string, error)
 	GetTelegramLink(ctx context.Context, userID uuid.UUID) (TelegramLink, error)
 	GetTelegramLinkByTelegramID(ctx context.Context, telegramUserID int64) (TelegramLink, error)
 	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
 	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
+	ListAuditByDocument(ctx context.Context, documentID uuid.UUID) ([]AuditEntry, error)
+	ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error)
 	// last_log_at falls back to d.created_at so the column is never NULL; it is
 	// meaningful only when log_count > 0. Examples are not counted.
 	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
+	ListGrants(ctx context.Context, documentID uuid.UUID) ([]ListGrantsRow, error)
 	ListInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]TenantInvitation, error)
 	ListLinksForLogs(ctx context.Context, ids []uuid.UUID) ([]LogLink, error)
 	// Every array parameter must be non-NULL (pass an empty array for "no filter"):
 	// cardinality(NULL) is NULL and would filter out every row.
 	// impact and status orders mirror domain.Impacts and domain.Statuses; keep in sync.
 	ListLogs(ctx context.Context, arg ListLogsParams) ([]ListLogsRow, error)
+	ListPendingDocumentInvitations(ctx context.Context, documentID uuid.UUID) ([]DocumentInvitation, error)
+	ListPendingDocumentInvitationsByTenant(ctx context.Context, tenantID uuid.UUID) ([]ListPendingDocumentInvitationsByTenantRow, error)
+	ListSharedDocuments(ctx context.Context, userID uuid.UUID) ([]ListSharedDocumentsRow, error)
 	ListTags(ctx context.Context) ([]string, error)
 	ListTagsForLogs(ctx context.Context, ids []uuid.UUID) ([]ListTagsForLogsRow, error)
 	ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error)
+	// Active documents the user owns or edits; the bot's /docs order.
+	ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error)
+	MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error
+	SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error)
 	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
+	UpdateGrantRole(ctx context.Context, arg UpdateGrantRoleParams) (int64, error)
 	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)
 	UpsertTags(ctx context.Context, arg UpsertTagsParams) error
 	// Re-linking the same Telegram account keeps the target document.

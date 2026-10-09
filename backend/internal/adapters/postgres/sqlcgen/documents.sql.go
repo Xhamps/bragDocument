@@ -57,22 +57,45 @@ func (q *Queries) DeleteDocument(ctx context.Context, id uuid.UUID) (int64, erro
 	return result.RowsAffected(), nil
 }
 
-const getDocument = `-- name: GetDocument :one
-SELECT id, tenant_id, owner_id, title, description, state, created_at, updated_at FROM documents WHERE id = $1
+const getDocumentForUser = `-- name: GetDocumentForUser :one
+SELECT d.id, d.tenant_id, d.owner_id, d.title, d.description, d.state, d.created_at, d.updated_at,
+       (CASE WHEN d.owner_id = $1::uuid THEN 'owner' ELSE coalesce(g.role, '') END)::text AS role,
+       (g.user_id IS NOT NULL AND g.seen_at IS NULL)::boolean AS is_new,
+       coalesce(nullif(o.display_name, ''), o.email)::text AS owner_name
+FROM documents d
+JOIN users o ON o.id = d.owner_id
+LEFT JOIN document_grants g ON g.document_id = d.id AND g.user_id = $1::uuid
+WHERE d.id = $2
 `
 
-func (q *Queries) GetDocument(ctx context.Context, id uuid.UUID) (Document, error) {
-	row := q.db.QueryRow(ctx, getDocument, id)
-	var i Document
+type GetDocumentForUserParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+type GetDocumentForUserRow struct {
+	Document  Document
+	Role      string
+	IsNew     bool
+	OwnerName string
+}
+
+// role is ” when the user neither owns nor has a grant on the document.
+func (q *Queries) GetDocumentForUser(ctx context.Context, arg GetDocumentForUserParams) (GetDocumentForUserRow, error) {
+	row := q.db.QueryRow(ctx, getDocumentForUser, arg.UserID, arg.ID)
+	var i GetDocumentForUserRow
 	err := row.Scan(
-		&i.ID,
-		&i.TenantID,
-		&i.OwnerID,
-		&i.Title,
-		&i.Description,
-		&i.State,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.Document.ID,
+		&i.Document.TenantID,
+		&i.Document.OwnerID,
+		&i.Document.Title,
+		&i.Document.Description,
+		&i.Document.State,
+		&i.Document.CreatedAt,
+		&i.Document.UpdatedAt,
+		&i.Role,
+		&i.IsNew,
+		&i.OwnerName,
 	)
 	return i, err
 }
@@ -125,6 +148,134 @@ func (q *Queries) ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) (
 		return nil, err
 	}
 	return items, nil
+}
+
+const listSharedDocuments = `-- name: ListSharedDocuments :many
+SELECT d.id, d.tenant_id, d.owner_id, d.title, d.description, d.state, d.created_at, d.updated_at,
+       g.role,
+       (g.seen_at IS NULL)::boolean AS is_new,
+       coalesce(nullif(o.display_name, ''), o.email)::text AS owner_name,
+       count(l.id)::int AS log_count,
+       coalesce(max(l.created_at), d.created_at)::timestamptz AS last_log_at
+FROM document_grants g
+JOIN documents d ON d.id = g.document_id
+JOIN users o ON o.id = d.owner_id
+LEFT JOIN logs l ON l.document_id = d.id AND NOT l.is_example
+WHERE g.user_id = $1
+GROUP BY d.id, g.document_id, g.user_id, o.id
+ORDER BY d.updated_at DESC
+`
+
+type ListSharedDocumentsRow struct {
+	Document  Document
+	Role      string
+	IsNew     bool
+	OwnerName string
+	LogCount  int32
+	LastLogAt time.Time
+}
+
+func (q *Queries) ListSharedDocuments(ctx context.Context, userID uuid.UUID) ([]ListSharedDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listSharedDocuments, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSharedDocumentsRow
+	for rows.Next() {
+		var i ListSharedDocumentsRow
+		if err := rows.Scan(
+			&i.Document.ID,
+			&i.Document.TenantID,
+			&i.Document.OwnerID,
+			&i.Document.Title,
+			&i.Document.Description,
+			&i.Document.State,
+			&i.Document.CreatedAt,
+			&i.Document.UpdatedAt,
+			&i.Role,
+			&i.IsNew,
+			&i.OwnerName,
+			&i.LogCount,
+			&i.LastLogAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWritableDocuments = `-- name: ListWritableDocuments :many
+SELECT d.id, d.tenant_id, d.owner_id, d.title, d.description, d.state, d.created_at, d.updated_at FROM documents d
+LEFT JOIN document_grants g ON g.document_id = d.id AND g.user_id = $1
+WHERE d.state = 'active' AND (d.owner_id = $1 OR g.role = 'editor')
+ORDER BY d.updated_at DESC
+`
+
+// Active documents the user owns or edits; the bot's /docs order.
+func (q *Queries) ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error) {
+	rows, err := q.db.Query(ctx, listWritableDocuments, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Document
+	for rows.Next() {
+		var i Document
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Description,
+			&i.State,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markGrantSeen = `-- name: MarkGrantSeen :exec
+UPDATE document_grants SET seen_at = now()
+WHERE document_id = $1 AND user_id = $2 AND seen_at IS NULL
+`
+
+type MarkGrantSeenParams struct {
+	DocumentID uuid.UUID
+	UserID     uuid.UUID
+}
+
+func (q *Queries) MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error {
+	_, err := q.db.Exec(ctx, markGrantSeen, arg.DocumentID, arg.UserID)
+	return err
+}
+
+const setDocumentOwner = `-- name: SetDocumentOwner :execrows
+UPDATE documents SET owner_id = $2, updated_at = now() WHERE id = $1
+`
+
+type SetDocumentOwnerParams struct {
+	ID      uuid.UUID
+	OwnerID uuid.UUID
+}
+
+func (q *Queries) SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setDocumentOwner, arg.ID, arg.OwnerID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateDocument = `-- name: UpdateDocument :one

@@ -10,3 +10,6 @@ SELECT * FROM users WHERE tenant_id = $1 ORDER BY created_at;
 
 -- name: DeleteUser :execrows
 DELETE FROM users WHERE id = $1;
+
+-- name: GetUserByEmail :one
+SELECT * FROM users WHERE email = $1;

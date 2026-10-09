@@ -80,7 +80,7 @@ Frontend:
 
 - Route `/settings` (`routes/Settings.tsx`), "Settings" nav link.
 - Telegram card. Not linked: "Generate link code" → code with Copy, expiry, "Open in Telegram" when `bot_url` is set, and "send `/start CODE` to the bot". Linked: "Linked since {date}" and Unlink with confirm. Status refetches on window focus.
-- `DocumentLogs` reads `?edit=<logId>`, fetches the log, opens `LogFormDialog`, drops the param on close.
+- `DocumentLogs` reads `?edit=<logId>`, fetches the log, opens `LogFormDialog` (not for archived documents), drops the param once the fetch settles.
 - `settings/useTelegram.ts` react-query hooks.
 
 ## 5. Testing

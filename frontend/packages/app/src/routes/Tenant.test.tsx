@@ -5,6 +5,7 @@ import { me, mockFetch, renderAt } from "../test/mocks";
 test("admin sees members and invitations, invites, removes", async () => {
   const calls = mockFetch({
     "GET /me": me,
+    "GET /tenant/audit": [],
     "GET /tenant/members": [
       {
         id: "u1",
@@ -63,6 +64,7 @@ test("admin sees members and invitations, invites, removes", async () => {
 test("explains 409s, clears invite error on edit, shows withdraw errors", async () => {
   mockFetch({
     "GET /me": me,
+    "GET /tenant/audit": [],
     "GET /tenant/members": [
       {
         id: "u2",
@@ -120,6 +122,7 @@ test("explains 409s, clears invite error on edit, shows withdraw errors", async 
 test("shows empty invitations message", async () => {
   mockFetch({
     "GET /me": me,
+    "GET /tenant/audit": [],
     "GET /tenant/members": [],
     "GET /tenant/invitations": [],
   });
@@ -132,6 +135,7 @@ test("shows empty invitations message", async () => {
 test("member is redirected home", async () => {
   const calls = mockFetch({
     "GET /me": { ...me, role: "member" },
+    "GET /tenant/audit": [],
     "GET /documents": { owned: [], shared: [] },
   });
   renderAt("/tenant");
@@ -139,4 +143,41 @@ test("member is redirected home", async () => {
     await screen.findByText(/what is a brag document/i),
   ).toBeInTheDocument();
   expect(calls.some((c) => c.path.startsWith("/tenant/"))).toBe(false);
+});
+
+test("admin sees the sharing audit and document invitations", async () => {
+  mockFetch({
+    "GET /me": me,
+    "GET /tenant/members": [],
+    "GET /tenant/invitations": [
+      {
+        id: "di1",
+        email: "new@acme.com",
+        created_at: "2026-01-03T00:00:00Z",
+        document_title: "Bob 2026",
+      },
+    ],
+    "GET /tenant/audit": [
+      {
+        id: 1,
+        actor_email: "bob@acme.com",
+        action: "grant",
+        document_id: "d2",
+        document_title: "Bob 2026",
+        target: "ada@acme.com",
+        role: "viewer",
+        at: "2026-01-03T00:00:00Z",
+      },
+    ],
+  });
+  renderAt("/tenant");
+  expect(
+    await screen.findByText(
+      /bob@acme\.com shared ada@acme\.com on “Bob 2026” as viewer/,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/via “Bob 2026”/)).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /withdraw new@acme\.com/i }),
+  ).not.toBeInTheDocument();
 });

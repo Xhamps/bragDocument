@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-10-08
+status: accepted
+date: 2026-10-09
 decision-makers: Engineering, Security
 ---
 
@@ -19,13 +19,13 @@ Documents are shared with roles ([PRD-0004](../prd/0004-sharing-and-rbac.md)). W
 
 ## Considered Options
 
-* `document_grants(document_id, user_id, role)` table, a static role→permission matrix in Go, a Gin middleware that loads the caller's role per document
+* `document_grants(document_id, user_id, role)` table, a static role→permission matrix in Go, and a role resolver in the application layer (`app.access`)
 * Policy engine (Casbin, OPA)
 * Supabase RLS policies as the sole authorization layer
 
 ## Decision Outcome
 
-Chosen option: "Grants table + static matrix + middleware", because three fixed roles do not justify a policy engine, and keeping the matrix in code makes it testable and reviewable. The middleware resolves `(user, document)` → role (cached in Redis ≤ 30 s), attaches it to the request context, and handlers call `require(ctx, PermEditLogs)`. Ownership is a grant with role `owner`, constrained by a partial unique index to one per document. Every grant change writes an audit row.
+Chosen option: "Grants table + static matrix + app-layer resolver", because three fixed roles do not justify a policy engine, and keeping the matrix in code makes it testable and reviewable. `app.access(ctx, docs, docID, userID, perm)` loads the document and the caller's role in one query and checks `domain.Can(role, perm)`; handlers and the Telegram bot both go through the use cases, so there is no HTTP middleware (the bot calls `app` in-process and would bypass one). There is no Redis cache: FR-5 requires immediate revocation, and the single indexed query meets NFR-2. The owner stays in `documents.owner_id` (decided in the tenants design); `document_grants` holds `editor` and `viewer` only, so "exactly one owner" is a column, not a partial unique index. No role → 404 (FR-7); a role without the permission → 403 whose message names the role (`domain.AccessError`). Every grant change writes an `audit_entries` row in the same transaction; the app role has no UPDATE or DELETE on that table.
 
 ### Consequences
 
@@ -36,11 +36,11 @@ Chosen option: "Grants table + static matrix + middleware", because three fixed 
 
 ### Confirmation
 
-Table-driven tests over the matrix for every (role, action). An HTTP test suite asserts 403 for each forbidden combination and 404 for documents outside the tenant.
+`internal/domain/permission_test.go` checks every (role, permission) against the PRD table. `internal/app/access_matrix_test.go` drives every use case as owner, editor, viewer, and an ungranted member, asserting success, 403 (`AccessError`), or 404.
 
 ## Pros and Cons of the Options
 
-### Grants table + static matrix
+### Grants table + static matrix + app-layer resolver
 
 * Good, because simple, fast, testable.
 * Bad, because no dynamic policies.

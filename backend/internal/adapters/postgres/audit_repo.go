@@ -51,7 +51,7 @@ func NewAuditRepo(db *DB) *AuditRepo { return &AuditRepo{db: db} }
 // is a no-op (ADR-0015: at-least-once delivery, idempotent consumer).
 func (r *AuditRepo) Store(ctx context.Context, m domain.OutboxMessage) error {
 	if m.Topic != domain.TopicAudit {
-		return fmt.Errorf("audit message %d: topic %q", m.ID, m.Topic)
+		return fmt.Errorf("audit message %d: topic %q", m.ID, m.Topic) // poison: dead-lettered after retries
 	}
 	var a auditMessage
 	if err := json.Unmarshal(m.Payload, &a); err != nil {

@@ -218,6 +218,15 @@ func TestWriteSnapshotsBeforeAndEnqueuesAfter(t *testing.T) {
 	require.ErrorIs(t, logs.Delete(ctxA, doc.ID, uuid.NewString(), logEntry(ada.ID, doc.ID, domain.AuditLogDeleted)), domain.ErrNotFound)
 	require.Equal(t, before, count(t, db, ta.ID, "outbox"))
 
+	// Removing examples that exist writes exactly one message.
+	ex := testLog(ta.ID, "", ada.ID)
+	ex.IsExample = true
+	withEx, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "examples"}, []domain.Log{ex}, docCreated(ada.ID))
+	require.NoError(t, err)
+	before = count(t, db, ta.ID, "outbox")
+	require.NoError(t, logs.DeleteExamples(ctxA, withEx.ID, logEntry(ada.ID, withEx.ID, domain.AuditLogDeleted)))
+	require.Equal(t, before+1, count(t, db, ta.ID, "outbox"))
+
 	// Snapshot before fn: the deleted document keeps its title (FR-12).
 	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)))
 	e = latest()

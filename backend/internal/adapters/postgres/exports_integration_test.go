@@ -43,7 +43,10 @@ func TestExports(t *testing.T) {
 	// Create, get, list; tenant B sees nothing.
 	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	params := domain.ExportParams{Filter: domain.LogFilter{From: &from, Impacts: []string{"high"}}, Settings: s, TenantName: "A"}
-	j, err := exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: admin.ID, Params: params})
+	requested := func(actorID string) domain.AuditEntry {
+		return domain.AuditEntry{ActorID: actorID, Source: domain.SourceWeb, Action: domain.AuditExportRequested, DocumentID: doc.ID}
+	}
+	j, err := exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: admin.ID, Params: params}, requested(admin.ID))
 	require.NoError(t, err)
 	require.Equal(t, domain.ExportQueued, j.Status)
 	require.WithinDuration(t, time.Now().Add(24*time.Hour), j.ExpiresAt, time.Minute)
@@ -101,7 +104,11 @@ func TestExports(t *testing.T) {
 
 	// Another user's job: claimed, failed, and kept out of admin's list.
 	other := uuid.NewString() // requested_by has no FK
-	jf, err := exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: other, Params: params})
+	_, err = exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: other, Params: params}, requested(other))
+	require.ErrorIs(t, err, domain.ErrNotFound, "the audit entry names no user")
+	_, err = exports.Claim(context.Background())
+	require.ErrorIs(t, err, domain.ErrNotFound, "and the job rolled back with it")
+	jf, err := exports.Create(ctx, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: other, Params: params}, requested(admin.ID))
 	require.NoError(t, err)
 	claimed, err := exports.Claim(context.Background())
 	require.NoError(t, err)
@@ -132,4 +139,7 @@ func TestExports(t *testing.T) {
 	}
 	_, err = exports.Get(ctx, doc.ID, j.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
+
+	require.Equal(t, []string{domain.AuditDocumentCreated, domain.AuditExportRequested, domain.AuditExportRequested},
+		auditActions(t, db, ta.ID), "one entry per queued job")
 }

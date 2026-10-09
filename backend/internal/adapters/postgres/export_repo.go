@@ -27,7 +27,7 @@ func toExportJob(j sqlcgen.ExportJob) (domain.ExportJob, error) {
 	return out, nil
 }
 
-func (r *ExportRepo) Create(ctx context.Context, j domain.ExportJob) (domain.ExportJob, error) {
+func (r *ExportRepo) Create(ctx context.Context, j domain.ExportJob, a domain.AuditEntry) (domain.ExportJob, error) {
 	tid, err := parseID(j.TenantID)
 	if err != nil {
 		return domain.ExportJob{}, err
@@ -50,8 +50,10 @@ func (r *ExportRepo) Create(ctx context.Context, j domain.ExportJob) (domain.Exp
 		if err != nil {
 			return wrap(err)
 		}
-		out, err = toExportJob(row)
-		return err
+		if out, err = toExportJob(row); err != nil {
+			return err
+		}
+		return audit(ctx, q, a)
 	})
 	return out, err
 }

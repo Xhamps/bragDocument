@@ -529,18 +529,20 @@ type fakeExports struct {
 	settings  map[string]domain.ReportSettings
 	seq       int
 	finishErr error // returned by Finish and Fail (e.g. ErrNotFound: job reclaimed)
+	audit     []domain.AuditEntry
 }
 
 func newFakeExports() *fakeExports {
 	return &fakeExports{jobs: map[string]domain.ExportJob{}, settings: map[string]domain.ReportSettings{}}
 }
 
-func (f *fakeExports) Create(_ context.Context, j domain.ExportJob) (domain.ExportJob, error) {
+func (f *fakeExports) Create(_ context.Context, j domain.ExportJob, a domain.AuditEntry) (domain.ExportJob, error) {
 	f.seq++
 	j.ID, j.Status, j.CreatedAt = "j"+strconv.Itoa(f.seq), domain.ExportQueued, time.Now()
 	j.ExpiresAt = j.CreatedAt.Add(24 * time.Hour)
 	f.jobs[j.ID] = j
 	f.order = append(f.order, j.ID)
+	f.audit = append(f.audit, a)
 	return j, nil
 }
 func (f *fakeExports) Get(_ context.Context, docID, id string) (domain.ExportJob, error) {

@@ -13,6 +13,7 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/adapters/redis"
 	"github.com/xhamps/bragdocument/backend/internal/app"
 	"github.com/xhamps/bragdocument/backend/internal/config"
+	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/ports"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
@@ -49,7 +50,7 @@ func workerCmd() *cobra.Command {
 
 // runWorker claims export jobs and expires old files until ctx is done.
 func runWorker(ctx context.Context, cfg config.Config) error {
-	ctx = telemetry.WithService(ctx, "worker")
+	ctx = domain.WithSource(telemetry.WithService(ctx, "worker"), domain.SourceSystem)
 	if cfg.ExportKey == "" {
 		slog.WarnContext(ctx, "EXPORT_KEY not set; worker idle")
 		<-ctx.Done()

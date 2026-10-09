@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -67,4 +68,11 @@ func TestLogChangeAction(t *testing.T) {
 	a, f = LogChange(old, old)
 	require.Empty(t, a)
 	require.Nil(t, f)
+}
+
+func TestSourceOf(t *testing.T) {
+	ctx := context.Background()
+	require.Equal(t, SourceWeb, SourceOf(ctx))
+	require.Equal(t, SourceTelegram, SourceOf(WithSource(ctx, SourceTelegram)))
+	require.Equal(t, SourceSystem, SourceOf(WithSource(ctx, SourceSystem)))
 }

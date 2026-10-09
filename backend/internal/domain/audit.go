@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"time"
@@ -48,6 +49,21 @@ const (
 	SourceTelegram = "telegram"
 	SourceSystem   = "system"
 )
+
+type sourceKey struct{}
+
+// WithSource stores the audit source in ctx; cmd sets it per service.
+func WithSource(ctx context.Context, s string) context.Context {
+	return context.WithValue(ctx, sourceKey{}, s)
+}
+
+// SourceOf returns the audit source stored in ctx, or SourceWeb.
+func SourceOf(ctx context.Context) string {
+	if s, ok := ctx.Value(sourceKey{}).(string); ok {
+		return s
+	}
+	return SourceWeb
+}
 
 // Audit target types.
 const (

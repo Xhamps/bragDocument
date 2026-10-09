@@ -31,8 +31,6 @@ linters:
             - $gostd
             - github.com/xhamps/bragdocument/backend/internal/domain
             - github.com/xhamps/bragdocument/backend/internal/ports
-            # PRD-0009: app reads telemetry.Service(ctx) to pick the audit source.
-            - github.com/xhamps/bragdocument/backend/internal/telemetry
         adapter-http:
           files:
             - "**/internal/adapters/http/**"

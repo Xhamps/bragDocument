@@ -16,6 +16,7 @@ import { DocumentTabs } from "../documents/DocumentTabs";
 import { useDocument } from "../documents/useDocuments";
 import { ApiError } from "../lib/api";
 import { SharePanel } from "../sharing/SharePanel";
+import { Activity } from "../audit/Activity";
 import { ExportButton } from "../exports/ExportButton";
 import { LogFormDialog } from "../logs/LogFormDialog";
 import { ActiveFilters, LogFilters } from "../logs/LogFilters";
@@ -321,6 +322,8 @@ export function Component() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {doc.role === "owner" && <Activity docId={doc.id} />}
 
       <SharePanel doc={doc} open={sharing} onOpenChange={setSharing} />
     </div>

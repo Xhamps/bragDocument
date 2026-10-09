@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { me, mockFetch, renderAt } from "../test/mocks";
-import type { Document, Log } from "../lib/types";
+import type { AuditEntry, Document, Log } from "../lib/types";
 
 const doc = (over: Partial<Document> = {}): Document => ({
   id: "d1",
@@ -42,7 +42,20 @@ const routes = (logs: Log[] = [log()], d = doc()) => ({
   "GET /documents/d1": d,
   "GET /documents/d1/logs": { items: logs, total: logs.length },
   "GET /tags": { tags: ["project"] },
+  "GET /documents/d1/audit": { entries: [], next_before: null },
 });
+
+const edited: AuditEntry = {
+  id: 1,
+  at: new Date().toISOString(),
+  source: "web",
+  action: "log.edited",
+  actor: { id: "u2", name: "Ana", email: "ana@acme.com" },
+  document: { id: "d1", title: "2026" },
+  target: { type: "log", id: "l1", name: "Migrated billing" },
+  role: "",
+  changed_fields: [],
+};
 
 type Calls = ReturnType<typeof mockFetch>;
 const lastListQuery = (calls: Calls) =>
@@ -289,4 +302,34 @@ test("missing document says so", async () => {
   });
   renderAt("/documents/d1");
   expect(await screen.findByText("Document not found.")).toBeInTheDocument();
+});
+
+test("owner sees Activity with a View all link", async () => {
+  mockFetch({
+    ...routes(),
+    "GET /documents/d1/audit": { entries: [edited], next_before: null },
+  });
+  renderAt("/documents/d1");
+  expect(
+    await screen.findByRole("heading", { name: "Activity" }),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByText(/Ana edited log “Migrated billing”/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /view all/i })).toHaveAttribute(
+    "href",
+    "/audit?document=d1",
+  );
+});
+
+test("editor does not see Activity", async () => {
+  const calls = mockFetch(
+    routes([log()], doc({ role: "editor", owner_id: "u2", owner_name: "Bob" })),
+  );
+  renderAt("/documents/d1");
+  await screen.findByText("Moved billing jobs");
+  expect(
+    screen.queryByRole("heading", { name: "Activity" }),
+  ).not.toBeInTheDocument();
+  expect(calls.some((c) => c.path === "/documents/d1/audit")).toBe(false);
 });

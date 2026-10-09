@@ -8,15 +8,21 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	// Turns every pending invitation for the email in the tenant into a grant.
 	AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error)
+	// Names copied into the audit message so the entry outlives the actor and the
+	// document (FR-12). An id that matches nothing returns no row (ErrNotFound).
+	AuditSnapshot(ctx context.Context, arg AuditSnapshotParams) (AuditSnapshotRow, error)
 	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
 	ClaimExportJob(ctx context.Context) (ExportJob, error)
-	// Copies the document's tenant and title so the entry outlives the document.
-	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
+	// Run under the provisioning flag; SKIP LOCKED lets several relays run.
+	// Undelivered rows are claimed again redeliver_secs after their last publish,
+	// until they have been published max_attempts times.
+	ClaimOutbox(ctx context.Context, arg ClaimOutboxParams) ([]ClaimOutboxRow, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
@@ -32,7 +38,7 @@ type Querier interface {
 	// impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
 	DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
-	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
+	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) (int64, error)
 	// Under app.provisioning.
 	DeleteExportJob(ctx context.Context, id uuid.UUID) error
 	DeleteGrant(ctx context.Context, arg DeleteGrantParams) (int64, error)
@@ -41,9 +47,10 @@ type Querier interface {
 	DeleteLogLinks(ctx context.Context, logID uuid.UUID) error
 	DeleteLogTags(ctx context.Context, logID uuid.UUID) error
 	DeletePendingDocumentInvitation(ctx context.Context, arg DeletePendingDocumentInvitationParams) (int64, error)
-	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
+	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) (int64, error)
 	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	EnqueueOutbox(ctx context.Context, arg EnqueueOutboxParams) error
 	FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error)
 	// Tenant and document invitations compete; the oldest picks the tenant.
 	FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error)
@@ -62,8 +69,13 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
 	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
-	ListAuditByDocument(ctx context.Context, documentID uuid.UUID) ([]AuditEntry, error)
-	ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error)
+	// Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
+	// ponytail: one query with optional filters; AuditRepo.List pins a custom plan (a generic one seq-scans). Split per shape if custom plans ever miss the indexes (NFR-3).
+	ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEntry, error)
+	// ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.
+	ListAuditActors(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditActorsRow, error)
+	// Latest known title per document, including deleted ones (FR-12).
+	ListAuditDocuments(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditDocumentsRow, error)
 	// last_log_at falls back to d.created_at so the column is never NULL; it is
 	// meaningful only when log_count > 0. Examples are not counted.
 	ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
@@ -87,8 +99,14 @@ type Querier interface {
 	// Active documents the user owns or edits; the bot's /docs order.
 	ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error)
 	MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error
+	MarkOutboxDelivered(ctx context.Context, id int64) error
+	MarkOutboxPublished(ctx context.Context, ids []int64) error
+	// ponytail: seq-scans delivered rows; index delivered_at if the table grows.
+	PurgeOutbox(ctx context.Context) error
 	SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error)
 	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)
+	// The consumer's insert; a redelivered message is a no-op (ADR-0015).
+	StoreAuditEntry(ctx context.Context, arg StoreAuditEntryParams) error
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
 	UpdateGrantRole(ctx context.Context, arg UpdateGrantRoleParams) (int64, error)
 	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)

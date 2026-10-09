@@ -51,6 +51,7 @@ Detailed requirements live in the PRDs under [`prd/`](prd/).
 | Authorization | Role-based access control per document, enforced in the API | [ADR-0011](adr/0011-rbac-model.md) |
 | Impact extraction | OpenAI Chat Completions with structured output, optional (disabled without a key) | [ADR-0013](adr/0013-openai-for-impact-extraction.md) |
 | Email | Resend for share notifications, optional (disabled without a key) | [ADR-0014](adr/0014-resend-for-transactional-email.md) |
+| Events | Transactional outbox relayed to Redis Streams (audit entries) | [ADR-0015](adr/0015-transactional-outbox-with-redis-streams.md) |
 
 ## Repository layout
 
@@ -96,7 +97,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0006](prd/0006-pdf-report.md) | PDF report for sharing with the team | accepted |
 | [0007](prd/0007-impact-extraction.md) | Impact statement extracted from the description | accepted |
 | [0008](prd/0008-run-all-services-and-service-tagged-logs.md) | Run all backend services with one command, with service-tagged JSON logs | proposed |
-| [0009](prd/0009-audit-log.md) | Audit log for every action | proposed |
+| [0009](prd/0009-audit-log.md) | Audit log for every action | accepted |
 
 ### ADRs
 
@@ -117,3 +118,4 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0012](adr/0012-hexagonal-backend-layout.md) | Hexagonal backend layout with a single Cobra binary | accepted |
 | [0013](adr/0013-openai-for-impact-extraction.md) | OpenAI for impact extraction | accepted |
 | [0014](adr/0014-resend-for-transactional-email.md) | Resend for transactional email | accepted |
+| [0015](adr/0015-transactional-outbox-with-redis-streams.md) | Transactional outbox with Redis Streams | accepted |

@@ -29,6 +29,7 @@ const job = (over: Partial<ExportJob> = {}): ExportJob => ({
 });
 const base = {
   "GET /me": me,
+  "GET /documents": { owned: [], shared: [] },
   "GET /documents/d1": doc,
   "GET /documents/d1/logs": { items: [], total: 0 },
   "GET /tags": { tags: ["project", "misc"] },

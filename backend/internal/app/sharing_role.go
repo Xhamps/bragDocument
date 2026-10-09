@@ -21,5 +21,5 @@ func (s *Sharing) ChangeRole(ctx context.Context, actor domain.User, docID, user
 	if g.Role == role {
 		return nil
 	}
-	return s.repo.SetRole(ctx, docID, userID, role, auditBy(actor, domain.AuditRoleChange, docID, g.Email, role))
+	return s.repo.SetRole(ctx, docID, userID, role, auditBy(ctx, actor, domain.AuditRoleChange, docID, domain.TargetUser, userID, g.Email, role))
 }

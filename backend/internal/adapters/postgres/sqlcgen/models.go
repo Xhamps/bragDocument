@@ -19,14 +19,20 @@ type AppMetum struct {
 type AuditEntry struct {
 	ID            int64
 	TenantID      uuid.UUID
-	ActorID       uuid.UUID
+	ActorID       pgtype.UUID
 	ActorEmail    string
 	Action        string
-	DocumentID    uuid.UUID
-	DocumentTitle string
+	DocumentID    pgtype.UUID
+	DocumentTitle pgtype.Text
 	Target        string
 	Role          string
 	At            time.Time
+	ActorName     string
+	Source        string
+	TargetType    string
+	TargetID      string
+	ChangedFields []string
+	OutboxID      pgtype.Int8
 }
 
 type Document struct {
@@ -115,6 +121,17 @@ type LogTag struct {
 	TenantID uuid.UUID
 	LogID    uuid.UUID
 	TagName  string
+}
+
+type Outbox struct {
+	ID          int64
+	TenantID    uuid.UUID
+	Topic       string
+	Payload     []byte
+	CreatedAt   time.Time
+	PublishedAt pgtype.Timestamptz
+	DeliveredAt pgtype.Timestamptz
+	Attempts    int32
 }
 
 type Tag struct {

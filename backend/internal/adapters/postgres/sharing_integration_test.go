@@ -35,16 +35,21 @@ func TestSharing(t *testing.T) {
 	defer db.Close()
 
 	users, docs, sharing, tenants, logs := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db), NewLogRepo(db)
+	auditOf := func(ctx context.Context, docID string) ([]domain.AuditEntry, error) {
+		drain(t, db)
+		p, err := NewAuditRepo(db).List(ctx, domain.AuditFilter{DocumentID: docID, Limit: 100})
+		return p.Entries, err
+	}
 	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
 	zed, tb := provisionTenant(t, users, "B", "zed@example.com")
 	bob := addMember(t, users, ta, "bob@example.com")
 	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
 
-	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil)
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
 	require.NoError(t, err)
 	audit := func(action, target string, role domain.Role) domain.AuditEntry {
-		return domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: action, DocumentID: doc.ID, Target: target, Role: role}
+		return domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: action, DocumentID: doc.ID, Target: target, Role: role}
 	}
 
 	// Roles: owner; an ungranted member sees nothing.
@@ -69,9 +74,12 @@ func TestSharing(t *testing.T) {
 	// Another tenant's user can be neither granted nor resolved.
 	require.ErrorIs(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc.ID, UserID: zed.ID, Role: domain.RoleViewer, GrantedBy: ada.ID},
 		audit(domain.AuditGrant, zed.Email, domain.RoleViewer)), domain.ErrConflict)
-	entries, err := sharing.Audit(ctxA, doc.ID)
+	entries, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
-	require.Len(t, entries, 1, "the failed grant wrote no audit row")
+	require.Len(t, entries, 2, "created and granted; the failed grant wrote no audit row")
+	require.Equal(t, domain.AuditGrant, entries[0].Action)
+	require.Equal(t, "ada@example.com", entries[0].ActorEmail, "copied from users")
+	require.Equal(t, "2026", entries[0].DocumentTitle)
 	_, err = sharing.Member(ctxA, zed.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	_, err = sharing.Member(ctxA, bob.ID)
@@ -102,7 +110,7 @@ func TestSharing(t *testing.T) {
 	// Tenant B sees none of it.
 	_, err = docs.GetForUser(ctxB, doc.ID, bob.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	entriesB, err := sharing.Audit(ctxB, "")
+	entriesB, err := auditOf(ctxB, "")
 	require.NoError(t, err)
 	require.Empty(t, entriesB)
 
@@ -153,13 +161,13 @@ func TestSharing(t *testing.T) {
 	require.Empty(t, sh.Invitations)
 
 	// A transfer to another tenant's user rolls back whole.
-	before, err := sharing.Audit(ctxA, doc.ID)
+	before, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.ErrorIs(t, sharing.Transfer(ctxA, doc.ID, ada.ID, zed.ID, audit(domain.AuditTransfer, zed.Email, domain.RoleOwner)), domain.ErrConflict)
 	got, err = docs.GetForUser(ctxA, doc.ID, ada.ID)
 	require.NoError(t, err)
 	require.Equal(t, domain.RoleOwner, got.Role)
-	after, err := sharing.Audit(ctxA, doc.ID)
+	after, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Len(t, after, len(before))
 
@@ -182,17 +190,19 @@ func TestSharing(t *testing.T) {
 	require.ErrorIs(t, sharing.Revoke(ctxA, doc.ID, newID, audit(domain.AuditRevoke, "x", "")), domain.ErrNotFound)
 
 	// Audit: newest first, copies the title, survives deletion, cannot be rewritten.
-	entries, err = sharing.Audit(ctxA, doc.ID)
+	entries, err = auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Contains(t, actions(entries), domain.AuditInviteCancel)
 	require.Equal(t, domain.AuditRevoke, entries[0].Action)
-	require.Equal(t, domain.AuditGrant, entries[len(entries)-1].Action)
+	require.Equal(t, domain.AuditDocumentCreated, entries[len(entries)-1].Action)
 	require.Equal(t, "2026", entries[0].DocumentTitle)
 	require.Contains(t, actions(entries), domain.AuditInviteAccept)
-	require.NoError(t, docs.Delete(ctxA, doc.ID))
-	all, err := sharing.Audit(ctxA, "")
+	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)))
+	all, err := auditOf(ctxA, "")
 	require.NoError(t, err)
-	require.Len(t, all, len(entries))
+	require.Len(t, all, len(entries)+1)
+	require.Equal(t, domain.AuditDocumentDeleted, all[0].Action)
+	require.Equal(t, "2026", all[0].DocumentTitle, "written before the delete")
 	err = db.WithTenant(ctxA, ta.ID, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "DELETE FROM audit_entries")
 		return wrap(err)
@@ -200,14 +210,14 @@ func TestSharing(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Removing a member cascades their grants; logs they wrote in others' documents stay.
-	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil)
+	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil, docCreated(ada.ID))
 	require.NoError(t, err)
 	require.NoError(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc2.ID, UserID: bob.ID, Role: domain.RoleEditor, GrantedBy: ada.ID},
-		domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))
+		domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))
 	l := domain.Log{TenantID: ta.ID, DocumentID: doc2.ID, Name: "Shipped", Impact: "high", Status: "done",
 		CreatedAt: time.Now().UTC(), CreatedBy: bob.ID, UpdatedBy: bob.ID}
 	require.NoError(t, l.Validate())
-	_, err = logs.Create(ctxA, l)
+	_, err = logs.Create(ctxA, l, logEntry(bob.ID, doc2.ID, domain.AuditLogCreated))
 	require.NoError(t, err)
 	require.NoError(t, tenants.DeleteMember(ctxA, bob.ID))
 	sh, err = sharing.Get(ctxA, doc2.ID)

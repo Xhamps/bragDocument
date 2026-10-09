@@ -58,7 +58,7 @@ func (r *TelegramLinkRepo) Get(ctx context.Context, userID string) (domain.Teleg
 }
 
 // Link uses l.TenantID, not the context: the bot links before any tenant is in scope.
-func (r *TelegramLinkRepo) Link(ctx context.Context, l domain.TelegramLink) error {
+func (r *TelegramLinkRepo) Link(ctx context.Context, l domain.TelegramLink, a domain.AuditEntry) error {
 	uid, err := parseID(l.UserID)
 	if err != nil {
 		return err
@@ -68,8 +68,12 @@ func (r *TelegramLinkRepo) Link(ctx context.Context, l domain.TelegramLink) erro
 		return err
 	}
 	return r.db.WithTenant(ctx, l.TenantID, func(ctx context.Context, tx pgx.Tx) error {
-		return wrap(sqlcgen.New(tx).UpsertTelegramLink(ctx, sqlcgen.UpsertTelegramLinkParams{
-			UserID: uid, TenantID: tid, TelegramUserID: l.TelegramUserID, LinkedAt: l.LinkedAt}))
+		q := sqlcgen.New(tx)
+		if err := q.UpsertTelegramLink(ctx, sqlcgen.UpsertTelegramLinkParams{
+			UserID: uid, TenantID: tid, TelegramUserID: l.TelegramUserID, LinkedAt: l.LinkedAt}); err != nil {
+			return wrap(err)
+		}
+		return audit(ctx, q, a)
 	})
 }
 
@@ -95,12 +99,21 @@ func (r *TelegramLinkRepo) SetDocument(ctx context.Context, userID, documentID s
 	})
 }
 
-func (r *TelegramLinkRepo) Delete(ctx context.Context, userID string) error {
+// Delete writes a only when a link was removed: unlinking twice is one entry.
+func (r *TelegramLinkRepo) Delete(ctx context.Context, userID string, a domain.AuditEntry) error {
 	uid, err := parseID(userID)
 	if err != nil {
 		return err
 	}
-	return withQueries(ctx, r.db, func(ctx context.Context, q *sqlcgen.Queries) error {
-		return wrap(q.DeleteTelegramLink(ctx, uid))
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		n, err := q.DeleteTelegramLink(ctx, uid)
+		if err != nil {
+			return struct{}{}, wrap(err)
+		}
+		if n == 0 {
+			return struct{}{}, errNoChange // nothing removed, no entry
+		}
+		return struct{}{}, nil
 	})
+	return err
 }

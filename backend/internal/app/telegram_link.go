@@ -44,7 +44,7 @@ func (t *Telegram) Status(ctx context.Context, userID string) (domain.TelegramLi
 
 // Unlink removes the caller's link (FR-2). Idempotent.
 func (t *Telegram) Unlink(ctx context.Context, userID string) error {
-	return t.links.Delete(ctx, userID)
+	return t.links.Delete(ctx, userID, entry(ctx, userID, domain.AuditTelegramUnlinked, ""))
 }
 
 // start redeems a link code sent as "/start <code>".
@@ -58,7 +58,8 @@ func (t *Telegram) start(ctx context.Context, telegramID int64, code string) str
 	if !ok || json.Unmarshal(v, &o) != nil {
 		return msgCodeInvalid
 	}
-	err = t.links.Link(ctx, domain.TelegramLink{UserID: o.UserID, TenantID: o.TenantID, TelegramUserID: telegramID, LinkedAt: t.now()})
+	err = t.links.Link(ctx, domain.TelegramLink{UserID: o.UserID, TenantID: o.TenantID, TelegramUserID: telegramID, LinkedAt: t.now()},
+		entry(ctx, o.UserID, domain.AuditTelegramLinked, ""))
 	switch {
 	case errors.Is(err, domain.ErrConflict):
 		return msgLinkedElsewhere

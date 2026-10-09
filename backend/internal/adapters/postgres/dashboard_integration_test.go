@@ -27,14 +27,14 @@ func TestDashboard(t *testing.T) {
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
 
 	examples := domain.ExampleLogs(time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC), admin.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, examples)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: admin.ID, Title: "2026"}, examples, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	mk := func(name, impact, status string, at time.Time, tags ...string) {
 		l := domain.Log{TenantID: ta.ID, DocumentID: doc.ID, Name: name, Impact: impact, Status: status,
 			Tags: tags, Links: []domain.Link{}, CreatedAt: at, CreatedBy: admin.ID, UpdatedBy: admin.ID}
 		require.NoError(t, l.Validate())
-		_, err := logs.Create(ctx, l)
+		_, err := logs.Create(ctx, l, logEntry(admin.ID, doc.ID, domain.AuditLogCreated))
 		require.NoError(t, err)
 	}
 	at := func(m time.Month, d int) time.Time { return time.Date(2026, m, d, 12, 0, 0, 0, time.UTC) }

@@ -20,6 +20,7 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/adapters/redis"
 	"github.com/xhamps/bragdocument/backend/internal/app"
 	"github.com/xhamps/bragdocument/backend/internal/config"
+	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/ports"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
@@ -40,7 +41,7 @@ func apiCmd() *cobra.Command {
 
 // runAPI serves HTTP until ctx is done, then shuts down within cfg.ShutdownTimeout.
 func runAPI(ctx context.Context, cfg config.Config) error {
-	ctx = telemetry.WithService(ctx, "api")
+	ctx = domain.WithSource(telemetry.WithService(ctx, "api"), domain.SourceWeb)
 	db, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.DBTimeout)
 	if err != nil {
 		return err
@@ -114,6 +115,7 @@ func runAPI(ctx context.Context, cfg config.Config) error {
 	httpadapter.RegisterTelegram(authed, tgUC, cfg.TelegramBotUsername)
 	httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
 	httpadapter.RegisterSharing(authed, app.NewSharing(docRepo, postgres.NewSharingRepo(db), mailer, cfg.AppURL))
+	httpadapter.RegisterAudit(authed, app.NewAudit(docRepo, postgres.NewAuditRepo(db)))
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

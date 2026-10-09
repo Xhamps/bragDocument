@@ -15,5 +15,5 @@ func (s *Sharing) Revoke(ctx context.Context, actor domain.User, docID, userID s
 	if err != nil {
 		return err
 	}
-	return s.repo.Revoke(ctx, docID, userID, auditBy(actor, domain.AuditRevoke, docID, g.Email, g.Role))
+	return s.repo.Revoke(ctx, docID, userID, auditBy(ctx, actor, domain.AuditRevoke, docID, domain.TargetUser, userID, g.Email, g.Role))
 }

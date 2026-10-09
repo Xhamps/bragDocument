@@ -46,5 +46,6 @@ func (s *Exports) Create(ctx context.Context, in CreateExportInput) (domain.Expo
 		}
 	}
 	return s.jobs.Create(ctx, domain.ExportJob{TenantID: d.TenantID, DocumentID: d.ID, RequestedBy: in.UserID,
-		Params: domain.ExportParams{Filter: f, Settings: in.Settings, TenantName: in.TenantName}})
+		Params: domain.ExportParams{Filter: f, Settings: in.Settings, TenantName: in.TenantName}},
+		entry(ctx, in.UserID, domain.AuditExportRequested, d.ID))
 }

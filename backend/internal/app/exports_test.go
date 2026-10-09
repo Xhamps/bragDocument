@@ -40,7 +40,7 @@ func newExportsFixture(t *testing.T) exportsFixture {
 
 func (f exportsFixture) addLog(t *testing.T, name string, tags ...string) {
 	t.Helper()
-	_, err := f.logs.Create(context.Background(), domain.Log{DocumentID: "d1", Name: name, Impact: "high", Status: domain.StatusDone, Tags: tags})
+	_, err := f.logs.Create(context.Background(), domain.Log{DocumentID: "d1", Name: name, Impact: "high", Status: domain.StatusDone, Tags: tags}, domain.AuditEntry{})
 	require.NoError(t, err)
 }
 
@@ -72,6 +72,19 @@ func TestExportCreateLimits(t *testing.T) {
 	_, err = f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
 	require.ErrorAs(t, err, &ve, "FR-7")
 	require.Contains(t, ve.Fields["filters"], "2001")
+}
+
+func TestExportCreateIsAudited(t *testing.T) {
+	f := newExportsFixture(t)
+	_, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u2"})
+	require.Error(t, err, "no logs match")
+	require.Empty(t, f.jobs.audit, "a rejected export writes nothing")
+
+	f.addLog(t, "a")
+	_, err = f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u2"})
+	require.NoError(t, err)
+	require.Equal(t, []domain.AuditEntry{{ActorID: "u2", Source: domain.SourceWeb, Action: domain.AuditExportRequested, DocumentID: "d1"}},
+		f.jobs.audit, "the viewer who asked is the actor")
 }
 
 func TestExportSettingsDefault(t *testing.T) {

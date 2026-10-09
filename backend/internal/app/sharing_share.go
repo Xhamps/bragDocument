@@ -45,11 +45,11 @@ func (s *Sharing) Share(ctx context.Context, in ShareInput) (string, error) {
 	switch {
 	case err == nil:
 		g := domain.Grant{DocumentID: d.ID, UserID: u.ID, Role: in.Role, GrantedBy: in.Actor.ID}
-		err = s.repo.Grant(ctx, g, auditBy(in.Actor, domain.AuditGrant, d.ID, email, in.Role))
+		err = s.repo.Grant(ctx, g, auditBy(ctx, in.Actor, domain.AuditGrant, d.ID, domain.TargetUser, u.ID, email, in.Role))
 	case errors.Is(err, domain.ErrNotFound):
 		kind, link = ShareInvited, s.appURL+"/sign-in"
 		inv := domain.DocumentInvitation{DocumentID: d.ID, Email: email, Role: in.Role, InvitedBy: in.Actor.ID}
-		_, err = s.repo.Invite(ctx, inv, auditBy(in.Actor, domain.AuditInvite, d.ID, email, in.Role))
+		_, err = s.repo.Invite(ctx, inv, auditBy(ctx, in.Actor, domain.AuditInvite, d.ID, domain.TargetInvitation, "", email, in.Role))
 	}
 	if err != nil {
 		return "", err

@@ -17,5 +17,5 @@ ON CONFLICT (user_id) DO UPDATE SET
 -- name: SetTelegramLinkDocument :execrows
 UPDATE telegram_links SET document_id = $2 WHERE user_id = $1;
 
--- name: DeleteTelegramLink :exec
+-- name: DeleteTelegramLink :execrows
 DELETE FROM telegram_links WHERE user_id = $1;

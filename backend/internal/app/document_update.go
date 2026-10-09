@@ -21,6 +21,7 @@ func (s *Documents) Update(ctx context.Context, in UpdateDocumentInput) (domain.
 	if err != nil {
 		return domain.Document{}, err
 	}
+	old := d
 	if in.Title != nil {
 		d.Title = *in.Title
 	}
@@ -33,7 +34,13 @@ func (s *Documents) Update(ctx context.Context, in UpdateDocumentInput) (domain.
 	if err := d.Validate(); err != nil {
 		return domain.Document{}, err
 	}
-	out, err := s.docs.Update(ctx, d)
+	action, fields := domain.DocumentChange(old, d)
+	if action == "" {
+		return d, nil // nothing changed: no write, no entry
+	}
+	a := entry(ctx, in.UserID, action, d.ID)
+	a.ChangedFields = fields
+	out, err := s.docs.Update(ctx, d, a)
 	out.Role, out.OwnerName = d.Role, d.OwnerName
 	return out, err
 }

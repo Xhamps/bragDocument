@@ -145,14 +145,15 @@ func (r *LogRepo) Get(ctx context.Context, documentID, id string) (domain.Log, e
 	return out, err
 }
 
-func (r *LogRepo) Create(ctx context.Context, l domain.Log) (domain.Log, error) {
-	var out domain.Log
-	err := r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		var err error
-		out, err = insertLog(ctx, q, l)
-		return err
+func (r *LogRepo) Create(ctx context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
+	return write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, a *domain.AuditEntry) (domain.Log, error) {
+		out, err := insertLog(ctx, q, l)
+		if err != nil {
+			return domain.Log{}, err
+		}
+		a.TargetID = out.ID
+		return out, nil
 	})
-	return out, err
 }
 
 // insertLog is shared with DocumentRepo.Create, which seeds example logs.
@@ -212,7 +213,7 @@ func setTagsAndLinks(ctx context.Context, q *sqlcgen.Queries, tid, lid uuid.UUID
 	return nil
 }
 
-func (r *LogRepo) Update(ctx context.Context, l domain.Log) (domain.Log, error) {
+func (r *LogRepo) Update(ctx context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
 	lid, err := parseID(l.ID)
 	if err != nil {
 		return domain.Log{}, err
@@ -225,27 +226,25 @@ func (r *LogRepo) Update(ctx context.Context, l domain.Log) (domain.Log, error) 
 	if err != nil {
 		return domain.Log{}, err
 	}
-	var out domain.Log
-	err = r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+	return write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (domain.Log, error) {
 		row, err := q.UpdateLog(ctx, sqlcgen.UpdateLogParams{
 			ID: lid, DocumentID: did, Name: l.Name, Description: l.Description, Impact: l.Impact,
 			ImpactStatement: textOrNull(l.ImpactStatement), Status: l.Status, IsExample: l.IsExample,
 			CreatedAt: l.CreatedAt, UpdatedBy: uid,
 		})
 		if err != nil {
-			return wrap(err)
+			return domain.Log{}, wrap(err)
 		}
 		if err := setTagsAndLinks(ctx, q, row.TenantID, row.ID, l.Tags, l.Links); err != nil {
-			return err
+			return domain.Log{}, err
 		}
-		out = toLog(row)
+		out := toLog(row)
 		out.Tags, out.Links = slices.Sorted(slices.Values(orEmpty(l.Tags))), orEmpty(l.Links) // matches Get's ORDER BY tag_name
-		return nil
+		return out, nil
 	})
-	return out, err
 }
 
-func (r *LogRepo) Delete(ctx context.Context, documentID, id string) error {
+func (r *LogRepo) Delete(ctx context.Context, documentID, id string, a domain.AuditEntry) error {
 	did, err := parseID(documentID)
 	if err != nil {
 		return err
@@ -254,26 +253,28 @@ func (r *LogRepo) Delete(ctx context.Context, documentID, id string) error {
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		n, err := q.DeleteLog(ctx, sqlcgen.DeleteLogParams{ID: lid, DocumentID: did})
-		if err != nil {
-			return wrap(err)
-		}
-		if n == 0 {
-			return domain.ErrNotFound
-		}
-		return nil
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		return struct{}{}, rowsOrNotFound(q.DeleteLog(ctx, sqlcgen.DeleteLogParams{ID: lid, DocumentID: did})) // a missing log rolls back
 	})
+	return err
 }
 
-func (r *LogRepo) DeleteExamples(ctx context.Context, documentID string) error {
+func (r *LogRepo) DeleteExamples(ctx context.Context, documentID string, a domain.AuditEntry) error {
 	did, err := parseID(documentID)
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		return wrap(q.DeleteExampleLogs(ctx, did))
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		n, err := q.DeleteExampleLogs(ctx, did)
+		if err != nil {
+			return struct{}{}, wrap(err)
+		}
+		if n == 0 {
+			return struct{}{}, errNoChange // no examples: no entry
+		}
+		return struct{}{}, nil
 	})
+	return err
 }
 
 func (r *LogRepo) ListTags(ctx context.Context) ([]string, error) {

@@ -45,3 +45,29 @@ func TestDocumentsUpdate(t *testing.T) {
 	var ve *domain.ValidationError
 	require.ErrorAs(t, err, &ve)
 }
+
+func TestUpdateAuditsBiggestChange(t *testing.T) {
+	docs := newFakeDocs()
+	docs.docs["d1"] = domain.Document{ID: "d1", OwnerID: "u1", Title: "a", State: domain.DocumentActive}
+	ctx := domain.WithSource(context.Background(), domain.SourceTelegram)
+	title, state := "b", domain.DocumentArchived
+	_, err := NewDocuments(docs).Update(ctx, UpdateDocumentInput{ID: "d1", UserID: "u1", Title: &title, State: &state})
+	require.NoError(t, err)
+	require.Len(t, docs.audit, 1)
+	a := docs.audit[0]
+	require.Equal(t, domain.AuditDocumentArchived, a.Action)
+	require.Equal(t, []string{"title", "state"}, a.ChangedFields)
+	require.Equal(t, "u1", a.ActorID)
+	require.Equal(t, "d1", a.DocumentID)
+	require.Equal(t, domain.SourceTelegram, a.Source)
+}
+
+func TestUpdateWithoutChangeWritesNothing(t *testing.T) {
+	docs := newFakeDocs()
+	docs.docs["d1"] = domain.Document{ID: "d1", OwnerID: "u1", Title: "a", State: domain.DocumentActive}
+	title := " a " // trimmed by Validate: no change
+	got, err := NewDocuments(docs).Update(context.Background(), UpdateDocumentInput{ID: "d1", UserID: "u1", Title: &title})
+	require.NoError(t, err)
+	require.Equal(t, domain.RoleOwner, got.Role)
+	require.Empty(t, docs.audit)
+}

@@ -13,13 +13,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteTelegramLink = `-- name: DeleteTelegramLink :exec
+const deleteTelegramLink = `-- name: DeleteTelegramLink :execrows
 DELETE FROM telegram_links WHERE user_id = $1
 `
 
-func (q *Queries) DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteTelegramLink, userID)
-	return err
+func (q *Queries) DeleteTelegramLink(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteTelegramLink, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getTelegramLink = `-- name: GetTelegramLink :one

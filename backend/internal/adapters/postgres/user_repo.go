@@ -109,8 +109,8 @@ func (p provisionTx) AcceptInvitations(ctx context.Context, u domain.User) error
 		return wrap(err)
 	}
 	for _, row := range rows {
-		a := domain.AuditEntry{ActorID: u.ID, ActorEmail: u.Email, Action: domain.AuditInviteAccept,
-			DocumentID: row.DocumentID.String(), Target: u.Email, Role: domain.Role(row.Role)}
+		a := domain.AuditEntry{ActorID: u.ID, Source: domain.SourceWeb, Action: domain.AuditInviteAccept,
+			DocumentID: row.DocumentID.String(), TargetType: domain.TargetUser, TargetID: u.ID, Target: u.Email, Role: domain.Role(row.Role)}
 		if err := audit(ctx, p.q, a); err != nil {
 			return err
 		}

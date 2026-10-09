@@ -23,9 +23,6 @@ type SharingRepo interface {
 	CancelInvitation(ctx context.Context, docID, invID string, a domain.AuditEntry) error
 	// Transfer makes toUserID the owner, drops their grant, and makes fromUserID an editor.
 	Transfer(ctx context.Context, docID, fromUserID, toUserID string, a domain.AuditEntry) error
-	// Audit lists entries newest first: of one document, or of the tenant when docID is "".
-	// It returns at most 200 entries per document and 500 per tenant.
-	Audit(ctx context.Context, docID string) ([]domain.AuditEntry, error)
 }
 
 // Mailer sends one transactional email (ADR-0014). A disabled mailer returns

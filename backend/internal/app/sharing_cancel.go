@@ -21,5 +21,5 @@ func (s *Sharing) CancelInvitation(ctx context.Context, actor domain.User, docID
 		return domain.ErrNotFound
 	}
 	inv := sh.Invitations[i]
-	return s.repo.CancelInvitation(ctx, docID, invID, auditBy(actor, domain.AuditInviteCancel, docID, inv.Email, inv.Role))
+	return s.repo.CancelInvitation(ctx, docID, invID, auditBy(ctx, actor, domain.AuditInviteCancel, docID, domain.TargetInvitation, invID, inv.Email, inv.Role))
 }

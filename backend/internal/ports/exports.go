@@ -8,7 +8,8 @@ import (
 
 // ExportRepo stores export jobs and report settings (PRD-0006).
 type ExportRepo interface {
-	Create(ctx context.Context, j domain.ExportJob) (domain.ExportJob, error)
+	// Create queues j and writes a in the same transaction.
+	Create(ctx context.Context, j domain.ExportJob, a domain.AuditEntry) (domain.ExportJob, error)
 	// Get returns domain.ErrNotFound when the job is not on the document.
 	Get(ctx context.Context, documentID, id string) (domain.ExportJob, error)
 	// List returns the user's unexpired jobs on the document, newest first, at most 10.

@@ -97,22 +97,49 @@ export type DocumentInvitation = {
 
 export type Sharing = { grants: Grant[]; invitations: DocumentInvitation[] };
 
+export type AuditAction =
+  | "document.created"
+  | "document.renamed"
+  | "document.edited"
+  | "document.archived"
+  | "document.unarchived"
+  | "document.deleted"
+  | "sharing.granted"
+  | "sharing.invitation_sent"
+  | "sharing.role_changed"
+  | "sharing.revoked"
+  | "sharing.invitation_cancelled"
+  | "sharing.invitation_accepted"
+  | "sharing.ownership_transferred"
+  | "log.created"
+  | "log.edited"
+  | "log.deleted"
+  | "log.status_changed"
+  | "telegram.linked"
+  | "telegram.unlinked"
+  | "export.requested";
+
 export type AuditEntry = {
   id: number;
-  actor_email: string;
-  action:
-    | "grant"
-    | "invite"
-    | "role_change"
-    | "revoke"
-    | "invite_cancel"
-    | "invite_accept"
-    | "transfer";
-  document_id: string;
-  document_title: string;
-  target: string;
-  role: string;
   at: string;
+  source: "web" | "telegram" | "system";
+  action: AuditAction;
+  actor: { id: string | null; name: string; email: string };
+  document: { id: string; title: string } | null;
+  target: {
+    type: "" | "log" | "user" | "invitation";
+    id: string;
+    name: string;
+  };
+  role: string;
+  changed_fields: string[];
+};
+
+export type AuditPage = { entries: AuditEntry[]; next_before: number | null };
+
+export type AuditFilters = {
+  actors: { id: string; name: string; email: string }[];
+  documents: { id: string; title: string }[];
 };
 
 export type Bucket = { key: string; count: number };

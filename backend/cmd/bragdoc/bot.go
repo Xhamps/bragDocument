@@ -14,6 +14,7 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/adapters/telegram"
 	"github.com/xhamps/bragdocument/backend/internal/app"
 	"github.com/xhamps/bragdocument/backend/internal/config"
+	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/ports"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
@@ -37,7 +38,7 @@ func botCmd() *cobra.Command {
 
 // runBot long-polls Telegram until ctx is done.
 func runBot(ctx context.Context, cfg config.Config) error {
-	ctx = telemetry.WithService(ctx, "bot")
+	ctx = domain.WithSource(telemetry.WithService(ctx, "bot"), domain.SourceTelegram)
 	if cfg.TelegramToken == "" {
 		slog.WarnContext(ctx, "TELEGRAM_BOT_TOKEN not set; bot idle")
 		<-ctx.Done()

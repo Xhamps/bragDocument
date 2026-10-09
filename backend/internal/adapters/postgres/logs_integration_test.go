@@ -32,7 +32,7 @@ func TestLogRepo(t *testing.T) {
 	for i := range examples {
 		require.NoError(t, examples[i].Validate())
 	}
-	doc, err := docs.Create(ctx, domain.Document{TenantID: tenantA.ID, OwnerID: admin.ID, Title: "2026"}, examples)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: tenantA.ID, OwnerID: admin.ID, Title: "2026"}, examples, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	page, err := logs.List(ctx, doc.ID, domain.LogFilter{Sort: "created_at", Desc: true, Page: 1, PerPage: 50})
@@ -47,13 +47,13 @@ func TestLogRepo(t *testing.T) {
 	require.Equal(t, 0, list[0].LogCount)
 	require.Nil(t, list[0].LastLogAt)
 
-	require.NoError(t, logs.DeleteExamples(ctx, doc.ID))
+	require.NoError(t, logs.DeleteExamples(ctx, doc.ID, logEntry(admin.ID, doc.ID, domain.AuditLogDeleted)))
 
 	mk := func(name, desc, impact, status string, daysAgo int, tags []string, links []domain.Link) domain.Log {
 		l := domain.Log{TenantID: tenantA.ID, DocumentID: doc.ID, Name: name, Description: desc, Impact: impact,
 			Status: status, Tags: tags, Links: links, CreatedAt: now.AddDate(0, 0, -daysAgo), CreatedBy: admin.ID, UpdatedBy: admin.ID}
 		require.NoError(t, l.Validate())
-		out, err := logs.Create(ctx, l)
+		out, err := logs.Create(ctx, l, logEntry(admin.ID, doc.ID, domain.AuditLogCreated))
 		require.NoError(t, err)
 		return out
 	}
@@ -105,7 +105,7 @@ func TestLogRepo(t *testing.T) {
 
 	// Update replaces tags and links and stores the statement.
 	b.Tags, b.Links, b.ImpactStatement = []string{"learning"}, []domain.Link{{URL: "https://a.io", Host: "a.io"}}, &none
-	got, err := logs.Update(ctx, b)
+	got, err := logs.Update(ctx, b, logEntry(admin.ID, doc.ID, domain.AuditLogEdited))
 	require.NoError(t, err)
 	got, err = logs.Get(ctx, doc.ID, got.ID)
 	require.NoError(t, err)
@@ -128,34 +128,40 @@ func TestLogRepo(t *testing.T) {
 	require.Zero(t, pB.Total)
 	_, err = logs.Get(ctxB, doc.ID, a.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	require.ErrorIs(t, logs.Delete(ctxB, doc.ID, a.ID), domain.ErrNotFound)
+	require.ErrorIs(t, logs.Delete(ctxB, doc.ID, a.ID, logEntry(adminB.ID, doc.ID, domain.AuditLogDeleted)), domain.ErrNotFound)
 	tagsB, err := logs.ListTags(ctxB)
 	require.NoError(t, err)
 	require.Empty(t, tagsB)
 	aB := a
 	aB.Name, aB.UpdatedBy = "hijacked", adminB.ID
-	_, err = logs.Update(ctxB, aB)
+	_, err = logs.Update(ctxB, aB, logEntry(adminB.ID, doc.ID, domain.AuditLogEdited))
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	require.NoError(t, logs.DeleteExamples(ctxB, doc.ID))
+	require.ErrorIs(t, logs.DeleteExamples(ctxB, doc.ID, logEntry(adminB.ID, doc.ID, domain.AuditLogDeleted)), domain.ErrNotFound,
+		"the entry names a document B cannot see")
 	pA, err := logs.List(ctx, doc.ID, q{Page: 1, PerPage: 50, Sort: "created_at"})
 	require.NoError(t, err)
 	require.Equal(t, 3, pA.Total)
-	// The composite FK (document_id, tenant_id) finds no B document with A's
-	// id (FK checks bypass RLS), so the insert is a 23503 -> ErrConflict.
-	_, err = logs.Create(ctxB, domain.Log{TenantID: tenantB.ID, DocumentID: doc.ID, Name: "x", Impact: "low",
-		Status: "done", CreatedAt: now, CreatedBy: adminB.ID, UpdatedBy: adminB.ID})
+	// The entry's snapshot (before the insert) cannot see A's document.
+	bLog := domain.Log{TenantID: tenantB.ID, DocumentID: doc.ID, Name: "x", Impact: "low",
+		Status: "done", CreatedAt: now, CreatedBy: adminB.ID, UpdatedBy: adminB.ID}
+	_, err = logs.Create(ctxB, bLog, logEntry(adminB.ID, doc.ID, domain.AuditLogCreated))
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	// Without the document in the entry, the insert runs first: the composite FK
+	// (document_id, tenant_id) finds no B document with A's id (FK checks bypass
+	// RLS), so the insert is a 23503 -> ErrConflict.
+	_, err = logs.Create(ctxB, bLog, logEntry(adminB.ID, "", domain.AuditLogCreated))
 	require.ErrorIs(t, err, domain.ErrConflict)
 
 	// Update of a missing log.
 	missing := b
 	missing.ID = uuid.NewString()
-	_, err = logs.Update(ctx, missing)
+	_, err = logs.Update(ctx, missing, logEntry(admin.ID, doc.ID, domain.AuditLogEdited))
 	require.ErrorIs(t, err, domain.ErrNotFound)
 
 	// Delete and cascade.
-	require.NoError(t, logs.Delete(ctx, doc.ID, c.ID))
-	require.ErrorIs(t, logs.Delete(ctx, doc.ID, c.ID), domain.ErrNotFound)
-	require.NoError(t, docs.Delete(ctx, doc.ID))
+	require.NoError(t, logs.Delete(ctx, doc.ID, c.ID, logEntry(admin.ID, doc.ID, domain.AuditLogDeleted)))
+	require.ErrorIs(t, logs.Delete(ctx, doc.ID, c.ID, logEntry(admin.ID, doc.ID, domain.AuditLogDeleted)), domain.ErrNotFound)
+	require.NoError(t, docs.Delete(ctx, doc.ID, docDeleted(admin.ID, doc.ID)))
 	_, err = logs.Get(ctx, doc.ID, a.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }
@@ -188,7 +194,7 @@ func seedTenThousand(t *testing.T) (context.Context, domain.Document, *LogRepo) 
 	users, docs, logs := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db)
 	admin, tn := provisionTenant(t, users, "A", "a@example.com")
 	ctx := telemetry.WithTenantID(context.Background(), tn.ID)
-	doc, err := docs.Create(ctx, domain.Document{TenantID: tn.ID, OwnerID: admin.ID, Title: "big"}, nil)
+	doc, err := docs.Create(ctx, domain.Document{TenantID: tn.ID, OwnerID: admin.ID, Title: "big"}, nil, docCreated(admin.ID))
 	require.NoError(t, err)
 
 	owner, err := Connect(context.Background(), ownerURL, 60*time.Second)

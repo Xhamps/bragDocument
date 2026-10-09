@@ -19,8 +19,6 @@ type SharingUseCases interface {
 	Revoke(ctx context.Context, actor domain.User, docID, userID string) error
 	CancelInvitation(ctx context.Context, actor domain.User, docID, invID string) error
 	Transfer(ctx context.Context, actor domain.User, docID, toUserID string) error
-	DocumentAudit(ctx context.Context, actor domain.User, docID string) ([]domain.AuditEntry, error)
-	TenantAudit(ctx context.Context, actor domain.User) ([]domain.AuditEntry, error)
 }
 
 // GrantResponse is one person with access.
@@ -65,27 +63,6 @@ type ChangeRoleRequest struct {
 // TransferRequest is the POST body.
 type TransferRequest struct {
 	UserID string `json:"user_id"`
-}
-
-// AuditEntryResponse is one sharing change.
-type AuditEntryResponse struct {
-	ID            int64     `json:"id"`
-	ActorEmail    string    `json:"actor_email"`
-	Action        string    `json:"action"`
-	DocumentID    string    `json:"document_id"`
-	DocumentTitle string    `json:"document_title"`
-	Target        string    `json:"target"`
-	Role          string    `json:"role"`
-	At            time.Time `json:"at"`
-}
-
-func toAudit(es []domain.AuditEntry) []AuditEntryResponse {
-	out := make([]AuditEntryResponse, 0, len(es))
-	for _, e := range es {
-		out = append(out, AuditEntryResponse{ID: e.ID, ActorEmail: e.ActorEmail, Action: e.Action, DocumentID: e.DocumentID,
-			DocumentTitle: e.DocumentTitle, Target: e.Target, Role: string(e.Role), At: e.At})
-	}
-	return out
 }
 
 // noContent writes 204 or the error.
@@ -147,21 +124,5 @@ func RegisterSharing(r gin.IRouter, uc SharingUseCases) {
 			return
 		}
 		noContent(c, uc.Transfer(c.Request.Context(), principal(c).User, c.Param("id"), req.UserID))
-	})
-	g.GET("/audit", func(c *gin.Context) {
-		es, err := uc.DocumentAudit(c.Request.Context(), principal(c).User, c.Param("id"))
-		if err != nil {
-			RespondError(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, toAudit(es))
-	})
-	r.GET("/tenant/audit", func(c *gin.Context) {
-		es, err := uc.TenantAudit(c.Request.Context(), principal(c).User)
-		if err != nil {
-			RespondError(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, toAudit(es))
 	})
 }

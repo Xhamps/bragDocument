@@ -91,6 +91,7 @@ type fakeDocs struct {
 	grants   map[string]map[string]domain.Role // document → user → role
 	seen     []string                          // "doc/user" passed to MarkSeen
 	examples []domain.Log
+	audit    []domain.AuditEntry
 	seq      int
 }
 
@@ -161,25 +162,29 @@ func (f *fakeDocs) MarkSeen(_ context.Context, id, userID string) error {
 	f.seen = append(f.seen, id+"/"+userID)
 	return nil
 }
-func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
+func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log, a domain.AuditEntry) (domain.Document, error) {
 	f.examples = examples
 	f.seq++
 	d.ID = "d" + strconv.Itoa(f.seq)
 	f.docs[d.ID] = d
+	a.DocumentID = d.ID
+	f.audit = append(f.audit, a)
 	return d, nil
 }
-func (f *fakeDocs) Update(_ context.Context, d domain.Document) (domain.Document, error) {
+func (f *fakeDocs) Update(_ context.Context, d domain.Document, a domain.AuditEntry) (domain.Document, error) {
 	if _, ok := f.docs[d.ID]; !ok {
 		return domain.Document{}, domain.ErrNotFound
 	}
 	f.docs[d.ID] = d
+	f.audit = append(f.audit, a)
 	return d, nil
 }
-func (f *fakeDocs) Delete(_ context.Context, id string) error {
+func (f *fakeDocs) Delete(_ context.Context, id string, a domain.AuditEntry) error {
 	if _, ok := f.docs[id]; !ok {
 		return domain.ErrNotFound
 	}
 	delete(f.docs, id)
+	f.audit = append(f.audit, a)
 	return nil
 }
 
@@ -239,6 +244,7 @@ type fakeLogs struct {
 	examples  int // DeleteExamples calls
 	seq       int
 	dashCalls int
+	audit     []domain.AuditEntry // entries of successful writes
 }
 
 func newFakeLogs() *fakeLogs { return &fakeLogs{logs: map[string]domain.Log{}} }
@@ -269,28 +275,36 @@ func (f *fakeLogs) Get(_ context.Context, documentID, id string) (domain.Log, er
 	}
 	return l, nil
 }
-func (f *fakeLogs) Create(_ context.Context, l domain.Log) (domain.Log, error) {
+func (f *fakeLogs) Create(_ context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
 	f.seq++
 	l.ID = "l" + strconv.Itoa(f.seq)
 	f.logs[l.ID] = l
+	a.TargetID = l.ID
+	f.audit = append(f.audit, a)
 	return l, nil
 }
-func (f *fakeLogs) Update(_ context.Context, l domain.Log) (domain.Log, error) {
+func (f *fakeLogs) Update(_ context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
 	if _, ok := f.logs[l.ID]; !ok {
 		return domain.Log{}, domain.ErrNotFound
 	}
 	f.logs[l.ID] = l
+	f.audit = append(f.audit, a)
 	return l, nil
 }
-func (f *fakeLogs) Delete(ctx context.Context, documentID, id string) error {
+func (f *fakeLogs) Delete(ctx context.Context, documentID, id string, a domain.AuditEntry) error {
 	if _, err := f.Get(ctx, documentID, id); err != nil {
 		return err
 	}
 	delete(f.logs, id)
+	f.audit = append(f.audit, a)
 	return nil
 }
-func (f *fakeLogs) DeleteExamples(context.Context, string) error { f.examples++; return nil }
-func (f *fakeLogs) ListTags(context.Context) ([]string, error)   { return []string{"project"}, nil }
+func (f *fakeLogs) DeleteExamples(_ context.Context, _ string, a domain.AuditEntry) error {
+	f.examples++
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeLogs) ListTags(context.Context) ([]string, error) { return []string{"project"}, nil }
 func (f *fakeLogs) Dashboard(_ context.Context, documentID string, p domain.Period) (domain.Dashboard, error) {
 	f.dashCalls++
 	d := domain.Dashboard{From: p.From, To: p.To}
@@ -347,6 +361,7 @@ type fakeTelegramLinks struct {
 	byUser  map[string]domain.TelegramLink
 	err     error // returned by Link when set
 	findErr error // returned by FindByTelegramID when set
+	audit   []domain.AuditEntry
 }
 
 func newFakeTelegramLinks() *fakeTelegramLinks {
@@ -370,7 +385,7 @@ func (f *fakeTelegramLinks) Get(_ context.Context, userID string) (domain.Telegr
 	}
 	return l, nil
 }
-func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink) error {
+func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink, a domain.AuditEntry) error {
 	if f.err != nil {
 		return f.err
 	}
@@ -380,6 +395,7 @@ func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink) error
 		}
 	}
 	f.byUser[l.UserID] = l
+	f.audit = append(f.audit, a)
 	return nil
 }
 func (f *fakeTelegramLinks) SetDocument(_ context.Context, userID, docID string) error {
@@ -388,8 +404,11 @@ func (f *fakeTelegramLinks) SetDocument(_ context.Context, userID, docID string)
 	f.byUser[userID] = l
 	return nil
 }
-func (f *fakeTelegramLinks) Delete(_ context.Context, userID string) error {
-	delete(f.byUser, userID)
+func (f *fakeTelegramLinks) Delete(_ context.Context, userID string, a domain.AuditEntry) error {
+	if _, ok := f.byUser[userID]; ok {
+		delete(f.byUser, userID)
+		f.audit = append(f.audit, a)
+	}
 	return nil
 }
 
@@ -482,15 +501,6 @@ func (f *fakeSharing) Transfer(_ context.Context, docID, from, to string, a doma
 	f.audit = append(f.audit, a)
 	return nil
 }
-func (f *fakeSharing) Audit(_ context.Context, docID string) ([]domain.AuditEntry, error) {
-	out := []domain.AuditEntry{}
-	for _, a := range slices.Backward(f.audit) {
-		if docID == "" || a.DocumentID == docID {
-			out = append(out, a)
-		}
-	}
-	return out, nil
-}
 
 type fakeMailer struct {
 	sent []string // "to: subject"
@@ -510,18 +520,20 @@ type fakeExports struct {
 	settings  map[string]domain.ReportSettings
 	seq       int
 	finishErr error // returned by Finish and Fail (e.g. ErrNotFound: job reclaimed)
+	audit     []domain.AuditEntry
 }
 
 func newFakeExports() *fakeExports {
 	return &fakeExports{jobs: map[string]domain.ExportJob{}, settings: map[string]domain.ReportSettings{}}
 }
 
-func (f *fakeExports) Create(_ context.Context, j domain.ExportJob) (domain.ExportJob, error) {
+func (f *fakeExports) Create(_ context.Context, j domain.ExportJob, a domain.AuditEntry) (domain.ExportJob, error) {
 	f.seq++
 	j.ID, j.Status, j.CreatedAt = "j"+strconv.Itoa(f.seq), domain.ExportQueued, time.Now()
 	j.ExpiresAt = j.CreatedAt.Add(24 * time.Hour)
 	f.jobs[j.ID] = j
 	f.order = append(f.order, j.ID)
+	f.audit = append(f.audit, a)
 	return j, nil
 }
 func (f *fakeExports) Get(_ context.Context, docID, id string) (domain.ExportJob, error) {
@@ -620,4 +632,18 @@ func (f *fakeFiles) Delete(_ context.Context, k string) error {
 	}
 	delete(f.files, k)
 	return nil
+}
+
+type fakeAudit struct {
+	f     domain.AuditFilter
+	owner string
+}
+
+func (a *fakeAudit) List(_ context.Context, f domain.AuditFilter) (domain.AuditPage, error) {
+	a.f = f
+	return domain.AuditPage{Entries: []domain.AuditEntry{}}, nil
+}
+func (a *fakeAudit) Filters(_ context.Context, ownerID string) ([]domain.AuditActor, []domain.AuditDocument, error) {
+	a.owner = ownerID
+	return nil, nil, nil
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { api } from "../lib/api";
-import type { AuditEntry, GrantRole, Sharing } from "../lib/types";
+import type { GrantRole, Sharing } from "../lib/types";
 
 const key = (docId: string) => ["sharing", docId];
 
@@ -8,22 +9,6 @@ export function useSharing(docId: string, enabled: boolean) {
   return useQuery({
     queryKey: key(docId),
     queryFn: () => api<Sharing>(`/documents/${docId}/sharing`),
-    enabled,
-  });
-}
-
-export function useDocumentAudit(docId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["audit", docId],
-    queryFn: () => api<AuditEntry[]>(`/documents/${docId}/audit`),
-    enabled,
-  });
-}
-
-export function useTenantAudit(enabled: boolean) {
-  return useQuery({
-    queryKey: ["audit", "tenant"],
-    queryFn: () => api<AuditEntry[]>("/tenant/audit"),
     enabled,
   });
 }
@@ -37,7 +22,7 @@ function useSharingMutation<TVars, TOut = void>(
     mutationFn: fn,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: key(docId) });
-      void qc.invalidateQueries({ queryKey: ["audit"] });
+      refreshAuditSoon(qc);
       void qc.invalidateQueries({ queryKey: ["documents"] }); // role changes after a transfer
     },
   });

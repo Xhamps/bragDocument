@@ -6,6 +6,8 @@ decision-makers: Engineering
 
 # Redis as cache
 
+> **Amended 2026-10-09:** Redis also carries event streams for the transactional outbox ([ADR-0015](0015-transactional-outbox-with-redis-streams.md)). Streams are not a cache, but the degradation rule still holds: the outbox in PostgreSQL is the source of truth, so Redis being down only delays delivery (audit entries appear once it is back). Redis now runs with AOF (`appendfsync everysec`, data on a volume) and `maxmemory-policy noeviction`, so streams survive restarts and are never evicted; and the outbox republishes any entry not confirmed delivered within 10 minutes, which covers a Redis loss. With `noeviction`, a full Redis rejects cache writes instead of evicting; the cache already degrades on errors.
+
 ## Context and Problem Statement
 
 The logs list, dashboard aggregates, and per-request permission lookups are read far more often than written. The project requires Redis provisioned locally with Docker. What do we cache, and how is it kept correct?

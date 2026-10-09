@@ -13,11 +13,9 @@ import {
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { Document, GrantRole } from "../lib/types";
-import { describeAudit } from "./audit";
 import {
   useCancelInvitation,
   useChangeRole,
-  useDocumentAudit,
   useRevoke,
   useShare,
   useSharing,
@@ -44,8 +42,6 @@ function RoleOptions() {
 
 export function SharePanel({ doc, open, onOpenChange }: Props) {
   const sharing = useSharing(doc.id, open);
-  const [showHistory, setShowHistory] = useState(false);
-  const history = useDocumentAudit(doc.id, open && showHistory);
   const share = useShare(doc.id);
   const changeRole = useChangeRole(doc.id);
   const revoke = useRevoke(doc.id);
@@ -95,7 +91,6 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
       setRole("viewer");
       setNotice(null);
       setTransferTo(null);
-      setShowHistory(false);
       share.reset();
       resetActions();
     }
@@ -270,28 +265,6 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             </div>
           </div>
         )}
-
-        <details
-          className="text-sm"
-          onToggle={(e) => setShowHistory(e.currentTarget.open)}
-        >
-          <summary className="cursor-pointer text-muted-foreground">
-            History
-          </summary>
-          <ul className="mt-2 flex flex-col gap-1">
-            {history.data?.length === 0 && (
-              <li className="text-muted-foreground">No sharing changes yet.</li>
-            )}
-            {history.data?.map((a) => (
-              <li key={a.id}>
-                <time dateTime={a.at} className="text-muted-foreground">
-                  {new Date(a.at).toLocaleDateString()}
-                </time>{" "}
-                {describeAudit(a)}
-              </li>
-            ))}
-          </ul>
-        </details>
       </DialogContent>
     </Dialog>
   );

@@ -31,16 +31,3 @@ RETURNING *;
 
 -- name: DeletePendingDocumentInvitation :execrows
 DELETE FROM document_invitations WHERE id = $1 AND document_id = $2 AND accepted_at IS NULL;
-
--- name: CreateAuditEntry :execrows
--- Copies the document's tenant and title so the entry outlives the document.
-INSERT INTO audit_entries (tenant_id, actor_id, actor_email, action, document_id, document_title, target, role)
-SELECT d.tenant_id, sqlc.arg(actor_id)::uuid, sqlc.arg(actor_email)::text, sqlc.arg(action)::text,
-       d.id, d.title, sqlc.arg(target)::text, sqlc.arg(role)::text
-FROM documents d WHERE d.id = sqlc.arg(document_id);
-
--- name: ListAuditByDocument :many
-SELECT * FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200;
-
--- name: ListAuditByTenant :many
-SELECT * FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500;

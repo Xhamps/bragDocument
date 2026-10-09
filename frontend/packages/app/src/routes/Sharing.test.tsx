@@ -39,22 +39,11 @@ const sharing: Sharing = {
 
 const base = {
   "GET /me": me,
+  "GET /documents": { owned: [], shared: [] },
   "GET /documents/d1": doc,
   "GET /documents/d1/logs": { items: [], total: 0 },
   "GET /tags": { tags: [] },
   "GET /documents/d1/sharing": sharing,
-  "GET /documents/d1/audit": [
-    {
-      id: 1,
-      actor_email: "a@acme.com",
-      action: "grant",
-      document_id: "d1",
-      document_title: "2026",
-      target: "bob@acme.com",
-      role: "viewer",
-      at: "2026-01-01T00:00:00Z",
-    },
-  ],
 };
 
 async function openPanel() {
@@ -136,15 +125,6 @@ test("transfer needs a confirmation", async () => {
       calls.find((c) => c.path === "/documents/d1/transfer")?.body,
     ).toEqual({ user_id: "u2" }),
   );
-});
-
-test("history lists the document's audit", async () => {
-  mockFetch(base);
-  const d = await openPanel();
-  await userEvent.click(d.getByText(/history/i));
-  expect(
-    await d.findByText(/a@acme\.com shared bob@acme\.com on “2026” as viewer/),
-  ).toBeInTheDocument();
 });
 
 test("closing the panel drops a pending transfer confirmation", async () => {

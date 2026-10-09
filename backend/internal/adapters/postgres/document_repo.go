@@ -136,7 +136,7 @@ func (r *DocumentRepo) MarkSeen(ctx context.Context, id, userID string) error {
 	})
 }
 
-func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
+func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples []domain.Log, a domain.AuditEntry) (domain.Document, error) {
 	tid, err := parseID(d.TenantID)
 	if err != nil {
 		return domain.Document{}, err
@@ -145,54 +145,44 @@ func (r *DocumentRepo) Create(ctx context.Context, d domain.Document, examples [
 	if err != nil {
 		return domain.Document{}, err
 	}
-	var out domain.Document
-	err = r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+	return write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, a *domain.AuditEntry) (domain.Document, error) {
 		row, err := q.CreateDocument(ctx, sqlcgen.CreateDocumentParams{TenantID: tid, OwnerID: oid, Title: d.Title, Description: d.Description})
 		if err != nil {
-			return wrap(err)
+			return domain.Document{}, wrap(err)
 		}
 		for _, ex := range examples {
 			ex.TenantID, ex.DocumentID = row.TenantID.String(), row.ID.String()
 			if _, err := insertLog(ctx, q, ex); err != nil {
-				return err
+				return domain.Document{}, err
 			}
 		}
-		out = toDocument(row)
-		return nil
+		a.DocumentID = row.ID.String() // snapshot runs after fn
+		return toDocument(row), nil
 	})
-	return out, err
 }
 
-func (r *DocumentRepo) Update(ctx context.Context, d domain.Document) (domain.Document, error) {
+func (r *DocumentRepo) Update(ctx context.Context, d domain.Document, a domain.AuditEntry) (domain.Document, error) {
 	did, err := parseID(d.ID)
 	if err != nil {
 		return domain.Document{}, err
 	}
-	var out domain.Document
-	err = r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+	// The snapshot runs before fn: a rename names the title as it was.
+	return write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (domain.Document, error) {
 		row, err := q.UpdateDocument(ctx, sqlcgen.UpdateDocumentParams{ID: did, Title: d.Title, Description: d.Description, State: d.State})
 		if err != nil {
-			return wrap(err)
+			return domain.Document{}, wrap(err)
 		}
-		out = toDocument(row)
-		return nil
+		return toDocument(row), nil
 	})
-	return out, err
 }
 
-func (r *DocumentRepo) Delete(ctx context.Context, id string) error {
+func (r *DocumentRepo) Delete(ctx context.Context, id string, a domain.AuditEntry) error {
 	did, err := parseID(id)
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		n, err := q.DeleteDocument(ctx, did)
-		if err != nil {
-			return wrap(err)
-		}
-		if n == 0 {
-			return domain.ErrNotFound
-		}
-		return nil
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		return struct{}{}, rowsOrNotFound(q.DeleteDocument(ctx, did))
 	})
+	return err
 }

@@ -248,3 +248,59 @@ func TestLogsGet(t *testing.T) {
 	_, err = f.s.Get(ctx, "d3", l.ID, "u1")
 	require.ErrorIs(t, err, domain.ErrNotFound, "log of another document")
 }
+
+func TestLogWritesAreAudited(t *testing.T) {
+	f := newLogsFixture()
+	ctx := context.Background()
+	in := createIn("d1")
+	in.Name = "Migrated billing"
+	l, err := f.s.Create(ctx, in)
+	require.NoError(t, err)
+	st := "in_progress"
+	_, err = f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d1", UserID: "u1", Status: &st})
+	require.NoError(t, err)
+	_, err = f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d1", UserID: "u1", Status: &st})
+	require.NoError(t, err, "an unchanged update writes no entry")
+	name := "Billing v2"
+	_, err = f.s.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: "d1", UserID: "u1", Name: &name})
+	require.NoError(t, err)
+	require.NoError(t, f.s.Delete(ctx, "d1", l.ID, "u1"))
+	require.NoError(t, f.s.DeleteExamples(ctx, "d1", "u1"))
+	require.ErrorIs(t, f.s.Delete(ctx, "d1", l.ID, "u1"), domain.ErrNotFound)
+
+	got := []string{}
+	for _, a := range f.logs.audit {
+		got = append(got, a.Action)
+		require.Equal(t, "u1", a.ActorID)
+		require.Equal(t, "d1", a.DocumentID)
+		require.Equal(t, domain.TargetLog, a.TargetType)
+		require.Equal(t, domain.SourceWeb, a.Source)
+	}
+	require.Equal(t, []string{domain.AuditLogCreated, domain.AuditLogStatusChanged, domain.AuditLogEdited,
+		domain.AuditLogDeleted, domain.AuditLogDeleted}, got)
+	require.Equal(t, "Migrated billing", f.logs.audit[0].Target)
+	require.Equal(t, l.ID, f.logs.audit[0].TargetID)
+	require.Equal(t, []string{"status"}, f.logs.audit[1].ChangedFields)
+	require.Equal(t, []string{"name"}, f.logs.audit[2].ChangedFields)
+	require.Equal(t, "Billing v2", f.logs.audit[3].Target, "delete names the log as it was")
+	require.Equal(t, l.ID, f.logs.audit[3].TargetID)
+	require.Equal(t, "example logs", f.logs.audit[4].Target)
+}
+
+func TestSavingUnchangedExampleIsAudited(t *testing.T) {
+	f := newLogsFixture()
+	f.logs.logs["l9"] = domain.Log{ID: "l9", DocumentID: "d1", Name: "Example", Impact: "low", Status: domain.StatusDone, IsExample: true, Tags: []string{}, Links: []domain.Link{}}
+	got, err := f.s.Update(context.Background(), UpdateLogInput{ID: "l9", DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	require.False(t, got.IsExample)
+	require.Len(t, f.logs.audit, 1)
+	require.Equal(t, domain.AuditLogEdited, f.logs.audit[0].Action)
+}
+
+func TestBotLogWriteIsTelegramSource(t *testing.T) {
+	f := newLogsFixture()
+	ctx := domain.WithSource(context.Background(), domain.SourceTelegram)
+	_, err := f.s.Create(ctx, createIn("d1"))
+	require.NoError(t, err)
+	require.Equal(t, domain.SourceTelegram, f.logs.audit[0].Source)
+}

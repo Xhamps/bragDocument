@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { api } from "../lib/api";
 import type { Impact, Log, LogLink, LogList, LogStatus } from "../lib/types";
 
@@ -57,6 +58,7 @@ function useLogMutation<TVars, TOut>(
       void qc.invalidateQueries({ queryKey: ["documents"] }); // card counters
       void qc.invalidateQueries({ queryKey: ["tags"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", docId] });
+      refreshAuditSoon(qc);
     },
   });
 }

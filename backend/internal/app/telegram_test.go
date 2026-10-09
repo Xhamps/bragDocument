@@ -107,6 +107,21 @@ func TestTelegramStatusAndUnlink(t *testing.T) {
 	require.Contains(t, f.say(42, "hello"), "/start")
 }
 
+func TestTelegramLinkAndUnlinkAreAudited(t *testing.T) {
+	f := newTGFixture()
+	_, err := f.tg.NewCode(context.Background(), "u1", "t1")
+	require.NoError(t, err)
+	bot := domain.WithSource(context.Background(), domain.SourceTelegram)
+	require.Contains(t, f.tg.Reply(bot, 42, "/start ABCD2345").Text, "Linked")
+	require.Len(t, f.links.audit, 1)
+	require.Equal(t, domain.AuditEntry{ActorID: "u1", Source: domain.SourceTelegram, Action: domain.AuditTelegramLinked}, f.links.audit[0])
+
+	require.NoError(t, f.tg.Unlink(context.Background(), "u1"))
+	require.NoError(t, f.tg.Unlink(context.Background(), "u1")) // idempotent: no second entry
+	require.Len(t, f.links.audit, 2)
+	require.Equal(t, domain.AuditEntry{ActorID: "u1", Source: domain.SourceWeb, Action: domain.AuditTelegramUnlinked}, f.links.audit[1])
+}
+
 // titled titles the logs fixture's documents: d1 and d3 active, d2 archived.
 func (f *tgFixture) titled() {
 	for id, title := range map[string]string{"d1": "Alpha", "d2": "Beta", "d3": "Gamma"} {

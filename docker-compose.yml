@@ -66,8 +66,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       GOTENBERG_URL: http://gotenberg:3000
       APP_URL: ${APP_URL:-http://localhost:${FRONTEND_PORT:-5173}}
+      EXPORT_DIR: /data/exports
     ports:
       - "${API_PORT:-8080}:8080"
+    volumes:
+      - exports:/data/exports
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -107,9 +110,12 @@ services:
       DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       GOTENBERG_URL: http://gotenberg:3000
+      EXPORT_DIR: /data/exports
     volumes:
       - exports:/data/exports
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

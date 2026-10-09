@@ -2,6 +2,8 @@
 package config
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,6 +24,10 @@ type Config struct {
 	SupabaseURL      string `env:"SUPABASE_URL"`       // required by api; JWKS at /auth/v1/.well-known/jwks.json
 	RedisURL         string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
 	GotenbergURL     string `env:"GOTENBERG_URL" envDefault:"http://localhost:3000"`
+
+	GotenbergTimeout time.Duration `env:"GOTENBERG_TIMEOUT" envDefault:"60s"`
+	ExportDir        string        `env:"EXPORT_DIR" envDefault:"data/exports"`
+	ExportKey        string        `env:"EXPORT_KEY"` // base64 of 32 bytes; required by api and worker (PRD-0006 NFR-2)
 
 	TelegramToken       string `env:"TELEGRAM_BOT_TOKEN"`
 	TelegramMode        string `env:"TELEGRAM_MODE" envDefault:"polling"`
@@ -58,4 +64,13 @@ func Load() (Config, error) {
 		c.DatabaseOwnerURL = c.DatabaseURL
 	}
 	return c, nil
+}
+
+// ExportKeyBytes decodes EXPORT_KEY. api and worker call it; the bot never needs it.
+func (c Config) ExportKeyBytes() ([]byte, error) {
+	k, err := base64.StdEncoding.DecodeString(c.ExportKey)
+	if err != nil || len(k) != 32 {
+		return nil, errors.New("config: EXPORT_KEY must be base64 of 32 bytes (openssl rand -base64 32)")
+	}
+	return k, nil
 }

@@ -215,7 +215,8 @@ func (r *SharingRepo) Transfer(ctx context.Context, docID, fromUserID, toUserID 
 		return err
 	}
 	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		if err := rowsOrNotFound(q.SetDocumentOwner(ctx, sqlcgen.SetDocumentOwnerParams{ID: did, OwnerID: to})); err != nil {
+		// A from that is no longer the owner (stale or concurrent transfer) matches nothing: ErrNotFound.
+		if err := rowsOrNotFound(q.SetDocumentOwner(ctx, sqlcgen.SetDocumentOwnerParams{ID: did, OwnerID: to, FromID: from})); err != nil {
 			return err
 		}
 		if _, err := q.DeleteGrant(ctx, sqlcgen.DeleteGrantParams{DocumentID: did, UserID: to}); err != nil {

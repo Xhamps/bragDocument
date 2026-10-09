@@ -262,16 +262,17 @@ func (q *Queries) MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) er
 }
 
 const setDocumentOwner = `-- name: SetDocumentOwner :execrows
-UPDATE documents SET owner_id = $2, updated_at = now() WHERE id = $1
+UPDATE documents SET owner_id = $1, updated_at = now() WHERE id = $2 AND owner_id = $3
 `
 
 type SetDocumentOwnerParams struct {
-	ID      uuid.UUID
 	OwnerID uuid.UUID
+	ID      uuid.UUID
+	FromID  uuid.UUID
 }
 
 func (q *Queries) SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setDocumentOwner, arg.ID, arg.OwnerID)
+	result, err := q.db.Exec(ctx, setDocumentOwner, arg.OwnerID, arg.ID, arg.FromID)
 	if err != nil {
 		return 0, err
 	}

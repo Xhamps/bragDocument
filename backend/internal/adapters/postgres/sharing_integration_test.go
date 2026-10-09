@@ -36,7 +36,7 @@ func TestSharing(t *testing.T) {
 
 	users, docs, sharing, tenants := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db)
 	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
-	_, tb := provisionTenant(t, users, "B", "zed@example.com")
+	zed, tb := provisionTenant(t, users, "B", "zed@example.com")
 	bob := addMember(t, users, ta, "bob@example.com")
 	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
@@ -66,6 +66,16 @@ func TestSharing(t *testing.T) {
 	g := domain.Grant{DocumentID: doc.ID, UserID: bob.ID, Role: domain.RoleViewer, GrantedBy: ada.ID}
 	require.NoError(t, sharing.Grant(ctxA, g, audit(domain.AuditGrant, bob.Email, domain.RoleViewer)))
 	require.ErrorIs(t, sharing.Grant(ctxA, g, audit(domain.AuditGrant, bob.Email, domain.RoleViewer)), domain.ErrConflict)
+	// Another tenant's user can be neither granted nor resolved.
+	require.ErrorIs(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc.ID, UserID: zed.ID, Role: domain.RoleViewer, GrantedBy: ada.ID},
+		audit(domain.AuditGrant, zed.Email, domain.RoleViewer)), domain.ErrConflict)
+	entries, err := sharing.Audit(ctxA, doc.ID)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "the failed grant wrote no audit row")
+	_, err = sharing.Member(ctxA, zed.ID)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	_, err = sharing.Member(ctxA, bob.ID)
+	require.NoError(t, err)
 	got, err = docs.GetForUser(ctxA, doc.ID, bob.ID)
 	require.NoError(t, err)
 	require.Equal(t, domain.RoleViewer, got.Role)
@@ -133,6 +143,26 @@ func TestSharing(t *testing.T) {
 	require.Empty(t, sh.Invitations)
 	require.ErrorIs(t, sharing.CancelInvitation(ctxA, doc.ID, created.ID, audit(domain.AuditInviteCancel, inv.Email, inv.Role)), domain.ErrNotFound, "accepted, no longer pending")
 
+	// Cancel a pending invitation.
+	other, err := sharing.Invite(ctxA, domain.DocumentInvitation{DocumentID: doc.ID, Email: "other@example.com", Role: domain.RoleViewer, InvitedBy: ada.ID},
+		audit(domain.AuditInvite, "other@example.com", domain.RoleViewer))
+	require.NoError(t, err)
+	require.NoError(t, sharing.CancelInvitation(ctxA, doc.ID, other.ID, audit(domain.AuditInviteCancel, other.Email, other.Role)))
+	sh, err = sharing.Get(ctxA, doc.ID)
+	require.NoError(t, err)
+	require.Empty(t, sh.Invitations)
+
+	// A transfer to another tenant's user rolls back whole.
+	before, err := sharing.Audit(ctxA, doc.ID)
+	require.NoError(t, err)
+	require.ErrorIs(t, sharing.Transfer(ctxA, doc.ID, ada.ID, zed.ID, audit(domain.AuditTransfer, zed.Email, domain.RoleOwner)), domain.ErrConflict)
+	got, err = docs.GetForUser(ctxA, doc.ID, ada.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.RoleOwner, got.Role)
+	after, err := sharing.Audit(ctxA, doc.ID)
+	require.NoError(t, err)
+	require.Len(t, after, len(before))
+
 	// Transfer: bob owns it, ada edits it.
 	require.NoError(t, sharing.Transfer(ctxA, doc.ID, ada.ID, bob.ID, audit(domain.AuditTransfer, bob.Email, domain.RoleOwner)))
 	got, err = docs.GetForUser(ctxA, doc.ID, bob.ID)
@@ -142,6 +172,9 @@ func TestSharing(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, domain.RoleEditor, got.Role)
 
+	require.ErrorIs(t, sharing.Transfer(ctxA, doc.ID, ada.ID, newID, audit(domain.AuditTransfer, "new@example.com", domain.RoleOwner)),
+		domain.ErrNotFound, "ada no longer owns it")
+
 	// Revocation takes effect at once.
 	require.NoError(t, sharing.Revoke(ctxA, doc.ID, newID, audit(domain.AuditRevoke, "new@example.com", domain.RoleEditor)))
 	_, err = docs.GetForUser(ctxA, doc.ID, newID)
@@ -149,8 +182,9 @@ func TestSharing(t *testing.T) {
 	require.ErrorIs(t, sharing.Revoke(ctxA, doc.ID, newID, audit(domain.AuditRevoke, "x", "")), domain.ErrNotFound)
 
 	// Audit: newest first, copies the title, survives deletion, cannot be rewritten.
-	entries, err := sharing.Audit(ctxA, doc.ID)
+	entries, err = sharing.Audit(ctxA, doc.ID)
 	require.NoError(t, err)
+	require.Contains(t, actions(entries), domain.AuditInviteCancel)
 	require.Equal(t, domain.AuditRevoke, entries[0].Action)
 	require.Equal(t, domain.AuditGrant, entries[len(entries)-1].Action)
 	require.Equal(t, "2026", entries[0].DocumentTitle)

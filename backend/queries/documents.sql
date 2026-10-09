@@ -59,4 +59,4 @@ UPDATE document_grants SET seen_at = now()
 WHERE document_id = $1 AND user_id = $2 AND seen_at IS NULL;
 
 -- name: SetDocumentOwner :execrows
-UPDATE documents SET owner_id = $2, updated_at = now() WHERE id = $1;
+UPDATE documents SET owner_id = sqlc.arg(owner_id), updated_at = now() WHERE id = sqlc.arg(id) AND owner_id = sqlc.arg(from_id);

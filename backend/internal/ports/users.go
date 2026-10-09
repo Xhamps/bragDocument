@@ -23,5 +23,6 @@ type ProvisionTx interface {
 	CreateUser(ctx context.Context, u domain.User) (domain.User, error)
 	// AcceptInvitations removes the user's tenant invitation and turns their
 	// pending document invitations in the user's tenant into grants, audited.
+	// It scopes the rest of the transaction to u's tenant, so call it last.
 	AcceptInvitations(ctx context.Context, u domain.User) error
 }

@@ -85,7 +85,7 @@ paths:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     get:
-      summary: Filtered, sorted, paged logs of a document (owner only)
+      summary: Filtered, sorted, paged logs of a document (read access; owner, editor, or viewer)
       parameters:
         - { name: q, in: query, schema: { type: string }, description: Substring of name or description, case-insensitive }
         - { name: tag, in: query, schema: { type: array, items: { type: string } }, explode: true, description: Any-of }
@@ -121,7 +121,7 @@ paths:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       - { name: logId, in: path, required: true, schema: { type: string, format: uuid } }
     get:
-      summary: One log (owner only; archived documents included)
+      summary: One log (read access; owner, editor, or viewer; archived documents included)
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Log" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -299,7 +299,7 @@ components:
         tenant: { $ref: "#/components/schemas/Tenant" }
     Document:
       type: object
-      required: [id, owner_id, title, description, state, created_at, updated_at]
+      required: [id, owner_id, title, description, state, created_at, updated_at, role, is_new]
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
@@ -309,7 +309,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         role: { type: string, enum: [owner, editor, viewer] }
-        owner_name: { type: string, description: Present on shared documents }
+        owner_name: { type: string, description: "Owner's display name or email; omitted in the owned list" }
         is_new: { type: boolean, description: Shared and not opened yet }
         log_count: { type: integer, description: "Logs excluding examples. Set only by GET /documents (list); absent or zero elsewhere." }
         last_log_at: { type: string, format: date-time, nullable: true, description: "Newest created_at, null without logs. Set only by GET /documents (list); absent or zero elsewhere." }

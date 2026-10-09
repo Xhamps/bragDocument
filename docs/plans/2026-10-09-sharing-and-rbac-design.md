@@ -22,18 +22,22 @@ Migration `0005_sharing`:
 
 ```
 document_grants       document_id, tenant_id, user_id fk users ON DELETE CASCADE,
-                      role text check in ('editor','viewer'), granted_by fk users, granted_at,
+                      role text check in ('editor','viewer'), granted_by uuid (no FK), granted_at,
                       seen_at timestamptz NULL                 -- NULL = "New"
                       PK (document_id, user_id)
                       FK (document_id, tenant_id) -> documents ON DELETE CASCADE
 document_invitations  id, tenant_id, document_id (composite FK, cascade), email,
-                      role check in ('editor','viewer'), invited_by, created_at,
-                      accepted_at NULL; unique (document_id, email)
-audit_entries         id, tenant_id, actor_id, action text, document_id NULL (ON DELETE SET NULL),
+                      role check in ('editor','viewer'), invited_by uuid (no FK), created_at,
+                      accepted_at NULL; unique (document_id, email) WHERE accepted_at IS NULL
+audit_entries         id, tenant_id, actor_id, action text, document_id NOT NULL (no FK),
                       document_title text, target text, role text NULL, at
+documents             + FK (owner_id, tenant_id) -> users (id, tenant_id)
+logs                  - FKs on created_by, updated_by
 ```
 
-- Tenant RLS on all three. `document_invitations` also gets the `app_provisioning()` read policy used by `tenant_invitations`.
+- `granted_by`, `invited_by`, `actor_id`, `logs.created_by/updated_by` are provenance uuids without FKs: they outlive the user (editors write into others' documents).
+
+- Tenant RLS on all three. `document_invitations` also gets the `app_provisioning()` policy used by `tenant_invitations`, `SELECT` only.
 - Audit actions: `grant`, `invite`, `role_change`, `revoke`, `invite_cancel`, `invite_accept`, `transfer`. Append-only; `document_title` is copied so the trail survives document deletion.
 - Deleting a member cascades their grants; deleting a document cascades grants and invitations (PRD-0001 FR-6).
 
@@ -71,7 +75,7 @@ The admin's `/tenant/invitations` also lists pending document invitations, read-
 
 - `ports.Mailer.Send(ctx, to, subject, html string) error`.
 - `adapters/email/resend.go` with `github.com/resend/resend-go/v2`. Config `RESEND_API_KEY`, `MAIL_FROM`. Empty key → one startup warning, `Send` returns `ErrUnavailable`.
-- `Share` sends after commit. Failure → log plus `emails_failed_total`; the share still succeeds (degradation rule; ADR-0012 and the backend-endpoint skill list Resend as optional).
+- `Share` sends after commit. Failure → log plus `email_failures_total`; the share still succeeds (degradation rule; ADR-0012 and the backend-endpoint skill list Resend as optional).
 - Template: "{owner} shared '{title}' with you as {role}" linking to `APP_URL/documents/:id` (members) or the sign-in page (invitees).
 
 ## 6. Frontend, bot, testing

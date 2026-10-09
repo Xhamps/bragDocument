@@ -284,14 +284,18 @@ func (f *fakeCache) Set(_ context.Context, k string, v []byte, ttl time.Duration
 func (f *fakeCache) Delete(_ context.Context, k string) error { delete(f.data, k); return f.err }
 
 type fakeTelegramLinks struct {
-	byUser map[string]domain.TelegramLink
-	err    error // returned by Link when set
+	byUser  map[string]domain.TelegramLink
+	err     error // returned by Link when set
+	findErr error // returned by FindByTelegramID when set
 }
 
 func newFakeTelegramLinks() *fakeTelegramLinks {
 	return &fakeTelegramLinks{byUser: map[string]domain.TelegramLink{}}
 }
 func (f *fakeTelegramLinks) FindByTelegramID(_ context.Context, id int64) (domain.TelegramLink, error) {
+	if f.findErr != nil {
+		return domain.TelegramLink{}, f.findErr
+	}
 	for _, l := range f.byUser {
 		if l.TelegramUserID == id {
 			return l, nil

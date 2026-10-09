@@ -213,10 +213,11 @@ func TestTelegramLastAndUndo(t *testing.T) {
 	require.Len(t, f.lf.logs.logs, 1)
 	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"), "only the last one")
 
-	// Already deleted on the web: the pointer is still cleared.
+	// Already deleted on the web: nothing removed, pointer cleared.
 	f.tg.Reply(context.Background(), 42, "Third")
 	delete(f.lf.logs.logs, "l3")
-	require.Equal(t, "Removed: Third", f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"))
+	require.NotContains(t, f.undo.data, "tg:undo:42")
 
 	// Archived since: refused, pointer kept.
 	f.tg.Reply(context.Background(), 42, "Fourth")
@@ -225,4 +226,36 @@ func TestTelegramLastAndUndo(t *testing.T) {
 	f.lf.docs.docs["d1"] = d
 	require.Equal(t, msgArchived, f.tg.Reply(context.Background(), 42, "/undo"))
 	require.Contains(t, f.undo.data, "tg:undo:42")
+}
+
+func TestTelegramUndoIsPerUser(t *testing.T) {
+	f := newTGFixture()
+	f.linked("d1")
+	f.tg.Reply(context.Background(), 42, "Secret of u1")
+	require.NoError(t, f.tg.Unlink(context.Background(), "u1"))
+	f.lf.docs.docs["d7"] = domain.Document{ID: "d7", TenantID: "t2", OwnerID: "u2", State: domain.DocumentActive}
+	f.links.byUser["u2"] = domain.TelegramLink{UserID: "u2", TenantID: "t2", TelegramUserID: 42, DocumentID: "d7"}
+	require.Equal(t, msgNothingToUndo, f.tg.Reply(context.Background(), 42, "/undo"))
+	require.Len(t, f.lf.logs.logs, 1)
+}
+
+func TestTelegramCommandParsing(t *testing.T) {
+	f := newTGFixture()
+	for _, msg := range []string{"/start\nabcd2345", "/start abcd-2345", "/start ABCD 2345"} {
+		_, err := f.tg.NewCode(context.Background(), "u1", "t1")
+		require.NoError(t, err)
+		require.Contains(t, f.tg.Reply(context.Background(), 42, msg), "Linked", msg)
+	}
+	f.titled()
+	require.Contains(t, f.tg.Reply(context.Background(), 42, "/use\n2"), "Gamma")
+	require.Equal(t, "d3", f.links.byUser["u1"].DocumentID)
+}
+
+func TestTelegramLookupFailureStoresNothing(t *testing.T) {
+	f := newTGFixture()
+	f.linked("d1")
+	f.links.findErr = errors.New("db down")
+	require.Equal(t, msgTryAgain, f.tg.Reply(context.Background(), 42, "Shipped X"))
+	require.Empty(t, f.lf.logs.logs)
+	require.Empty(t, f.undo.data)
 }

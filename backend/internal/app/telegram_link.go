@@ -49,7 +49,7 @@ func (t *Telegram) Unlink(ctx context.Context, userID string) error {
 
 // start redeems a link code sent as "/start <code>".
 func (t *Telegram) start(ctx context.Context, telegramID int64, code string) string {
-	v, ok, err := t.codes.GetDel(ctx, codeKey(strings.ToUpper(code)))
+	v, ok, err := t.codes.GetDel(ctx, codeKey(normalizeCode(code)))
 	if err != nil {
 		slog.WarnContext(ctx, "telegram link code lookup failed", slog.Any("err", err))
 		return msgLinkUnavailable
@@ -67,4 +67,9 @@ func (t *Telegram) start(ctx context.Context, telegramID int64, code string) str
 		return msgTryAgain
 	}
 	return "Linked. Send /docs to pick the document I write to."
+}
+
+// normalizeCode accepts the code as typed: any case, with spaces or dashes.
+func normalizeCode(code string) string {
+	return strings.ToUpper(strings.NewReplacer(" ", "", "-", "").Replace(code))
 }

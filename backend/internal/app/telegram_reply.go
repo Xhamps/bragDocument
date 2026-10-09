@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 )
@@ -56,9 +57,12 @@ func splitCommand(text string) (cmd, arg string) {
 	if !strings.HasPrefix(text, "/") {
 		return "", text
 	}
-	cmd, arg, _ = strings.Cut(text, " ")
+	cmd, arg = text, ""
+	if i := strings.IndexFunc(text, unicode.IsSpace); i >= 0 {
+		cmd, arg = text[:i], strings.TrimSpace(text[i:])
+	}
 	cmd, _, _ = strings.Cut(cmd, "@")
-	return strings.ToLower(cmd), strings.TrimSpace(arg)
+	return strings.ToLower(cmd), arg
 }
 
 // activeDocs is the owner's active documents in web list order; /use indexes into it.
@@ -107,6 +111,7 @@ func (t *Telegram) use(ctx context.Context, link domain.TelegramLink, arg string
 }
 
 type undoEntry struct {
+	UserID     string `json:"user_id"` // the Telegram id may be relinked to another user within the TTL
 	DocumentID string `json:"document_id"`
 	LogID      string `json:"log_id"`
 	Name       string `json:"name"`
@@ -125,7 +130,7 @@ func (t *Telegram) capture(ctx context.Context, link domain.TelegramLink, telegr
 	if err != nil {
 		return t.failed(ctx, err)
 	}
-	v, _ := json.Marshal(undoEntry{DocumentID: l.DocumentID, LogID: l.ID, Name: l.Name})
+	v, _ := json.Marshal(undoEntry{UserID: link.UserID, DocumentID: l.DocumentID, LogID: l.ID, Name: l.Name})
 	_ = t.undo.Set(ctx, undoKey(telegramID), v, undoTTL) // Degrading: never fails
 
 	var b strings.Builder
@@ -167,7 +172,7 @@ func (t *Telegram) last(ctx context.Context, link domain.TelegramLink) string {
 func (t *Telegram) undoLast(ctx context.Context, link domain.TelegramLink, telegramID int64) string {
 	v, ok, _ := t.undo.Get(ctx, undoKey(telegramID))
 	var e undoEntry
-	if !ok || json.Unmarshal(v, &e) != nil {
+	if !ok || json.Unmarshal(v, &e) != nil || e.UserID != link.UserID {
 		return msgNothingToUndo
 	}
 	err := t.logs.Delete(ctx, e.DocumentID, e.LogID, link.UserID)
@@ -175,6 +180,9 @@ func (t *Telegram) undoLast(ctx context.Context, link domain.TelegramLink, teleg
 		return t.failed(ctx, err)
 	}
 	_ = t.undo.Delete(ctx, undoKey(telegramID))
+	if err != nil {
+		return msgNothingToUndo // already deleted elsewhere
+	}
 	return "Removed: " + e.Name
 }
 

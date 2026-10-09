@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-09
 owner: Product
 stakeholders: Engineering, Operations
@@ -96,8 +96,6 @@ No business entities change. Log records gain one field, `service` (`api` | `bot
 
 | Question | Owner | Due |
 |---|---|---|
-| Name of the command: `all`, `serve` or `dev`? | Engineering | Before implementation |
-| Should the three services share one database pool and cache client in the combined mode, or keep one each? | Engineering | Before implementation |
 | Should Docker Compose offer a single-container profile that uses the combined command? | Operations | Later |
 
 ## 13. Decisions log
@@ -107,3 +105,6 @@ No business entities change. Log records gain one field, `service` (`api` | `bot
 | 2026-10-09 | Keep per-service commands and containers | Production-like runs scale and restart services independently |
 | 2026-10-09 | Migrations stay out of the combined command | The app's database role must not need schema rights |
 | 2026-10-09 | One failing service stops the whole command | A half-running backend hides failures; failing loudly is easier to notice |
+| 2026-10-09 | The combined command is `bragdoc all` (`make run-all`) | Reads naturally next to `api`, `bot`, `worker` |
+| 2026-10-09 | Each service keeps its own database pool and cache client under `all` | Each service runs exactly the code it runs alone; three pools cost nothing at this scale |
+| 2026-10-09 | The exit line's `service` is the subcommand (`all` under the combined command); the error names the failing service | The exit is process-level; `api: …` in `err` says which service failed |

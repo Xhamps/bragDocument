@@ -36,7 +36,7 @@ type Querier interface {
 	// impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
 	DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
-	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
+	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) (int64, error)
 	// Under app.provisioning.
 	DeleteExportJob(ctx context.Context, id uuid.UUID) error
 	DeleteGrant(ctx context.Context, arg DeleteGrantParams) (int64, error)

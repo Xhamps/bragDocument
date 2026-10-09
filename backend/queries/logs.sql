@@ -55,7 +55,7 @@ RETURNING *;
 -- name: DeleteLog :execrows
 DELETE FROM logs WHERE id = @id AND document_id = @document_id;
 
--- name: DeleteExampleLogs :exec
+-- name: DeleteExampleLogs :execrows
 DELETE FROM logs WHERE document_id = @document_id AND is_example;
 
 -- name: UpsertTags :exec

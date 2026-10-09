@@ -141,10 +141,15 @@ func TestLogRepo(t *testing.T) {
 	pA, err := logs.List(ctx, doc.ID, q{Page: 1, PerPage: 50, Sort: "created_at"})
 	require.NoError(t, err)
 	require.Equal(t, 3, pA.Total)
-	// The composite FK (document_id, tenant_id) finds no B document with A's
-	// id (FK checks bypass RLS), so the insert is a 23503 -> ErrConflict.
-	_, err = logs.Create(ctxB, domain.Log{TenantID: tenantB.ID, DocumentID: doc.ID, Name: "x", Impact: "low",
-		Status: "done", CreatedAt: now, CreatedBy: adminB.ID, UpdatedBy: adminB.ID}, logEntry(adminB.ID, doc.ID, domain.AuditLogCreated))
+	// The entry's snapshot (before the insert) cannot see A's document.
+	bLog := domain.Log{TenantID: tenantB.ID, DocumentID: doc.ID, Name: "x", Impact: "low",
+		Status: "done", CreatedAt: now, CreatedBy: adminB.ID, UpdatedBy: adminB.ID}
+	_, err = logs.Create(ctxB, bLog, logEntry(adminB.ID, doc.ID, domain.AuditLogCreated))
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	// Without the document in the entry, the insert runs first: the composite FK
+	// (document_id, tenant_id) finds no B document with A's id (FK checks bypass
+	// RLS), so the insert is a 23503 -> ErrConflict.
+	_, err = logs.Create(ctxB, bLog, logEntry(adminB.ID, "", domain.AuditLogCreated))
 	require.ErrorIs(t, err, domain.ErrConflict)
 
 	// Update of a missing log.

@@ -105,11 +105,15 @@ func (r *TelegramLinkRepo) Delete(ctx context.Context, userID string, a domain.A
 	if err != nil {
 		return err
 	}
-	return withQueries(ctx, r.db, func(ctx context.Context, q *sqlcgen.Queries) error {
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
 		n, err := q.DeleteTelegramLink(ctx, uid)
-		if err != nil || n == 0 {
-			return wrap(err) // wrap(nil) is nil: nothing removed, no entry
+		if err != nil {
+			return struct{}{}, wrap(err)
 		}
-		return audit(ctx, q, a)
+		if n == 0 {
+			return struct{}{}, errNoChange // nothing removed, no entry
+		}
+		return struct{}{}, nil
 	})
+	return err
 }

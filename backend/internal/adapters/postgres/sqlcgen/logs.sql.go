@@ -153,13 +153,16 @@ func (q *Queries) DashboardTotals(ctx context.Context, arg DashboardTotalsParams
 	return i, err
 }
 
-const deleteExampleLogs = `-- name: DeleteExampleLogs :exec
+const deleteExampleLogs = `-- name: DeleteExampleLogs :execrows
 DELETE FROM logs WHERE document_id = $1 AND is_example
 `
 
-func (q *Queries) DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteExampleLogs, documentID)
-	return err
+func (q *Queries) DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExampleLogs, documentID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteLog = `-- name: DeleteLog :execrows

@@ -98,12 +98,11 @@ func (r *SharingRepo) Grant(ctx context.Context, g domain.Grant, a domain.AuditE
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		if _, err := q.CreateGrant(ctx, sqlcgen.CreateGrantParams{DocumentID: did, UserID: uid, Role: string(g.Role), GrantedBy: by}); err != nil {
-			return wrap(err)
-		}
-		return audit(ctx, q, a)
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		_, err := q.CreateGrant(ctx, sqlcgen.CreateGrantParams{DocumentID: did, UserID: uid, Role: string(g.Role), GrantedBy: by})
+		return struct{}{}, wrap(err)
 	})
+	return err
 }
 
 func (r *SharingRepo) Invite(ctx context.Context, inv domain.DocumentInvitation, a domain.AuditEntry) (domain.DocumentInvitation, error) {
@@ -115,18 +114,16 @@ func (r *SharingRepo) Invite(ctx context.Context, inv domain.DocumentInvitation,
 	if err != nil {
 		return domain.DocumentInvitation{}, err
 	}
-	var out domain.DocumentInvitation
-	err = r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+	return write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, a *domain.AuditEntry) (domain.DocumentInvitation, error) {
 		row, err := q.CreateDocumentInvitation(ctx, sqlcgen.CreateDocumentInvitationParams{DocumentID: did,
 			Email: inv.Email, Role: string(inv.Role), InvitedBy: by})
 		if err != nil {
-			return wrap(err)
+			return domain.DocumentInvitation{}, wrap(err)
 		}
-		out = toDocumentInvitation(row)
+		out := toDocumentInvitation(row)
 		a.TargetID = out.ID // known only after insert
-		return audit(ctx, q, a)
+		return out, nil
 	})
-	return out, err
 }
 
 func (r *SharingRepo) SetRole(ctx context.Context, docID, userID string, role domain.Role, a domain.AuditEntry) error {
@@ -138,12 +135,10 @@ func (r *SharingRepo) SetRole(ctx context.Context, docID, userID string, role do
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		if err := rowsOrNotFound(q.UpdateGrantRole(ctx, sqlcgen.UpdateGrantRoleParams{DocumentID: did, UserID: uid, Role: string(role)})); err != nil {
-			return err
-		}
-		return audit(ctx, q, a)
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		return struct{}{}, rowsOrNotFound(q.UpdateGrantRole(ctx, sqlcgen.UpdateGrantRoleParams{DocumentID: did, UserID: uid, Role: string(role)}))
 	})
+	return err
 }
 
 func (r *SharingRepo) Revoke(ctx context.Context, docID, userID string, a domain.AuditEntry) error {
@@ -155,12 +150,10 @@ func (r *SharingRepo) Revoke(ctx context.Context, docID, userID string, a domain
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		if err := rowsOrNotFound(q.DeleteGrant(ctx, sqlcgen.DeleteGrantParams{DocumentID: did, UserID: uid})); err != nil {
-			return err
-		}
-		return audit(ctx, q, a)
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		return struct{}{}, rowsOrNotFound(q.DeleteGrant(ctx, sqlcgen.DeleteGrantParams{DocumentID: did, UserID: uid}))
 	})
+	return err
 }
 
 func (r *SharingRepo) CancelInvitation(ctx context.Context, docID, invID string, a domain.AuditEntry) error {
@@ -172,12 +165,10 @@ func (r *SharingRepo) CancelInvitation(ctx context.Context, docID, invID string,
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		if err := rowsOrNotFound(q.DeletePendingDocumentInvitation(ctx, sqlcgen.DeletePendingDocumentInvitationParams{ID: iid, DocumentID: did})); err != nil {
-			return err
-		}
-		return audit(ctx, q, a)
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
+		return struct{}{}, rowsOrNotFound(q.DeletePendingDocumentInvitation(ctx, sqlcgen.DeletePendingDocumentInvitationParams{ID: iid, DocumentID: did}))
 	})
+	return err
 }
 
 func (r *SharingRepo) Transfer(ctx context.Context, docID, fromUserID, toUserID string, a domain.AuditEntry) error {
@@ -193,17 +184,16 @@ func (r *SharingRepo) Transfer(ctx context.Context, docID, fromUserID, toUserID 
 	if err != nil {
 		return err
 	}
-	return r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+	_, err = write(ctx, r.db, a, func(ctx context.Context, q *sqlcgen.Queries, _ *domain.AuditEntry) (struct{}, error) {
 		// A from that is no longer the owner (stale or concurrent transfer) matches nothing: ErrNotFound.
 		if err := rowsOrNotFound(q.SetDocumentOwner(ctx, sqlcgen.SetDocumentOwnerParams{ID: did, OwnerID: to, FromID: from})); err != nil {
-			return err
+			return struct{}{}, err
 		}
 		if _, err := q.DeleteGrant(ctx, sqlcgen.DeleteGrantParams{DocumentID: did, UserID: to}); err != nil {
-			return wrap(err)
+			return struct{}{}, wrap(err)
 		}
-		if _, err := q.CreateGrant(ctx, sqlcgen.CreateGrantParams{DocumentID: did, UserID: from, Role: string(domain.RoleEditor), GrantedBy: from}); err != nil {
-			return wrap(err)
-		}
-		return audit(ctx, q, a)
+		_, err := q.CreateGrant(ctx, sqlcgen.CreateGrantParams{DocumentID: did, UserID: from, Role: string(domain.RoleEditor), GrantedBy: from})
+		return struct{}{}, wrap(err)
 	})
+	return err
 }

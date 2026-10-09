@@ -168,3 +168,59 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, "filled", linked.TargetID)
 	require.Equal(t, ada.Email, linked.ActorEmail)
 }
+
+// TestWriteSnapshotsBeforeAndEnqueuesAfter runs the repos through write[T]:
+// titles are snapshotted before fn when the document is known, ids assigned by
+// fn reach the entry, and no-ops and failures leave no message.
+func TestWriteSnapshotsBeforeAndEnqueuesAfter(t *testing.T) {
+	ownerURL := startPostgres(t)
+	require.NoError(t, Migrate(ownerURL))
+	db, err := Connect(context.Background(), appRoleURL(t, ownerURL), 5*time.Second)
+	require.NoError(t, err)
+	defer db.Close()
+
+	users, docs, logs, links, audits := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db), NewTelegramLinkRepo(db), NewAuditRepo(db)
+	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
+	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
+	latest := func() domain.AuditEntry {
+		t.Helper()
+		drain(t, db)
+		page, err := audits.List(ctxA, domain.AuditFilter{Limit: 1})
+		require.NoError(t, err)
+		require.Len(t, page.Entries, 1)
+		return page.Entries[0]
+	}
+
+	// Snapshot after fn: Create sets the document id.
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
+	require.NoError(t, err)
+	e := latest()
+	require.Equal(t, doc.ID, e.DocumentID)
+	require.Equal(t, "2026", e.DocumentTitle)
+
+	// Enqueued after fn: the new log's id is the target.
+	lg, err := logs.Create(ctxA, testLog(ta.ID, doc.ID, ada.ID), logEntry(ada.ID, doc.ID, domain.AuditLogCreated))
+	require.NoError(t, err)
+	require.Equal(t, lg.ID, latest().TargetID)
+
+	// Snapshot before fn: a rename names the title as it was.
+	next := doc
+	next.Title = "2026 brag"
+	_, err = docs.Update(ctxA, next, domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb,
+		Action: domain.AuditDocumentRenamed, DocumentID: doc.ID, ChangedFields: []string{"title"}})
+	require.NoError(t, err)
+	require.Equal(t, "2026", latest().DocumentTitle)
+
+	// No-ops and failures leave no message.
+	before := count(t, db, ta.ID, "outbox")
+	require.NoError(t, links.Delete(ctxA, ada.ID, tgEntry(ada.ID, domain.AuditTelegramUnlinked)), "not linked: errNoChange")
+	require.NoError(t, logs.DeleteExamples(ctxA, doc.ID, logEntry(ada.ID, doc.ID, domain.AuditLogDeleted)), "no examples: errNoChange")
+	require.ErrorIs(t, logs.Delete(ctxA, doc.ID, uuid.NewString(), logEntry(ada.ID, doc.ID, domain.AuditLogDeleted)), domain.ErrNotFound)
+	require.Equal(t, before, count(t, db, ta.ID, "outbox"))
+
+	// Snapshot before fn: the deleted document keeps its title (FR-12).
+	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)))
+	e = latest()
+	require.Equal(t, domain.AuditDocumentDeleted, e.Action)
+	require.Equal(t, "2026 brag", e.DocumentTitle)
+}

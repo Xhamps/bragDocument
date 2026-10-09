@@ -57,6 +57,111 @@ func (q *Queries) CreateAuditEntry(ctx context.Context, arg CreateAuditEntryPara
 	return result.RowsAffected(), nil
 }
 
+const listAudit = `-- name: ListAudit :many
+SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries
+WHERE ($1::uuid IS NULL OR actor_id = $1::uuid)
+  AND ($2::uuid IS NULL OR document_id = $2::uuid)
+  AND ($3::text IS NULL OR action = $3::text)
+  AND ($4::timestamptz IS NULL OR at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR at < $5::timestamptz)
+  AND ($6::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $6::uuid))
+  AND ($7::bigint IS NULL OR id < $7::bigint)
+ORDER BY id DESC
+LIMIT $8
+`
+
+type ListAuditParams struct {
+	ActorID    pgtype.UUID
+	DocumentID pgtype.UUID
+	Action     pgtype.Text
+	FromAt     pgtype.Timestamptz
+	ToAt       pgtype.Timestamptz
+	OwnerID    pgtype.UUID
+	Before     pgtype.Int8
+	Lim        int32
+}
+
+// Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
+// ponytail: one query with optional filters; split per filter shape if EXPLAIN shows a generic plan ignoring the indexes (NFR-3).
+func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEntry, error) {
+	rows, err := q.db.Query(ctx, listAudit,
+		arg.ActorID,
+		arg.DocumentID,
+		arg.Action,
+		arg.FromAt,
+		arg.ToAt,
+		arg.OwnerID,
+		arg.Before,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditEntry
+	for rows.Next() {
+		var i AuditEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ActorID,
+			&i.ActorEmail,
+			&i.Action,
+			&i.DocumentID,
+			&i.DocumentTitle,
+			&i.Target,
+			&i.Role,
+			&i.At,
+			&i.ActorName,
+			&i.Source,
+			&i.TargetType,
+			&i.TargetID,
+			&i.ChangedFields,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditActors = `-- name: ListAuditActors :many
+SELECT DISTINCT ON (actor_id) actor_id, actor_name, actor_email FROM audit_entries
+WHERE actor_id IS NOT NULL
+  AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
+ORDER BY actor_id, id DESC
+`
+
+type ListAuditActorsRow struct {
+	ActorID    pgtype.UUID
+	ActorName  string
+	ActorEmail string
+}
+
+// ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.
+func (q *Queries) ListAuditActors(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditActorsRow, error) {
+	rows, err := q.db.Query(ctx, listAuditActors, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAuditActorsRow
+	for rows.Next() {
+		var i ListAuditActorsRow
+		if err := rows.Scan(&i.ActorID, &i.ActorName, &i.ActorEmail); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAuditByDocument = `-- name: ListAuditByDocument :many
 SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200
 `
@@ -128,6 +233,39 @@ func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]
 			&i.TargetID,
 			&i.ChangedFields,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditDocuments = `-- name: ListAuditDocuments :many
+SELECT DISTINCT ON (document_id) document_id, document_title FROM audit_entries
+WHERE document_id IS NOT NULL
+  AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
+ORDER BY document_id, id DESC
+`
+
+type ListAuditDocumentsRow struct {
+	DocumentID    pgtype.UUID
+	DocumentTitle pgtype.Text
+}
+
+// Latest known title per document, including deleted ones (FR-12).
+func (q *Queries) ListAuditDocuments(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listAuditDocuments, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAuditDocumentsRow
+	for rows.Next() {
+		var i ListAuditDocumentsRow
+		if err := rows.Scan(&i.DocumentID, &i.DocumentTitle); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

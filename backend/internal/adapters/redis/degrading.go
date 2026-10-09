@@ -66,6 +66,17 @@ func (d *Degrading) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	return v, found, nil
 }
 
+// GetDel implements ports.Cache; errors become misses.
+func (d *Degrading) GetDel(ctx context.Context, key string) ([]byte, bool, error) {
+	v, found, err := d.inner.GetDel(ctx, key)
+	if err != nil {
+		d.fail(ctx, "getdel", err)
+		return nil, false, nil
+	}
+	d.healthy.Store(true)
+	return v, found, nil
+}
+
 // Set implements ports.Cache; errors are dropped.
 func (d *Degrading) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	if err := d.inner.Set(ctx, key, value, ttl); err != nil {

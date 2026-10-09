@@ -186,6 +186,7 @@ const LABELS: Record<string, string> = {
   from: "From",
   to: "To",
   domain: "Domain",
+  examples: "Examples",
 };
 
 /** Removable chips for every active filter (PRD-0002 §9). */
@@ -204,7 +205,12 @@ export function ActiveFilters({
     <div className="flex flex-wrap items-center gap-2">
       {chips.map(([k, v]) => (
         <Badge key={k + v} variant="secondary">
-          {LABELS[k]}: {k === "status" ? STATUS_LABEL[v as LogStatus] : v}
+          {LABELS[k]}:{" "}
+          {k === "status"
+            ? STATUS_LABEL[v as LogStatus]
+            : k === "examples"
+              ? "hidden"
+              : v}
           <button
             type="button"
             aria-label={`Remove filter ${LABELS[k]}: ${v}`}

@@ -146,3 +146,24 @@ test("history lists the document's audit", async () => {
     await d.findByText(/a@acme\.com shared bob@acme\.com on “2026” as viewer/),
   ).toBeInTheDocument();
 });
+
+test("closing the panel drops a pending transfer confirmation", async () => {
+  mockFetch(base);
+  const d = await openPanel();
+  await userEvent.click(
+    d.getByRole("button", { name: /make bob@acme\.com owner/i }),
+  );
+  expect(
+    d.getByRole("button", { name: /^transfer ownership$/i }),
+  ).toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  await vi.waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  await userEvent.click(screen.getByRole("button", { name: /^share$/i }));
+  const reopened = within(await screen.findByRole("dialog"));
+  await reopened.findByText("Bob");
+  expect(
+    reopened.queryByRole("button", { name: /^transfer ownership$/i }),
+  ).not.toBeInTheDocument();
+});

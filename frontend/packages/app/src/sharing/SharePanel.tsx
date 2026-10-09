@@ -81,9 +81,29 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
     changeRole.error ?? revoke.error ?? cancel.error ?? transfer.error,
   );
   const target = sharing.data?.grants.find((g) => g.user_id === transferTo);
+  // Reset before each row action so the error shown is the latest action's.
+  const resetActions = () => {
+    changeRole.reset();
+    revoke.reset();
+    cancel.reset();
+    transfer.reset();
+  };
+  // Closing starts the next open fresh.
+  const setOpen = (o: boolean) => {
+    if (!o) {
+      setEmail("");
+      setRole("viewer");
+      setNotice(null);
+      setTransferTo(null);
+      setShowHistory(false);
+      share.reset();
+      resetActions();
+    }
+    onOpenChange(o);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Share “{doc.title}”</DialogTitle>
@@ -157,12 +177,13 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   className={selectClass}
                   value={g.role}
                   disabled={changeRole.isPending}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    resetActions();
                     changeRole.mutate({
                       userId: g.user_id,
                       role: e.target.value as GrantRole,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <RoleOptions />
                 </select>
@@ -179,7 +200,10 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   size="sm"
                   aria-label={`Remove ${g.email}`}
                   disabled={revoke.isPending}
-                  onClick={() => revoke.mutate(g.user_id)}
+                  onClick={() => {
+                    resetActions();
+                    revoke.mutate(g.user_id);
+                  }}
                 >
                   Remove
                 </Button>
@@ -194,7 +218,10 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   size="sm"
                   aria-label={`Cancel invitation for ${i.email}`}
                   disabled={cancel.isPending}
-                  onClick={() => cancel.mutate(i.id)}
+                  onClick={() => {
+                    resetActions();
+                    cancel.mutate(i.id);
+                  }}
                 >
                   Cancel
                 </Button>
@@ -209,8 +236,13 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
         )}
 
         {target && (
-          <div className="flex flex-col gap-2 rounded-md border border-destructive/50 p-3 text-sm">
-            <p>
+          <div
+            role="alertdialog"
+            aria-label="Confirm ownership transfer"
+            aria-describedby="transfer-confirm-text"
+            className="flex flex-col gap-2 rounded-md border border-destructive/50 p-3 text-sm"
+          >
+            <p id="transfer-confirm-text">
               Make {target.display_name || target.email} the owner? You become
               an editor and can no longer change sharing.
             </p>
@@ -226,14 +258,12 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                 variant="destructive"
                 size="sm"
                 disabled={transfer.isPending}
-                onClick={() =>
+                onClick={() => {
+                  resetActions();
                   transfer.mutate(target.user_id, {
-                    onSuccess: () => {
-                      setTransferTo(null);
-                      onOpenChange(false);
-                    },
-                  })
-                }
+                    onSuccess: () => setOpen(false),
+                  });
+                }}
               >
                 Transfer ownership
               </Button>
@@ -254,7 +284,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             )}
             {history.data?.map((a) => (
               <li key={a.id}>
-                <time className="text-muted-foreground">
+                <time dateTime={a.at} className="text-muted-foreground">
                   {new Date(a.at).toLocaleDateString()}
                 </time>{" "}
                 {describeAudit(a)}

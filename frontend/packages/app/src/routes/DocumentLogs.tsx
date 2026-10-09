@@ -79,7 +79,7 @@ export function Component() {
   const archived = doc.state === "archived";
   const readOnly = archived || doc.role === "viewer";
   // Open the deep-linked log (adjusting state during render); a missing log or
-  // an archived document is ignored.
+  // a read-only (archived or viewer) document is ignored.
   if (editId && deepLinked.data && editing === null && !readOnly)
     setEditing(deepLinked.data);
 

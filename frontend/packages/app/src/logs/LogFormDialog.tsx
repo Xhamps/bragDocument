@@ -140,18 +140,22 @@ function Form({
             Saved. We couldn't find an impact in the description. What changed
             because of this work?
           </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-fit"
-            onClick={() => {
-              setPreview(false);
-              requestAnimationFrame(() => descRef.current?.focus());
-            }}
-          >
-            Add impact
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPreview(false);
+                requestAnimationFrame(() => descRef.current?.focus());
+              }}
+            >
+              Add impact
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+              Close
+            </Button>
+          </div>
         </div>
       )}
 

@@ -46,3 +46,13 @@ test("shows the provider error", async () => {
     await screen.findByText(/invalid login credentials/i),
   ).toBeInTheDocument();
 });
+
+test("links to sign-up and reset password", async () => {
+  renderAt("/sign-in");
+  expect(
+    await screen.findByRole("link", { name: /create an account/i }),
+  ).toHaveAttribute("href", "/sign-up");
+  expect(
+    screen.getByRole("link", { name: /forgot your password/i }),
+  ).toHaveAttribute("href", "/reset-password");
+});

@@ -3,6 +3,8 @@ import { RequireAuth } from "./auth/RequireAuth";
 
 export const routes: RouteObject[] = [
   { path: "/sign-in", lazy: () => import("./routes/SignIn") },
+  { path: "/sign-up", lazy: () => import("./routes/SignUp") },
+  { path: "/reset-password", lazy: () => import("./routes/ResetPassword") },
   { path: "/auth/callback", lazy: () => import("./routes/AuthCallback") },
   {
     element: <RequireAuth />,

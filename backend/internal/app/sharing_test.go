@@ -44,8 +44,8 @@ func TestShareWithMemberGrantsAndEmails(t *testing.T) {
 	require.Equal(t, domain.RoleViewer, f.docs.grants["d1"]["u2"])
 	require.Equal(t, []string{"bob@acme.com: Ada shared “2026” with you"}, f.mail.sent)
 	require.Contains(t, f.mail.html, `href="https://app.test/documents/d1"`)
-	require.Equal(t, domain.AuditEntry{ActorID: "u1", ActorEmail: "ada@acme.com", Action: domain.AuditGrant,
-		DocumentID: "d1", Target: "bob@acme.com", Role: domain.RoleViewer}, f.repo.audit[0])
+	require.Equal(t, domain.AuditEntry{ActorID: "u1", Source: domain.SourceWeb, Action: domain.AuditGrant,
+		DocumentID: "d1", TargetType: domain.TargetUser, TargetID: "u2", Target: "bob@acme.com", Role: domain.RoleViewer}, f.repo.audit[0])
 
 	_, err = f.s.Share(ctx, ShareInput{Actor: ada, DocumentID: "d1", Email: "bob@acme.com", Role: domain.RoleEditor})
 	require.ErrorIs(t, err, domain.ErrConflict)
@@ -117,6 +117,7 @@ func TestChangeRoleRevokeCancel(t *testing.T) {
 		[]string{f.repo.audit[0].Action, f.repo.audit[1].Action, f.repo.audit[2].Action})
 	require.Equal(t, "bob@acme.com", f.repo.audit[1].Target)
 	require.Equal(t, "new@acme.com", f.repo.audit[2].Target)
+	require.Equal(t, [2]string{domain.TargetInvitation, inv.ID}, [2]string{f.repo.audit[2].TargetType, f.repo.audit[2].TargetID})
 }
 
 func TestTransfer(t *testing.T) {

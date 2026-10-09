@@ -26,8 +26,10 @@ func NewSharing(docs ports.DocumentRepo, repo ports.SharingRepo, mail ports.Mail
 	return &Sharing{docs: docs, repo: repo, mail: mail, appURL: appURL}
 }
 
-func auditBy(actor domain.User, action, docID, target string, role domain.Role) domain.AuditEntry {
-	return domain.AuditEntry{ActorID: actor.ID, ActorEmail: actor.Email, Action: action, DocumentID: docID, Target: target, Role: role}
+func auditBy(ctx context.Context, actor domain.User, action, docID, targetType, targetID, target string, role domain.Role) domain.AuditEntry {
+	a := entry(ctx, actor.ID, action, docID)
+	a.TargetType, a.TargetID, a.Target, a.Role = targetType, targetID, target, role
+	return a
 }
 
 func grantableRole(r domain.Role) error {

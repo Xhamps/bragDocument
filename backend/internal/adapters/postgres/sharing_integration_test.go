@@ -44,7 +44,7 @@ func TestSharing(t *testing.T) {
 	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil)
 	require.NoError(t, err)
 	audit := func(action, target string, role domain.Role) domain.AuditEntry {
-		return domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: action, DocumentID: doc.ID, Target: target, Role: role}
+		return domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: action, DocumentID: doc.ID, Target: target, Role: role}
 	}
 
 	// Roles: owner; an ungranted member sees nothing.
@@ -72,6 +72,8 @@ func TestSharing(t *testing.T) {
 	entries, err := sharing.Audit(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Len(t, entries, 1, "the failed grant wrote no audit row")
+	require.Equal(t, "ada@example.com", entries[0].ActorEmail, "copied from users")
+	require.Equal(t, "2026", entries[0].DocumentTitle)
 	_, err = sharing.Member(ctxA, zed.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	_, err = sharing.Member(ctxA, bob.ID)
@@ -203,7 +205,7 @@ func TestSharing(t *testing.T) {
 	doc2, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2027"}, nil)
 	require.NoError(t, err)
 	require.NoError(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc2.ID, UserID: bob.ID, Role: domain.RoleEditor, GrantedBy: ada.ID},
-		domain.AuditEntry{ActorID: ada.ID, ActorEmail: ada.Email, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))
+		domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: domain.AuditGrant, DocumentID: doc2.ID, Target: bob.Email, Role: domain.RoleEditor}))
 	l := domain.Log{TenantID: ta.ID, DocumentID: doc2.ID, Name: "Shipped", Impact: "high", Status: "done",
 		CreatedAt: time.Now().UTC(), CreatedBy: bob.ID, UpdatedBy: bob.ID}
 	require.NoError(t, l.Validate())

@@ -16,7 +16,8 @@ type Querier interface {
 	AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error)
 	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
 	ClaimExportJob(ctx context.Context) (ExportJob, error)
-	// Copies the document's tenant and title so the entry outlives the document.
+	// Copies the actor's name and email and the document's title so the entry
+	// outlives both. A document id that matches nothing inserts nothing.
 	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
@@ -63,6 +64,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
 	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
+	// ponytail: PRD-0004 reads for SharingRepo.Audit; the AuditRepo queries replace them.
 	ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error)
 	ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error)
 	// last_log_at falls back to d.created_at so the column is never NULL; it is

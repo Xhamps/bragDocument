@@ -70,6 +70,8 @@ func toDocumentInvitation(i sqlcgen.DocumentInvitation) domain.DocumentInvitatio
 }
 
 func toAuditEntry(a sqlcgen.AuditEntry) domain.AuditEntry {
-	return domain.AuditEntry{ID: a.ID, ActorID: a.ActorID.String(), ActorEmail: a.ActorEmail, Action: a.Action,
-		DocumentID: a.DocumentID.String(), DocumentTitle: a.DocumentTitle, Target: a.Target, Role: domain.Role(a.Role), At: a.At}
+	return domain.AuditEntry{ID: a.ID, ActorID: idString(a.ActorID), ActorName: a.ActorName, ActorEmail: a.ActorEmail,
+		Source: a.Source, Action: a.Action, DocumentID: idString(a.DocumentID), DocumentTitle: a.DocumentTitle.String,
+		TargetType: a.TargetType, TargetID: a.TargetID, Target: a.Target, Role: domain.Role(a.Role),
+		ChangedFields: orEmpty(a.ChangedFields), At: a.At}
 }

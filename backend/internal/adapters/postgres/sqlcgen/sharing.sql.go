@@ -10,40 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const createAuditEntry = `-- name: CreateAuditEntry :execrows
-INSERT INTO audit_entries (tenant_id, actor_id, actor_email, action, document_id, document_title, target, role)
-SELECT d.tenant_id, $1::uuid, $2::text, $3::text,
-       d.id, d.title, $4::text, $5::text
-FROM documents d WHERE d.id = $6
-`
-
-type CreateAuditEntryParams struct {
-	ActorID    uuid.UUID
-	ActorEmail string
-	Action     string
-	Target     string
-	Role       string
-	DocumentID uuid.UUID
-}
-
-// Copies the document's tenant and title so the entry outlives the document.
-func (q *Queries) CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error) {
-	result, err := q.db.Exec(ctx, createAuditEntry,
-		arg.ActorID,
-		arg.ActorEmail,
-		arg.Action,
-		arg.Target,
-		arg.Role,
-		arg.DocumentID,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
 
 const createDocumentInvitation = `-- name: CreateDocumentInvitation :one
 INSERT INTO document_invitations (tenant_id, document_id, email, role, invited_by)
@@ -147,86 +114,6 @@ func (q *Queries) DeletePendingDocumentInvitation(ctx context.Context, arg Delet
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const listAuditByDocument = `-- name: ListAuditByDocument :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200
-`
-
-func (q *Queries) ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error) {
-	rows, err := q.db.Query(ctx, listAuditByDocument, documentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuditEntry
-	for rows.Next() {
-		var i AuditEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.ActorID,
-			&i.ActorEmail,
-			&i.Action,
-			&i.DocumentID,
-			&i.DocumentTitle,
-			&i.Target,
-			&i.Role,
-			&i.At,
-			&i.ActorName,
-			&i.Source,
-			&i.TargetType,
-			&i.TargetID,
-			&i.ChangedFields,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAuditByTenant = `-- name: ListAuditByTenant :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500
-`
-
-func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error) {
-	rows, err := q.db.Query(ctx, listAuditByTenant, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuditEntry
-	for rows.Next() {
-		var i AuditEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.ActorID,
-			&i.ActorEmail,
-			&i.Action,
-			&i.DocumentID,
-			&i.DocumentTitle,
-			&i.Target,
-			&i.Role,
-			&i.At,
-			&i.ActorName,
-			&i.Source,
-			&i.TargetType,
-			&i.TargetID,
-			&i.ChangedFields,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listGrants = `-- name: ListGrants :many

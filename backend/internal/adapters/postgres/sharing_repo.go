@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres/sqlcgen"
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
@@ -16,27 +18,6 @@ func NewSharingRepo(db *DB) *SharingRepo { return &SharingRepo{db: db} }
 
 func (r *SharingRepo) tx(ctx context.Context, fn func(ctx context.Context, q *sqlcgen.Queries) error) error {
 	return withQueries(ctx, r.db, fn)
-}
-
-// audit writes one entry; the document supplies tenant and title, so a missing document is ErrNotFound.
-func audit(ctx context.Context, q *sqlcgen.Queries, a domain.AuditEntry) error {
-	did, err := parseID(a.DocumentID)
-	if err != nil {
-		return err
-	}
-	aid, err := parseID(a.ActorID)
-	if err != nil {
-		return err
-	}
-	n, err := q.CreateAuditEntry(ctx, sqlcgen.CreateAuditEntryParams{DocumentID: did, ActorID: aid,
-		ActorEmail: a.ActorEmail, Action: a.Action, Target: a.Target, Role: string(a.Role)})
-	if err != nil {
-		return wrap(err)
-	}
-	if n == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
 }
 
 // rowsOrNotFound turns an :execrows result into domain.ErrNotFound when nothing matched.
@@ -145,6 +126,7 @@ func (r *SharingRepo) Invite(ctx context.Context, inv domain.DocumentInvitation,
 			return wrap(err)
 		}
 		out = toDocumentInvitation(row)
+		a.TargetID = out.ID // known only after insert
 		return audit(ctx, q, a)
 	})
 	return out, err
@@ -246,7 +228,7 @@ func (r *SharingRepo) Audit(ctx context.Context, docID string) ([]domain.AuditEn
 			if err != nil {
 				return err
 			}
-			if rows, err = q.ListAuditByDocument(ctx, did); err != nil {
+			if rows, err = q.ListAuditByDocument(ctx, pgtype.UUID{Bytes: did, Valid: true}); err != nil {
 				return wrap(err)
 			}
 		}

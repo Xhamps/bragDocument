@@ -24,5 +24,5 @@ func (s *Sharing) Transfer(ctx context.Context, actor domain.User, docID, toUser
 	if err != nil {
 		return err
 	}
-	return s.repo.Transfer(ctx, d.ID, actor.ID, u.ID, auditBy(actor, domain.AuditTransfer, d.ID, u.Email, domain.RoleOwner))
+	return s.repo.Transfer(ctx, d.ID, actor.ID, u.ID, auditBy(ctx, actor, domain.AuditTransfer, d.ID, domain.TargetUser, u.ID, u.Email, domain.RoleOwner))
 }

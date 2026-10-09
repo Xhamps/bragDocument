@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/xhamps/bragdocument/backend/internal/adapters/files"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/gotenberg"
@@ -81,8 +80,8 @@ func runWorker(ctx context.Context, cfg config.Config) error {
 	if err != nil || host == "" {
 		host = "worker" // a consumer name is required
 	}
-	var g errgroup.Group
-	g.Go(func() error { runOutbox(ctx, db, redis.NewStream(rc, "bragdoc", host)); return nil })
+	var wg sync.WaitGroup
+	wg.Go(func() { runOutbox(ctx, db, redis.NewStream(rc, "bragdoc", host)) })
 	slog.InfoContext(ctx, "worker started")
 	if uc != nil {
 		runExports(ctx, uc)
@@ -90,7 +89,7 @@ func runWorker(ctx context.Context, cfg config.Config) error {
 		slog.WarnContext(ctx, "EXPORT_KEY not set; exports disabled")
 		<-ctx.Done()
 	}
-	_ = g.Wait()
+	wg.Wait()
 	slog.InfoContext(ctx, "worker stopped")
 	return nil
 }
@@ -128,11 +127,7 @@ func runOutbox(ctx context.Context, db *postgres.DB, stream *redis.Stream) {
 	outbox, audits := postgres.NewOutboxRepo(db), postgres.NewAuditRepo(db)
 	var wg sync.WaitGroup
 	defer wg.Wait()
-	wg.Go(func() {
-		if err := stream.Consume(ctx, domain.TopicAudit, audits.Store); err != nil && ctx.Err() == nil {
-			slog.ErrorContext(ctx, "audit consumer stopped", slog.Any("err", err))
-		}
-	})
+	wg.Go(func() { _ = stream.Consume(ctx, domain.TopicAudit, audits.Store) }) // always nil: it logs and retries
 	tick := time.NewTicker(outboxPoll)
 	defer tick.Stop()
 	var lastWarn time.Time
@@ -147,7 +142,8 @@ func runOutbox(ctx context.Context, db *postgres.DB, stream *redis.Stream) {
 				break
 			}
 		}
-		if err := outbox.Purge(ctx); err != nil && ctx.Err() == nil {
+		if err := outbox.Purge(ctx); err != nil && ctx.Err() == nil && time.Since(lastWarn) > time.Minute {
+			lastWarn = time.Now()
 			slog.WarnContext(ctx, "outbox purge failed", slog.Any("err", err))
 		}
 		select {

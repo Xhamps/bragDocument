@@ -72,6 +72,7 @@ func TestOutboxEndToEnd(t *testing.T) {
 	require.NoError(t, err)
 
 	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	done := make(chan struct{})
 	go func() { runOutbox(runCtx, db, redis.NewStream(rc, "bragdoc", "test")); close(done) }()
 

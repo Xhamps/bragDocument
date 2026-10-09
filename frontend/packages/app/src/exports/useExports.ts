@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, download } from "../lib/api";
 import type { ExportJob, ReportSettings } from "../lib/types";
 
 export function useReportSettings(docId: string, enabled: boolean) {
@@ -54,4 +54,11 @@ export function useCreateExport(docId: string) {
       void qc.invalidateQueries({ queryKey: ["exports", docId], exact: true });
     },
   });
+}
+
+export function downloadJob(docId: string, j: ExportJob) {
+  return download(
+    `/documents/${docId}/exports/${j.id}/file`,
+    `brag-report-${j.created_at.slice(0, 10)}.pdf`,
+  );
 }

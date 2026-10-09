@@ -1,0 +1,68 @@
+import { useState } from "react";
+import { Button } from "@bragdoc/ui";
+import { errorText } from "../lib/errors";
+import { ExportDialog } from "./ExportDialog";
+import { downloadJob, useExportJob } from "./useExports";
+
+/** "Export PDF" for the document header (FR-1) plus a live status of the last export. */
+export function ExportButton({
+  docId,
+  params,
+}: {
+  docId: string;
+  params: URLSearchParams;
+}) {
+  const [open, setOpen] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [dlError, setDlError] = useState<unknown>(null);
+  const job = useExportJob(docId, jobId).data;
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        Export PDF
+      </Button>
+      <ExportDialog
+        docId={docId}
+        params={params}
+        open={open}
+        onOpenChange={setOpen}
+        onStarted={(j) => setJobId(j.id)}
+      />
+      {job && (
+        <span role="status" className="flex items-center gap-2 text-sm">
+          {job.status === "done" ? (
+            <>
+              Report ready
+              <Button
+                size="sm"
+                variant="link"
+                onClick={() =>
+                  downloadJob(docId, job).then(
+                    () => setDlError(null),
+                    setDlError,
+                  )
+                }
+              >
+                Download
+              </Button>
+              {!!dlError && (
+                <span className="text-destructive">{errorText(dlError)}</span>
+              )}
+            </>
+          ) : job.status === "failed" ? (
+            <span className="text-destructive">{job.error}</span>
+          ) : (
+            <>
+              Generating report
+              <progress
+                max={100}
+                value={job.progress}
+                aria-label="Report progress"
+              />
+            </>
+          )}
+        </span>
+      )}
+    </>
+  );
+}

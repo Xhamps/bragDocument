@@ -22,7 +22,16 @@ func TestParseLogMessage(t *testing.T) {
 		{"markdown heading is not a tag", "Notes\n# Heading\n##x", LogDraft{Name: "Notes", Description: "# Heading\n##x", Impact: "medium", Tags: []string{}, Links: []Link{}}},
 		{"url fragment is not a tag; trailing punctuation trimmed; dedupe",
 			"Doc https://a.io/p#sec. https://a.io/p#sec", LogDraft{Name: "Doc", Impact: "medium", Tags: []string{}, Links: []Link{{URL: "https://a.io/p#sec"}}}},
-		{"hyphen tags, dedupe", "X #on-call #on-call #Perf", LogDraft{Name: "X", Impact: "medium", Tags: []string{"on-call", "Perf"}, Links: []Link{}}},
+		{"hyphen tags, lowercased, dedupe", "X #on-call #on-call #Perf #perf", LogDraft{Name: "X", Impact: "medium", Tags: []string{"on-call", "perf"}, Links: []Link{}}},
+		{"impact with trailing punctuation in description", "X\nfixed it !high.", LogDraft{Name: "X", Description: "fixed it.", Impact: "high", Tags: []string{}, Links: []Link{}}},
+		{"impact with trailing punctuation in name", "X !high.\nbody", LogDraft{Name: "X", Description: "body", Impact: "high", Tags: []string{}, Links: []Link{}}},
+		{"tags with trailing punctuation", "Shipped #auth, and #perf.", LogDraft{Name: "Shipped and", Impact: "medium", Tags: []string{"auth", "perf"}, Links: []Link{}}},
+		{"parenthesized url", "Fix (see https://en.wikipedia.org/wiki/Go_(language))",
+			LogDraft{Name: "Fix (see", Impact: "medium", Tags: []string{}, Links: []Link{{URL: "https://en.wikipedia.org/wiki/Go_(language)"}}}},
+		{"url wrapped in angle brackets and quotes", "See\n<https://a.io/x> \"https://b.io\"",
+			LogDraft{Name: "See", Description: "<https://a.io/x> \"https://b.io\"", Impact: "medium", Tags: []string{}, Links: []Link{{URL: "https://a.io/x"}, {URL: "https://b.io"}}}},
+		{"crlf and leading blank lines", "\r\n  Title #A\r\nbody", LogDraft{Name: "Title", Description: "body", Impact: "medium", Tags: []string{"a"}, Links: []Link{}}},
+		{"tag needs a letter or digit", "X #- #_", LogDraft{Name: "X #- #_", Impact: "medium", Tags: []string{}, Links: []Link{}}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

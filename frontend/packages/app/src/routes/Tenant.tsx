@@ -6,8 +6,6 @@ import { useMe } from "../auth/useMe";
 import { api, ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { Invitation, Member } from "../lib/types";
-import { describeAudit } from "../sharing/audit";
-import { useTenantAudit } from "../sharing/useSharing";
 
 export function Component() {
   const { data: me } = useMe();
@@ -22,7 +20,6 @@ export function Component() {
     queryFn: () => api<Invitation[]>("/tenant/invitations"),
     enabled: me?.role === "admin",
   });
-  const audit = useTenantAudit(me?.role === "admin");
   const [email, setEmail] = useState("");
 
   const invite = useMutation({
@@ -168,34 +165,6 @@ export function Component() {
           <p role="alert" className="text-sm text-destructive">
             {withdrawError}
           </p>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">Sharing audit</h2>
-        {audit.error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {errorText(audit.error)}
-          </p>
-        ) : (
-          <ul className="divide-y rounded-xl ring-1 ring-foreground/10">
-            {audit.isPending && (
-              <li className="p-3 text-sm text-muted-foreground">Loading…</li>
-            )}
-            {audit.data?.length === 0 && (
-              <li className="p-3 text-sm text-muted-foreground">
-                No sharing changes yet.
-              </li>
-            )}
-            {audit.data?.map((a) => (
-              <li key={a.id} className="p-3 text-sm">
-                <time dateTime={a.at} className="text-muted-foreground">
-                  {new Date(a.at).toLocaleString()}
-                </time>{" "}
-                {describeAudit(a)}
-              </li>
-            ))}
-          </ul>
         )}
       </section>
     </div>

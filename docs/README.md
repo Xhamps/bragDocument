@@ -89,7 +89,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 |---|---|---|
 | [0001](prd/0001-tenants-users-and-brag-documents.md) | Tenants, users, and brag documents | accepted |
 | [0002](prd/0002-logs.md) | Logs: fields, creation, and the filtered list page | accepted |
-| [0003](prd/0003-telegram-bot.md) | Adding logs through a Telegram bot | proposed |
+| [0003](prd/0003-telegram-bot.md) | Adding logs through a Telegram bot | accepted |
 | [0004](prd/0004-sharing-and-rbac.md) | Sharing documents: invitations and roles | proposed |
 | [0005](prd/0005-dashboard.md) | Dashboard with log metrics | proposed |
 | [0006](prd/0006-pdf-report.md) | PDF report for sharing with the team | proposed |
@@ -108,7 +108,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0006](adr/0006-redis-as-cache.md) | Redis as cache | accepted |
 | [0007](adr/0007-multi-tenancy-strategy.md) | Multi-tenancy: shared schema with row-level security | accepted |
 | [0008](adr/0008-docker-compose-for-local-provisioning.md) | Docker Compose for local provisioning | accepted |
-| [0009](adr/0009-telegram-bot-integration.md) | Telegram bot integration | proposed |
+| [0009](adr/0009-telegram-bot-integration.md) | Telegram bot integration | accepted |
 | [0010](adr/0010-pdf-generation-with-gotenberg.md) | PDF generation with Gotenberg | proposed |
 | [0011](adr/0011-rbac-model.md) | RBAC model for documents | proposed |
 | [0012](adr/0012-hexagonal-backend-layout.md) | Hexagonal backend layout with a single Cobra binary | accepted |

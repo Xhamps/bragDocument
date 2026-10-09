@@ -14,6 +14,15 @@ docker compose --profile app up --build   # adds api, bot, worker, frontend
 
 Stack: Go + Gin backend, React + Tailwind frontend, PostgreSQL, Redis, Supabase Auth, Gotenberg.
 
+## Telegram bot
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
+2. In `.env`, set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (without `@`).
+3. `docker compose --profile app up --build`.
+4. In the web app, open Settings → Telegram, generate a code, and send `/start <code>` to the bot.
+
+Without a token the bot process idles. Only `TELEGRAM_MODE=polling` is supported (ADR-0009).
+
 ## Backend
 
 ```sh

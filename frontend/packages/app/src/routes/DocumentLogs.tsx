@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import {
   Badge,
@@ -20,6 +20,7 @@ import {
   useCreateLog,
   useDeleteExamples,
   useDeleteLog,
+  useLog,
   useLogs,
   useUpdateLog,
   type LogForm,
@@ -31,7 +32,12 @@ export function Component() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const docs = useDocuments();
-  const logs = useLogs(id, params.toString());
+  // The bot's deep link (PRD-0003 FR-6): `edit` is a UI param, not a filter.
+  const editId = params.get("edit");
+  const listParams = new URLSearchParams(params);
+  listParams.delete("edit");
+  const logs = useLogs(id, listParams.toString());
+  const deepLinked = useLog(id, editId);
   const create = useCreateLog(id);
   const update = useUpdateLog(id);
   const remove = useDeleteLog(id);
@@ -43,6 +49,18 @@ export function Component() {
     setDeletingLog(log);
     remove.reset(); // don't carry a failed delete's error to the next dialog
   };
+  // Drop the deep-link param once the fetch settles; opening is below.
+  useEffect(() => {
+    if (!editId || deepLinked.isPending) return;
+    setParams(
+      (p) => {
+        const n = new URLSearchParams(p);
+        n.delete("edit");
+        return n;
+      },
+      { replace: true },
+    );
+  }, [editId, deepLinked.isPending, setParams]);
 
   if (docs.isPending) return <p className="text-muted-foreground">Loading…</p>;
   const doc = [...(docs.data?.owned ?? []), ...(docs.data?.shared ?? [])].find(
@@ -55,6 +73,10 @@ export function Component() {
       </p>
     );
   const readOnly = doc.state === "archived";
+  // Open the deep-linked log (adjusting state during render); a missing log or
+  // an archived document is ignored.
+  if (editId && deepLinked.data && editing === null && !readOnly)
+    setEditing(deepLinked.data);
 
   const setFilter = (key: string, values: string[]) => {
     const next = new URLSearchParams(params);
@@ -107,7 +129,7 @@ export function Component() {
   );
   const total = logs.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / perPage));
-  const filtered = [...params.keys()].some(
+  const filtered = [...listParams.keys()].some(
     (k) => k !== "sort" && k !== "page" && k !== "per_page",
   );
   const items = logs.data?.items ?? [];

@@ -40,6 +40,15 @@ func (f *fakeCache) Delete(_ context.Context, key string) error {
 	return nil
 }
 
+func (f *fakeCache) GetDel(_ context.Context, key string) ([]byte, bool, error) {
+	if f.err != nil {
+		return nil, false, f.err
+	}
+	v, ok := f.data[key]
+	delete(f.data, key)
+	return v, ok, nil
+}
+
 func TestDegradingSwallowsErrorsAndCounts(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	inner := &fakeCache{err: errors.New("connection refused")}
@@ -51,11 +60,16 @@ func TestDegradingSwallowsErrorsAndCounts(t *testing.T) {
 	require.False(t, found)
 	require.Nil(t, v)
 
+	v, found, err = d.GetDel(ctx, "k")
+	require.NoError(t, err)
+	require.False(t, found)
+	require.Nil(t, v)
+
 	require.NoError(t, d.Set(ctx, "k", []byte("v"), time.Minute))
 	require.NoError(t, d.Delete(ctx, "k"))
 
 	require.False(t, d.Healthy())
-	require.Equal(t, float64(3), testutil.ToFloat64(d.errors))
+	require.Equal(t, float64(4), testutil.ToFloat64(d.errors))
 }
 
 func TestDegradingPassesThroughWhenHealthy(t *testing.T) {

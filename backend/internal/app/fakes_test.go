@@ -1,9 +1,13 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"slices"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 	"github.com/xhamps/bragdocument/backend/internal/ports"
@@ -99,6 +103,7 @@ func (f *fakeDocs) ListByOwner(_ context.Context, ownerID string) ([]domain.Docu
 			out = append(out, d)
 		}
 	}
+	slices.SortFunc(out, func(a, b domain.Document) int { return strings.Compare(a.ID, b.ID) })
 	return out, nil
 }
 func (f *fakeDocs) Get(_ context.Context, id string) (domain.Document, error) {
@@ -197,7 +202,14 @@ func (f *fakeLogs) List(_ context.Context, documentID string, fl domain.LogFilte
 			p.Items = append(p.Items, l)
 		}
 	}
+	// Newest first; same timestamp → later ID first, as created_at desc in Postgres.
+	slices.SortFunc(p.Items, func(a, b domain.Log) int {
+		return cmp.Or(b.CreatedAt.Compare(a.CreatedAt), cmp.Compare(len(b.ID), len(a.ID)), strings.Compare(b.ID, a.ID))
+	})
 	p.Total = len(p.Items)
+	if fl.PerPage > 0 && len(p.Items) > fl.PerPage {
+		p.Items = p.Items[:fl.PerPage]
+	}
 	return p, nil
 }
 func (f *fakeLogs) Get(_ context.Context, documentID, id string) (domain.Log, error) {
@@ -239,4 +251,84 @@ type fakeImpact struct {
 func (f *fakeImpact) Extract(context.Context, string, string) (string, error) {
 	f.calls++
 	return f.statement, f.err
+}
+
+type fakeCache struct {
+	data map[string][]byte
+	ttl  map[string]time.Duration
+	err  error
+}
+
+func newFakeCache() *fakeCache {
+	return &fakeCache{data: map[string][]byte{}, ttl: map[string]time.Duration{}}
+}
+func (f *fakeCache) Get(_ context.Context, k string) ([]byte, bool, error) {
+	if f.err != nil {
+		return nil, false, f.err
+	}
+	v, ok := f.data[k]
+	return v, ok, nil
+}
+func (f *fakeCache) GetDel(ctx context.Context, k string) ([]byte, bool, error) {
+	v, ok, err := f.Get(ctx, k)
+	delete(f.data, k)
+	return v, ok, err
+}
+func (f *fakeCache) Set(_ context.Context, k string, v []byte, ttl time.Duration) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.data[k], f.ttl[k] = v, ttl
+	return nil
+}
+func (f *fakeCache) Delete(_ context.Context, k string) error { delete(f.data, k); return f.err }
+
+type fakeTelegramLinks struct {
+	byUser  map[string]domain.TelegramLink
+	err     error // returned by Link when set
+	findErr error // returned by FindByTelegramID when set
+}
+
+func newFakeTelegramLinks() *fakeTelegramLinks {
+	return &fakeTelegramLinks{byUser: map[string]domain.TelegramLink{}}
+}
+func (f *fakeTelegramLinks) FindByTelegramID(_ context.Context, id int64) (domain.TelegramLink, error) {
+	if f.findErr != nil {
+		return domain.TelegramLink{}, f.findErr
+	}
+	for _, l := range f.byUser {
+		if l.TelegramUserID == id {
+			return l, nil
+		}
+	}
+	return domain.TelegramLink{}, domain.ErrNotFound
+}
+func (f *fakeTelegramLinks) Get(_ context.Context, userID string) (domain.TelegramLink, error) {
+	l, ok := f.byUser[userID]
+	if !ok {
+		return domain.TelegramLink{}, domain.ErrNotFound
+	}
+	return l, nil
+}
+func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink) error {
+	if f.err != nil {
+		return f.err
+	}
+	for _, o := range f.byUser {
+		if o.TelegramUserID == l.TelegramUserID && o.UserID != l.UserID {
+			return domain.ErrConflict
+		}
+	}
+	f.byUser[l.UserID] = l
+	return nil
+}
+func (f *fakeTelegramLinks) SetDocument(_ context.Context, userID, docID string) error {
+	l := f.byUser[userID]
+	l.DocumentID = docID
+	f.byUser[userID] = l
+	return nil
+}
+func (f *fakeTelegramLinks) Delete(_ context.Context, userID string) error {
+	delete(f.byUser, userID)
+	return nil
 }

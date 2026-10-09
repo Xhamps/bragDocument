@@ -20,6 +20,24 @@ paths:
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/telegram:
+    get:
+      summary: The caller's Telegram link state (PRD-0003)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TelegramStatus" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      summary: Unlink Telegram; a no-op when not linked
+      responses:
+        "204": { description: Unlinked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/telegram/code:
+    post:
+      summary: Issue a one-time link code; the user sends "/start <code>" to the bot
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/TelegramCode" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { description: Cache unavailable; linking needs Redis, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /documents:
     get:
       summary: List the caller's documents (owned and shared, archived included)
@@ -97,6 +115,13 @@ paths:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       - { name: logId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: One log (owner only; archived documents included)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Log" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       summary: Update a log; re-extracts the impact statement when name or description changed
       requestBody:
@@ -324,3 +349,17 @@ components:
         tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
         links: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/Link" } }
         created_at: { type: string, format: date-time, description: Not more than 24 h in the future }
+    TelegramStatus:
+      type: object
+      required: [linked]
+      properties:
+        linked: { type: boolean }
+        linked_at: { type: string, format: date-time, description: Present only when linked }
+        document_id: { type: string, format: uuid, description: The document new logs go to; present only when linked }
+    TelegramCode:
+      type: object
+      required: [code, expires_at]
+      properties:
+        code: { type: string, description: One-time; valid until expires_at }
+        expires_at: { type: string, format: date-time }
+        bot_url: { type: string, format: uri, description: "t.me deep link pre-filling /start <code>; absent when TELEGRAM_BOT_USERNAME is not set" }

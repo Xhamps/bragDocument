@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 owner: Product
 stakeholders: Engineering
@@ -79,10 +79,11 @@ The article's main advice is to record things as they happen. The moment of "I j
 
 | Question | Owner | Due |
 |---|---|---|
-| Should the bot ask follow-up questions (impact? tags?) or stay one-shot? Proposal: one-shot, with `/edit` later. | Product | before build |
 
 ## 13. Decisions log
 
 | Date | Decision | Why |
 |---|---|---|
-| 2026-10-08 | One-shot messages with inline markers | Lowest capture cost, matches the "write it down now" goal |
+| 2026-10-08 | One-shot messages with inline markers; no follow-up questions, `/edit` later | Lowest capture cost, matches the "write it down now" goal |
+| 2026-10-08 | Link codes and the `/undo` pointer live in Redis; linking needs Redis ([ADR-0009](../adr/0009-telegram-bot-integration.md)) | Short-lived state with TTLs; no table for throwaway data |
+| 2026-10-08 | The bot caps impact extraction at 2 s | Keeps replies within NFR-1 |

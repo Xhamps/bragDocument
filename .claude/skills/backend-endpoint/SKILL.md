@@ -11,6 +11,7 @@ Read first: `docs/adr/0012-hexagonal-backend-layout.md`, then the PRD for the fe
 
 1. **Dependency rule.** `domain` imports stdlib only. `app` and `ports` import `domain`. `adapters/*` implement ports and never import each other. `cmd` wires. Check: `make lint` (depguard).
 2. **Degradation rule.** A feature may fail because Postgres is down. It may never fail because Redis, Gotenberg, or Telegram is down. Use `ports.Cache` through the `redis.Degrading` decorator; never call go-redis directly from a use case.
+   Exception: Telegram linking needs Redis (ADR-0009); it uses the raw cache and returns `ErrUnavailable`.
 
 ## Steps, in order
 

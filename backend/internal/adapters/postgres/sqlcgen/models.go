@@ -64,6 +64,14 @@ type Tag struct {
 	Name     string
 }
 
+type TelegramLink struct {
+	UserID         uuid.UUID
+	TenantID       uuid.UUID
+	TelegramUserID int64
+	DocumentID     pgtype.UUID
+	LinkedAt       time.Time
+}
+
 type Tenant struct {
 	ID        uuid.UUID
 	Name      string

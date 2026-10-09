@@ -8,6 +8,10 @@ test("shell renders the title, the caller, and the documents page", async () => 
     await screen.findByRole("heading", { name: "Brag Document" }),
   ).toBeInTheDocument();
   expect(await screen.findByText("a@acme.com")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+    "href",
+    "/settings",
+  );
 });
 
 test("unauthenticated visitor is sent to sign-in", async () => {

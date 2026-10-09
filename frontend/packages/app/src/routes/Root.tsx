@@ -29,6 +29,9 @@ export function Component() {
               Kitchen sink
             </Link>
           )}
+          <Link to="/settings" className="text-sm text-muted-foreground">
+            Settings
+          </Link>
           <span className="ml-auto text-sm text-muted-foreground">
             {me?.email}
           </span>

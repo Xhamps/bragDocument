@@ -61,6 +61,20 @@ func (c *Cache) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	return v, true, nil
 }
 
+// GetDel implements ports.Cache.
+func (c *Cache) GetDel(ctx context.Context, key string) ([]byte, bool, error) {
+	ctx, cancel := c.withTimeout(ctx)
+	defer cancel()
+	v, err := c.client.GetDel(ctx, key).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return v, true, nil
+}
+
 // Set implements ports.Cache.
 func (c *Cache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	ctx, cancel := c.withTimeout(ctx)

@@ -230,3 +230,17 @@ func TestLogsUpdateMore(t *testing.T) {
 
 	require.ErrorIs(t, f.s.DeleteExamples(ctx, "d1", "u2"), domain.ErrForbidden)
 }
+
+func TestLogsGet(t *testing.T) {
+	f := newLogsFixture()
+	ctx := context.Background()
+	l, err := f.s.Create(ctx, createIn("d1"))
+	require.NoError(t, err)
+	got, err := f.s.Get(ctx, "d1", l.ID, "u1")
+	require.NoError(t, err)
+	require.Equal(t, l.ID, got.ID)
+	_, err = f.s.Get(ctx, "d1", l.ID, "u9")
+	require.ErrorIs(t, err, domain.ErrForbidden)
+	_, err = f.s.Get(ctx, "d3", l.ID, "u1")
+	require.ErrorIs(t, err, domain.ErrNotFound, "log of another document")
+}

@@ -6,9 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// daemonCmd builds the bot and worker commands. Both are placeholders that
-// start, log, and wait for a signal; their loops arrive with PRD-0003 and
-// PRD-0006.
+// daemonCmd builds the worker command, a placeholder that starts, logs, and
+// waits for a signal; its loop arrives with PRD-0006.
 func daemonCmd(name string) *cobra.Command {
 	return &cobra.Command{
 		Use:   name,

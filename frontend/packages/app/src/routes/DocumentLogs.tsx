@@ -162,7 +162,7 @@ export function Component() {
           ) : (
             <Button onClick={() => setEditing("new")}>New log</Button>
           )}
-          <ExportButton docId={doc.id} params={params} />
+          <ExportButton docId={doc.id} role={doc.role} params={params} />
           {doc.role === "owner" && (
             <Button variant="outline" onClick={() => setSharing(true)}>
               Share

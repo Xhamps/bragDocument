@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Button } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
+import type { DocRole } from "../lib/types";
 import { ExportDialog } from "./ExportDialog";
 import { downloadJob, useExportJob } from "./useExports";
 
 /** "Export PDF" for the document header (FR-1) plus a live status of the last export. */
 export function ExportButton({
   docId,
+  role,
   params,
 }: {
   docId: string;
+  role: DocRole;
   params: URLSearchParams;
 }) {
   const [open, setOpen] = useState(false);
@@ -23,6 +26,7 @@ export function ExportButton({
       </Button>
       <ExportDialog
         docId={docId}
+        role={role}
         params={params}
         open={open}
         onOpenChange={setOpen}

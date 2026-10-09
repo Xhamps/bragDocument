@@ -11,7 +11,7 @@ import {
 } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
-import type { ExportJob, ReportSettings } from "../lib/types";
+import type { DocRole, ExportJob, ReportSettings } from "../lib/types";
 import { FIELD } from "../logs/constants";
 import { useTags } from "../logs/useLogs";
 import { SECTIONS } from "./sections";
@@ -32,12 +32,14 @@ function exportQuery(params: URLSearchParams) {
 
 export function ExportDialog({
   docId,
+  role,
   params,
   open,
   onOpenChange,
   onStarted,
 }: {
   docId: string;
+  role: DocRole;
   params: URLSearchParams;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -76,6 +78,7 @@ export function ExportDialog({
           <SettingsForm
             initial={settings.data}
             tags={tags.data ?? []}
+            canSave={role !== "viewer"}
             pending={create.isPending}
             error={
               (create.error instanceof ApiError &&
@@ -139,12 +142,15 @@ export function ExportDialog({
 function SettingsForm({
   initial,
   tags,
+  canSave,
   pending,
   error,
   onSubmit,
 }: {
   initial: ReportSettings;
   tags: string[];
+  /** Viewers can export, but the API saves settings only for owners and editors. */
+  canSave: boolean;
   pending: boolean;
   error?: string;
   onSubmit: (s: ReportSettings) => void;
@@ -183,6 +189,11 @@ function SettingsForm({
           onChange={(e) => setGoalsNext(e.target.value)}
         />
       </div>
+      {!canSave && (
+        <p className="text-sm text-muted-foreground">
+          These apply to this report only.
+        </p>
+      )}
       {rows.length > 0 && (
         <table className="text-sm">
           <caption className="text-left font-medium">

@@ -132,7 +132,11 @@ export function Component() {
             </>
           )}
           {/* The active range, preset or custom: the report covers exactly what's shown. */}
-          <ExportButton docId={id} params={new URLSearchParams(range)} />
+          <ExportButton
+            docId={id}
+            role={doc.data.role}
+            params={new URLSearchParams(range)}
+          />
         </div>
       </div>
 

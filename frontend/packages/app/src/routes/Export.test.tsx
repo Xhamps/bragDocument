@@ -53,6 +53,10 @@ test("export carries the list's filters, goals, and mapping", async () => {
   expect(
     await within(dialog).findByLabelText(/goals for this year/i),
   ).toHaveValue("ship");
+  // base doc is a viewer: the API won't save their settings
+  expect(
+    within(dialog).getByText("These apply to this report only."),
+  ).toBeInTheDocument();
   expect(within(dialog).getByLabelText("Section for misc")).toHaveValue(
     "Other",
   );
@@ -187,4 +191,17 @@ test("dashboard export carries the period", async () => {
   expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({
     query: "from=2026-01-01&to=2026-03-31",
   });
+});
+
+test("owners don't get the report-only hint", async () => {
+  mockFetch({ ...base, "GET /documents/d1": { ...doc, role: "owner" } });
+  renderAt("/documents/d1");
+  await userEvent.click(
+    await screen.findByRole("button", { name: /export pdf/i }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await within(dialog).findByLabelText(/goals for this year/i);
+  expect(
+    within(dialog).queryByText("These apply to this report only."),
+  ).not.toBeInTheDocument();
 });

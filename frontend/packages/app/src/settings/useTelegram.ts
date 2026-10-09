@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { api } from "../lib/api";
 import type { TelegramCode, TelegramStatus } from "../lib/types";
 
@@ -23,7 +24,7 @@ export function useTelegramUnlink() {
     mutationFn: () => api<void>("/me/telegram", { method: "DELETE" }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["telegram"] });
-      void qc.invalidateQueries({ queryKey: ["audit"] });
+      refreshAuditSoon(qc);
     },
   });
 }

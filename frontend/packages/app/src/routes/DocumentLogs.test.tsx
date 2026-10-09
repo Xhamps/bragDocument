@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { me, mockFetch, renderAt } from "../test/mocks";
 import type { AuditEntry, Document, Log } from "../lib/types";
 
+afterEach(() => vi.useRealTimers());
+
 const doc = (over: Partial<Document> = {}): Document => ({
   id: "d1",
   owner_id: "u1",
@@ -337,13 +339,19 @@ test("editor does not see Activity", async () => {
   expect(calls.some((c) => c.path === "/documents/d1/audit")).toBe(false);
 });
 
-test("Activity refetches after a log edit", async () => {
-  let entries: AuditEntry[] = [];
+test("Activity refetches once the outbox has delivered", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  // The entry lands through the outbox, after the first post-edit refetch.
+  let saved = false;
+  let refetches = 0;
   mockFetch({
     ...routes(),
-    "GET /documents/d1/audit": () => ({ entries, next_before: null }),
+    "GET /documents/d1/audit": () => {
+      if (saved) refetches++;
+      return { entries: refetches > 1 ? [edited] : [], next_before: null };
+    },
     "PATCH /documents/d1/logs/l1": () => {
-      entries = [edited];
+      saved = true;
       return log();
     },
   });
@@ -352,6 +360,9 @@ test("Activity refetches after a log edit", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Actions" }));
   await userEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
   await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(refetches).toBe(1));
+  expect(screen.getByText("No activity yet.")).toBeInTheDocument();
+  vi.advanceTimersByTime(2000);
   expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
 });
 

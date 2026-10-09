@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../lib/api";
 import type { AuditFilters, AuditPage } from "../lib/types";
 
@@ -37,4 +41,11 @@ export function useAuditFilters() {
     queryKey: ["audit", "filters"],
     queryFn: () => api<AuditFilters>("/audit/filters"),
   });
+}
+
+/** Entries arrive through the outbox about a second after the action (ADR-0015):
+ *  refetch now, and once more when the entry has landed. */
+export function refreshAuditSoon(qc: QueryClient) {
+  void qc.invalidateQueries({ queryKey: ["audit"] });
+  setTimeout(() => void qc.invalidateQueries({ queryKey: ["audit"] }), 2000);
 }

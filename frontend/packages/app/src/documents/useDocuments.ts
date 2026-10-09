@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { ApiError, api } from "../lib/api";
 import type { Document, DocumentList } from "../lib/types";
 
@@ -26,7 +27,7 @@ function useInvalidating<TVars>(fn: (v: TVars) => Promise<unknown>) {
     mutationFn: fn,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: key });
-      void qc.invalidateQueries({ queryKey: ["audit"] });
+      refreshAuditSoon(qc);
     },
   });
 }

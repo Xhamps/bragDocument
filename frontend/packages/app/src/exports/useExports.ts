@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { api, download } from "../lib/api";
 import type { ExportJob, ReportSettings } from "../lib/types";
 
@@ -53,7 +54,7 @@ export function useCreateExport(docId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["report-settings", docId] });
       void qc.invalidateQueries({ queryKey: ["exports", docId], exact: true });
-      void qc.invalidateQueries({ queryKey: ["audit"] });
+      refreshAuditSoon(qc);
     },
   });
 }

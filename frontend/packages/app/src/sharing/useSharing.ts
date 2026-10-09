@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshAuditSoon } from "../audit/useAudit";
 import { api } from "../lib/api";
 import type { GrantRole, Sharing } from "../lib/types";
 
@@ -21,7 +22,7 @@ function useSharingMutation<TVars, TOut = void>(
     mutationFn: fn,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: key(docId) });
-      void qc.invalidateQueries({ queryKey: ["audit"] });
+      refreshAuditSoon(qc);
       void qc.invalidateQueries({ queryKey: ["documents"] }); // role changes after a transfer
     },
   });

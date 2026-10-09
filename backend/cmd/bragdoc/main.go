@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,6 +15,8 @@ import (
 )
 
 func main() {
+	// JSON before config loads, so a config error is JSON too (FR-8); boot replaces it.
+	slog.SetDefault(telemetry.NewLogger("info", "json", os.Stderr))
 	root := &cobra.Command{
 		Use:           "bragdoc",
 		Short:         "Brag Document backend",
@@ -30,7 +31,7 @@ func main() {
 	defer stop()
 
 	if err := root.ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		slog.Error("exit", slog.Any("err", err))
 		os.Exit(1)
 	}
 }

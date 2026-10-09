@@ -87,9 +87,9 @@ func DefaultReportSettings() ReportSettings {
 
 // ExportParams is everything a job renders, captured when it was requested.
 type ExportParams struct {
-	Filter     LogFilter
-	Settings   ReportSettings
-	TenantName string
+	Filter     LogFilter      `json:"filter"`
+	Settings   ReportSettings `json:"settings"`
+	TenantName string         `json:"tenant_name"`
 }
 
 // ExportJob is one report generation (PRD-0006 FR-5).

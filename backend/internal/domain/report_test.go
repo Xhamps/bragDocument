@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"maps"
 	"slices"
 	"strings"
@@ -85,4 +86,13 @@ func TestExportJobDownloadable(t *testing.T) {
 
 func TestDefaultSectionMapCoversSuggestedTags(t *testing.T) {
 	require.ElementsMatch(t, SuggestedTags, slices.Collect(maps.Keys(DefaultSectionMap)))
+}
+
+// Stored job params must not depend on Go field names.
+func TestExportParamsJSONKeys(t *testing.T) {
+	b, err := json.Marshal(ExportParams{Filter: LogFilter{HideExamples: true, PerPage: 1}, TenantName: "Acme"})
+	require.NoError(t, err)
+	for _, k := range []string{`"filter":`, `"hide_examples":true`, `"per_page":1`, `"settings":`, `"tenant_name":"Acme"`} {
+		require.Contains(t, string(b), k)
+	}
 }

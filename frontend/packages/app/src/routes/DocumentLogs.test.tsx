@@ -241,3 +241,14 @@ test("?edit= with a missing log just shows the list", async () => {
   await waitFor(() => expect(router.state.location.search).toBe(""));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
+
+test("?edit= on an archived document drops the param without opening", async () => {
+  mockFetch({
+    ...routes([log()], doc({ state: "archived" })),
+    "GET /documents/d1/logs/l1": log(),
+  });
+  const { router } = renderAt("/documents/d1?edit=l1");
+  expect(await screen.findByText("Moved billing jobs")).toBeInTheDocument();
+  await waitFor(() => expect(router.state.location.search).toBe(""));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});

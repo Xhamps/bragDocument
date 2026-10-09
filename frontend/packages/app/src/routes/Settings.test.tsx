@@ -18,14 +18,18 @@ test("not linked: generate a code, copy it, open in Telegram", async () => {
   });
   renderAt("/settings");
   expect(await screen.findByText("Not linked")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: /telegram/i }),
+  ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /generate link code/i }));
   expect(await screen.findByText("ABCD2345")).toBeInTheDocument();
   expect(screen.getByText("/start ABCD2345")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: /open in telegram/i }),
   ).toHaveAttribute("href", "https://t.me/BragBot?start=ABCD2345");
-  await user.click(screen.getByRole("button", { name: /copy/i }));
+  await user.click(screen.getByRole("button", { name: "Copy link code" }));
   expect(writeText).toHaveBeenCalledWith("ABCD2345");
+  expect(await screen.findByText("Copied")).toBeInTheDocument();
 });
 
 test("linked: unlink after confirming", async () => {

@@ -49,10 +49,7 @@ export function Component() {
     setDeletingLog(log);
     remove.reset(); // don't carry a failed delete's error to the next dialog
   };
-  // Open the deep-linked log (adjusting state during render), then drop the
-  // param once the fetch settles; a missing log is ignored.
-  if (editId && deepLinked.data && editing === null)
-    setEditing(deepLinked.data);
+  // Drop the deep-link param once the fetch settles; opening is below.
   useEffect(() => {
     if (!editId || deepLinked.isPending) return;
     setParams(
@@ -76,6 +73,10 @@ export function Component() {
       </p>
     );
   const readOnly = doc.state === "archived";
+  // Open the deep-linked log (adjusting state during render); a missing log or
+  // an archived document is ignored.
+  if (editId && deepLinked.data && editing === null && !readOnly)
+    setEditing(deepLinked.data);
 
   const setFilter = (key: string, values: string[]) => {
     const next = new URLSearchParams(params);

@@ -37,11 +37,24 @@ function TelegramCard() {
   const code = useTelegramCode();
   const unlink = useTelegramUnlink();
   const [confirming, setConfirming] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // ponytail: no clipboard (insecure context, denied); the code stays visible to copy by hand.
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle
+          role="heading"
+          aria-level={3}
+          className="flex items-center gap-2"
+        >
           Telegram
           {status.data && (
             <Badge variant={status.data.linked ? "default" : "secondary"}>
@@ -56,10 +69,10 @@ function TelegramCard() {
         {status.data?.linked && (
           <>
             <p>
-              Linked since{" "}
-              {status.data.linked_at &&
-                new Date(status.data.linked_at).toLocaleDateString()}
-              . Send the bot a message to log it; /help shows the format.
+              {status.data.linked_at
+                ? `Linked since ${new Date(status.data.linked_at).toLocaleDateString()}.`
+                : "Linked."}{" "}
+              Send the bot a message to log it; /help shows the format.
             </p>
             {confirming ? (
               <div className="flex gap-2">
@@ -68,7 +81,10 @@ function TelegramCard() {
                   disabled={unlink.isPending}
                   onClick={() =>
                     unlink.mutate(undefined, {
-                      onSuccess: () => setConfirming(false),
+                      onSuccess: () => {
+                        setConfirming(false);
+                        code.reset(); // the used code must not reappear
+                      },
                     })
                   }
                 >
@@ -96,7 +112,10 @@ function TelegramCard() {
             <Button
               className="self-start"
               disabled={code.isPending}
-              onClick={() => code.mutate()}
+              onClick={() => {
+                setCopied(false);
+                code.mutate();
+              }}
             >
               Generate link code
             </Button>
@@ -109,11 +128,10 @@ function TelegramCard() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() =>
-                      void navigator.clipboard.writeText(code.data.code)
-                    }
+                    aria-label="Copy link code"
+                    onClick={() => void copy(code.data.code)}
                   >
-                    Copy
+                    {copied ? "Copied" : "Copy"}
                   </Button>
                 </div>
                 <p className="text-muted-foreground">

@@ -22,6 +22,7 @@ export function useLog(docId: string, logId: string | null) {
     queryKey: ["logs", docId, "one", logId],
     queryFn: () => api<Log>(`/documents/${docId}/logs/${logId}`),
     enabled: !!logId,
+    retry: false, // a missing log won't appear; don't hold ?edit= in the URL
   });
 }
 

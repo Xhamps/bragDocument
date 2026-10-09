@@ -86,7 +86,7 @@ func TestBotRepliesToPrivateMessagesAndSurvivesPanics(t *testing.T) {
 	defer srv.Close()
 
 	rep := &fakeReplier{}
-	b, err := New("TOKEN", rep, WithServerURL(srv.URL))
+	b, err := New(context.Background(), "TOKEN", rep, WithServerURL(srv.URL))
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

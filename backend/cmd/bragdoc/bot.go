@@ -60,7 +60,7 @@ func botCmd() *cobra.Command {
 			// codes: raw rc so a Redis outage fails linking loudly; undo: Degrading (a miss is harmless).
 			uc := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docs, logs, rc, cache, cfg.AppURL, telemetry.WithTenantID)
 
-			b, err := telegram.New(cfg.TelegramToken, uc)
+			b, err := telegram.New(ctx, cfg.TelegramToken, uc)
 			if err != nil {
 				return err
 			}

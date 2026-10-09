@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 decision-makers: Engineering
 ---
@@ -27,7 +27,7 @@ The report export ([PRD-0006](../prd/0006-pdf-report.md)) must produce a readabl
 
 Chosen option: "HTML template + Gotenberg", because HTML and CSS give the layout quality the report needs (sections, tables, page headers, clickable links) with the least code, and Gotenberg is a single container in the compose file with a simple HTTP API.
 
-Flow: API enqueues an export job → worker renders `report.html` from the template with the filtered logs → POSTs it to Gotenberg → stores the PDF in object storage (local: a Docker volume; production: S3-compatible) → marks the job done with a 24 h expiry.
+Flow: the API inserts a `queued` row in `export_jobs` (PostgreSQL). The `worker` claims it with `FOR UPDATE SKIP LOCKED` under `app.provisioning`, then works inside the job's tenant: it renders `report.html` from the template with the filtered logs, POSTs it to Gotenberg with `generateDocumentOutline=true` (which implies a tagged PDF), encrypts the result with AES-256-GCM (`EXPORT_KEY`), and writes it under `EXPORT_DIR/<tenant>/<job>.pdf` (local: a Docker volume shared by api and worker; production: the same through a mounted volume until an S3 store is needed). The job is then `done` with a 24 h expiry. Progress (0–100) lives in Redis through the `Degrading` cache; a Redis outage hides the bar and nothing else. Each worker tick deletes expired jobs and their files.
 
 ### Consequences
 
@@ -35,7 +35,7 @@ Flow: API enqueues an export job → worker renders `report.html` from the templ
 * Good, because Gotenberg is stateless and horizontally scalable.
 * Neutral, because the export is a background job; job state is in PostgreSQL, progress in Redis.
 * Bad, because one more container and ~400 MB image. Acceptable.
-* Bad, because tagged (accessible) PDF support depends on Chromium's output; verify in confirmation, fall back to a post-processing step if needed.
+* Neutral, because tagged (accessible) output comes from Chromium's `generateTaggedPdf`, enabled through `generateDocumentOutline`; no post-processing step.
 
 ### Confirmation
 

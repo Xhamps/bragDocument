@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 owner: Product
 stakeholders: Engineering
@@ -75,10 +75,15 @@ Review processes still run on documents attached to forms and emails. The articl
 
 | Question | Owner | Due |
 |---|---|---|
-| Does the summary table belong on page 2 or at the end? | Design | before build |
+| Does the summary table belong on page 2 or at the end? | Design | answered 2026-10-09: page 2 |
 
 ## 13. Decisions log
 
 | Date | Decision | Why |
 |---|---|---|
 | 2026-10-08 | Sections follow the article's template | That is the format managers already recognize |
+| 2026-10-09 | Summary table on page 2, after the cover and goals | The overview comes before the detail, as in promotion packets |
+| 2026-10-09 | A log appears once, in its first matching section in template order | Section counts add up to the summary |
+| 2026-10-09 | The tag→section mapping and the goals are saved per document | The next export starts where the last one ended |
+| 2026-10-09 | Cover shows the tenant name; no logo in v1 | Tenants have no logo yet |
+| 2026-10-09 | Example logs are never in the report | They are starter content, not work |

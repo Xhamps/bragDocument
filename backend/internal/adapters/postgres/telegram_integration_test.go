@@ -26,6 +26,12 @@ func TestTelegramLinks(t *testing.T) {
 	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tb.ID)
 
+	// A link cannot claim a tenant other than its user's (composite FK, 23503).
+	err = links.Link(context.Background(), domain.TelegramLink{UserID: a.ID, TenantID: tb.ID, TelegramUserID: 99, LinkedAt: time.Now()})
+	require.ErrorIs(t, err, domain.ErrConflict)
+	_, err = links.FindByTelegramID(context.Background(), 99)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+
 	require.NoError(t, links.Link(context.Background(), domain.TelegramLink{UserID: a.ID, TenantID: ta.ID, TelegramUserID: 42, LinkedAt: time.Now()}))
 
 	// Cross-tenant lookup works without a tenant in context.
@@ -52,6 +58,15 @@ func TestTelegramLinks(t *testing.T) {
 	got, err = links.Get(ctxA, a.ID)
 	require.NoError(t, err)
 	require.Equal(t, doc.ID, got.DocumentID)
+
+	// Re-linking to a different Telegram account clears the target.
+	require.NoError(t, links.Link(context.Background(), domain.TelegramLink{UserID: a.ID, TenantID: ta.ID, TelegramUserID: 43, LinkedAt: time.Now()}))
+	got, err = links.Get(ctxA, a.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(43), got.TelegramUserID)
+	require.Empty(t, got.DocumentID)
+
+	require.NoError(t, links.SetDocument(ctxA, a.ID, doc.ID))
 	require.NoError(t, docs.Delete(ctxA, doc.ID))
 	got, err = links.Get(ctxA, a.ID)
 	require.NoError(t, err)
@@ -60,6 +75,6 @@ func TestTelegramLinks(t *testing.T) {
 	// Delete is idempotent.
 	require.NoError(t, links.Delete(ctxA, a.ID))
 	require.NoError(t, links.Delete(ctxA, a.ID))
-	_, err = links.FindByTelegramID(context.Background(), 42)
+	_, err = links.FindByTelegramID(context.Background(), 43)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }

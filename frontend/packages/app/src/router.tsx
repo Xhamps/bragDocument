@@ -13,6 +13,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, lazy: () => import("./routes/Documents") },
           { path: "tenant", lazy: () => import("./routes/Tenant") },
+          { path: "settings", lazy: () => import("./routes/Settings") },
           {
             path: "documents/:id",
             lazy: () => import("./routes/DocumentLogs"),

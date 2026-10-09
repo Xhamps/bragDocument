@@ -53,3 +53,15 @@ export type Log = {
 };
 
 export type LogList = { items: Log[]; total: number };
+
+export type TelegramStatus = {
+  linked: boolean;
+  linked_at?: string;
+  document_id?: string;
+};
+
+export type TelegramCode = {
+  code: string;
+  expires_at: string;
+  bot_url?: string;
+};

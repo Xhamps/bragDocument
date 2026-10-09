@@ -66,7 +66,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://bragdoc_app:bragdoc_app@postgres:5432/${POSTGRES_DB:-brag}?sslmode=disable
-      SUPABASE_URL: ${SUPABASE_URL_COMPOSE:-http://host.docker.internal:54321}
+      SUPABASE_URL: ${SUPABASE_URL_COMPOSE:-${SUPABASE_URL}}
       REDIS_URL: redis://redis:6379/0
       GOTENBERG_URL: http://gotenberg:3000
       APP_URL: ${APP_URL:-http://localhost:${FRONTEND_PORT:-5173}}

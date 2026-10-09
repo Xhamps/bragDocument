@@ -34,11 +34,13 @@ func startRedis(t *testing.T) (testcontainers.Container, string) {
 	return ctr, ep
 }
 
-// recorder counts deliveries per outbox id; failing ids return an error.
+// recorder counts deliveries per outbox id; failing ids return an error,
+// unavailable ids return domain.ErrUnavailable that many times.
 type recorder struct {
-	mu   sync.Mutex
-	seen map[int64]int
-	fail map[int64]bool
+	mu          sync.Mutex
+	seen        map[int64]int
+	fail        map[int64]bool
+	unavailable map[int64]int
 }
 
 func (r *recorder) handle(_ context.Context, m domain.OutboxMessage) error {
@@ -47,6 +49,10 @@ func (r *recorder) handle(_ context.Context, m domain.OutboxMessage) error {
 	r.seen[m.ID]++
 	if r.fail[m.ID] {
 		return fmt.Errorf("boom %d", m.ID)
+	}
+	if r.unavailable[m.ID] > 0 {
+		r.unavailable[m.ID]--
+		return fmt.Errorf("store: %w", domain.ErrUnavailable)
 	}
 	return nil
 }
@@ -76,7 +82,7 @@ func TestStreamPublishConsume(t *testing.T) {
 	// 0. Published to a brand-new stream before any group exists: still delivered.
 	require.NoError(t, s.Publish(ctx, []domain.OutboxMessage{msg(1)}))
 
-	rec := &recorder{seen: map[int64]int{}, fail: map[int64]bool{3: true}}
+	rec := &recorder{seen: map[int64]int{}, fail: map[int64]bool{3: true}, unavailable: map[int64]int{5: 6}}
 	cctx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	go func() { done <- s.Consume(cctx, domain.TopicAudit, rec.handle) }()
@@ -110,6 +116,17 @@ func TestStreamPublishConsume(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, n, "handled and dead-lettered entries are deleted from the stream")
 
+	// 3. A transient error (Postgres down) is retried past maxDeliveries,
+	// never dead-lettered, and handled once the dependency is back.
+	require.NoError(t, s.Publish(ctx, []domain.OutboxMessage{msg(5)}))
+	require.Eventually(t, func() bool {
+		n, err := cache.client.XLen(ctx, key).Result()
+		return rec.count(5) == 7 && err == nil && n == 0
+	}, 10*time.Second, 50*time.Millisecond)
+	n, err = cache.client.XLen(ctx, dead).Result()
+	require.NoError(t, err)
+	require.Equal(t, int64(1), n, "only the poison message is dead")
+
 	cancel()
 	select {
 	case err := <-done:
@@ -118,7 +135,7 @@ func TestStreamPublishConsume(t *testing.T) {
 		t.Fatal("Consume did not return after cancel")
 	}
 
-	// 3. Publish fails while Redis is down, so the relay retries.
+	// 4. Publish fails while Redis is down, so the relay retries.
 	require.NoError(t, ctr.Stop(ctx, nil))
 	require.Error(t, s.Publish(ctx, []domain.OutboxMessage{msg(4)}))
 }

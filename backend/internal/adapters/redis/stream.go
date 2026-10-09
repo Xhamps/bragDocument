@@ -49,7 +49,8 @@ func (s *Stream) Publish(ctx context.Context, msgs []domain.OutboxMessage) error
 
 // Consume handles topic's messages until ctx is done: new ones via XREADGROUP,
 // stale pending ones via XAUTOCLAIM. A handler error leaves the message
-// pending; after maxDeliveries it is copied to "<stream>:dead" and acked.
+// pending; after maxDeliveries it is copied to "<stream>:dead" and acked,
+// unless the error is transient (see deliver).
 // Redis errors are logged (at most once a minute) and retried, never returned.
 func (s *Stream) Consume(ctx context.Context, topic string, handle func(context.Context, domain.OutboxMessage) error) error {
 	k := key(topic)
@@ -77,8 +78,9 @@ func (s *Stream) Consume(ctx context.Context, topic string, handle func(context.
 func (s *Stream) poll(ctx context.Context, k, topic string, ready *bool, handle func(context.Context, domain.OutboxMessage) error) error {
 	c := s.cache.client
 	if !*ready {
-		// From "0", not "$": the relay marks rows published right after XADD,
-		// so entries written before the group exists must still be delivered.
+		// From "0", not "$": entries written before the group exists must
+		// still be delivered (otherwise the outbox only republishes them
+		// after redeliverAfter).
 		err := c.XGroupCreateMkStream(ctx, k, s.group, "0").Err()
 		if err != nil && !strings.HasPrefix(err.Error(), "BUSYGROUP") {
 			return fmt.Errorf("create group: %w", err)
@@ -113,8 +115,10 @@ func (s *Stream) poll(ctx context.Context, k, topic string, ready *bool, handle 
 	return nil
 }
 
-// deliver hands one entry to handle and acks it, or dead-letters it once it
-// has been delivered maxDeliveries times. Only Redis errors are returned.
+// deliver hands one entry to handle and acks it. A transient handler error
+// leaves it pending however often it was delivered; any other error
+// dead-letters it once it has been delivered maxDeliveries times. Only Redis
+// errors are returned.
 func (s *Stream) deliver(ctx context.Context, k, topic string, x redis.XMessage, handle func(context.Context, domain.OutboxMessage) error) error {
 	c := s.cache.client
 	herr := decodeAndHandle(ctx, topic, x, handle)
@@ -132,6 +136,13 @@ func (s *Stream) deliver(ctx context.Context, k, topic string, x redis.XMessage,
 			return nil
 		})
 		return err
+	}
+	if transient(herr) {
+		// A dependency outage (Postgres down, timeout, shutdown) says nothing
+		// about the message: never let it count toward dead-lettering.
+		slog.DebugContext(ctx, "stream handler unavailable; will retry", slog.String("stream", k),
+			slog.String("entry", x.ID), slog.Any("err", herr))
+		return nil // stays pending; XAUTOCLAIM retakes it after claimIdle
 	}
 	p, err := c.XPendingExt(ctx, &redis.XPendingExtArgs{Stream: k, Group: s.group,
 		Start: x.ID, End: x.ID, Count: 1}).Result()
@@ -160,6 +171,12 @@ func (s *Stream) deliver(ctx context.Context, k, topic string, x redis.XMessage,
 	slog.ErrorContext(ctx, "stream message dead-lettered", slog.String("stream", k),
 		slog.String("entry", x.ID), slog.Int64("deliveries", p[0].RetryCount), slog.Any("err", herr))
 	return nil
+}
+
+// transient reports handler errors that are retried forever, never dead-lettered.
+func transient(err error) bool {
+	return errors.Is(err, domain.ErrUnavailable) || errors.Is(err, context.Canceled) ||
+		errors.Is(err, context.DeadlineExceeded)
 }
 
 func decodeAndHandle(ctx context.Context, topic string, x redis.XMessage, handle func(context.Context, domain.OutboxMessage) error) error {

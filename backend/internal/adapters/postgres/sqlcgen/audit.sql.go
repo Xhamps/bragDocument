@@ -7,57 +7,43 @@ package sqlcgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createAuditEntry = `-- name: CreateAuditEntry :execrows
-INSERT INTO audit_entries (tenant_id, actor_id, actor_name, actor_email, source, action,
-                           document_id, document_title, target_type, target_id, target, role, changed_fields)
-SELECT app_tenant_id(), u.id, COALESCE(u.display_name, ''), COALESCE(u.email, ''), $1::text, $2::text,
-       d.id, d.title, $3::text, $4::text, $5::text,
-       $6::text, $7::text[]
+const auditSnapshot = `-- name: AuditSnapshot :one
+SELECT COALESCE(u.display_name, '')::text AS actor_name, COALESCE(u.email, '')::text AS actor_email,
+       d.title AS document_title
 FROM (SELECT 1) one
-LEFT JOIN users u ON u.id = $8::uuid
-LEFT JOIN documents d ON d.id = $9::uuid
-WHERE ($9::uuid IS NULL OR d.id IS NOT NULL)
-  AND ($8::uuid IS NULL OR u.id IS NOT NULL)
+LEFT JOIN users u ON u.id = $1::uuid
+LEFT JOIN documents d ON d.id = $2::uuid
+WHERE ($2::uuid IS NULL OR d.id IS NOT NULL)
+  AND ($1::uuid IS NULL OR u.id IS NOT NULL)
 `
 
-type CreateAuditEntryParams struct {
-	Source        string
-	Action        string
-	TargetType    string
-	TargetID      string
-	Target        string
-	Role          string
-	ChangedFields []string
-	ActorID       pgtype.UUID
-	DocumentID    pgtype.UUID
+type AuditSnapshotParams struct {
+	ActorID    pgtype.UUID
+	DocumentID pgtype.UUID
 }
 
-// Copies the actor's name and email and the document's title so the entry
-// outlives both. A document or actor id that matches nothing inserts nothing.
-func (q *Queries) CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error) {
-	result, err := q.db.Exec(ctx, createAuditEntry,
-		arg.Source,
-		arg.Action,
-		arg.TargetType,
-		arg.TargetID,
-		arg.Target,
-		arg.Role,
-		arg.ChangedFields,
-		arg.ActorID,
-		arg.DocumentID,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+type AuditSnapshotRow struct {
+	ActorName     string
+	ActorEmail    string
+	DocumentTitle pgtype.Text
+}
+
+// Names copied into the audit message so the entry outlives the actor and the
+// document (FR-12). An id that matches nothing returns no row (ErrNotFound).
+func (q *Queries) AuditSnapshot(ctx context.Context, arg AuditSnapshotParams) (AuditSnapshotRow, error) {
+	row := q.db.QueryRow(ctx, auditSnapshot, arg.ActorID, arg.DocumentID)
+	var i AuditSnapshotRow
+	err := row.Scan(&i.ActorName, &i.ActorEmail, &i.DocumentTitle)
+	return i, err
 }
 
 const listAudit = `-- name: ListAudit :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries
+SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields, outbox_id FROM audit_entries
 WHERE ($1::uuid IS NULL OR actor_id = $1::uuid)
   AND ($2::uuid IS NULL OR document_id = $2::uuid)
   AND ($3::text IS NULL OR action = $3::text)
@@ -116,6 +102,7 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEn
 			&i.TargetType,
 			&i.TargetID,
 			&i.ChangedFields,
+			&i.OutboxID,
 		); err != nil {
 			return nil, err
 		}
@@ -196,4 +183,52 @@ func (q *Queries) ListAuditDocuments(ctx context.Context, ownerID pgtype.UUID) (
 		return nil, err
 	}
 	return items, nil
+}
+
+const storeAuditEntry = `-- name: StoreAuditEntry :exec
+INSERT INTO audit_entries (tenant_id, actor_id, actor_name, actor_email, source, action, document_id,
+                           document_title, target_type, target_id, target, role, changed_fields, at, outbox_id)
+VALUES (app_tenant_id(), $1, $2, $3, $4,
+        $5, $6, $7, $8,
+        $9, $10, $11, $12, $13,
+        $14)
+ON CONFLICT (outbox_id) DO NOTHING
+`
+
+type StoreAuditEntryParams struct {
+	ActorID       pgtype.UUID
+	ActorName     string
+	ActorEmail    string
+	Source        string
+	Action        string
+	DocumentID    pgtype.UUID
+	DocumentTitle pgtype.Text
+	TargetType    string
+	TargetID      string
+	Target        string
+	Role          string
+	ChangedFields []string
+	At            time.Time
+	OutboxID      pgtype.Int8
+}
+
+// The consumer's insert; a redelivered message is a no-op (ADR-0015).
+func (q *Queries) StoreAuditEntry(ctx context.Context, arg StoreAuditEntryParams) error {
+	_, err := q.db.Exec(ctx, storeAuditEntry,
+		arg.ActorID,
+		arg.ActorName,
+		arg.ActorEmail,
+		arg.Source,
+		arg.Action,
+		arg.DocumentID,
+		arg.DocumentTitle,
+		arg.TargetType,
+		arg.TargetID,
+		arg.Target,
+		arg.Role,
+		arg.ChangedFields,
+		arg.At,
+		arg.OutboxID,
+	)
+	return err
 }

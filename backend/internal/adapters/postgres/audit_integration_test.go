@@ -17,7 +17,8 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
-// TestAuditInsert covers the nullable actor and document branches of audit().
+// TestAuditInsert covers the nullable actor and document branches of audit(),
+// through the outbox and Store.
 func TestAuditInsert(t *testing.T) {
 	ownerURL := startPostgres(t)
 	require.NoError(t, Migrate(ownerURL))
@@ -36,19 +37,20 @@ func TestAuditInsert(t *testing.T) {
 	doc, err := docs.Create(ctx, domain.Document{TenantID: ta.ID, OwnerID: bob.ID, Title: "2026"}, nil, docCreated(bob.ID))
 	require.NoError(t, err)
 
-	write := func(a domain.AuditEntry) error {
+	auditTx := func(a domain.AuditEntry) error {
 		return db.WithTenant(ctx, ta.ID, func(ctx context.Context, tx pgx.Tx) error { return audit(ctx, sqlcgen.New(tx), a) })
 	}
-	require.NoError(t, write(domain.AuditEntry{ActorID: bob.ID, Source: domain.SourceTelegram, Action: domain.AuditTelegramLinked}))
-	require.NoError(t, write(domain.AuditEntry{Source: domain.SourceSystem, Action: domain.AuditExportRequested, DocumentID: doc.ID}))
-	require.ErrorIs(t, write(domain.AuditEntry{ActorID: bob.ID, Source: domain.SourceWeb, Action: domain.AuditExportRequested, DocumentID: uuid.NewString()}), domain.ErrNotFound)
-	require.ErrorIs(t, write(domain.AuditEntry{ActorID: uuid.NewString(), Source: domain.SourceWeb, Action: domain.AuditTelegramLinked}), domain.ErrNotFound)
+	require.NoError(t, auditTx(domain.AuditEntry{ActorID: bob.ID, Source: domain.SourceTelegram, Action: domain.AuditTelegramLinked}))
+	require.NoError(t, auditTx(domain.AuditEntry{Source: domain.SourceSystem, Action: domain.AuditExportRequested, DocumentID: doc.ID}))
+	require.ErrorIs(t, auditTx(domain.AuditEntry{ActorID: bob.ID, Source: domain.SourceWeb, Action: domain.AuditExportRequested, DocumentID: uuid.NewString()}), domain.ErrNotFound)
+	require.ErrorIs(t, auditTx(domain.AuditEntry{ActorID: uuid.NewString(), Source: domain.SourceWeb, Action: domain.AuditTelegramLinked}), domain.ErrNotFound)
 
 	type row struct {
 		actorID, docID     *string
 		name, email, title *string
 	}
 	var rows []row
+	drain(t, db)
 	require.NoError(t, db.WithTenant(ctx, ta.ID, func(ctx context.Context, tx pgx.Tx) error {
 		rs, err := tx.Query(ctx, "SELECT actor_id::text, actor_name, actor_email, document_id::text, document_title FROM audit_entries ORDER BY id")
 		if err != nil {
@@ -106,6 +108,8 @@ func TestAuditRepo(t *testing.T) {
 		require.NoError(t, err)
 	}
 	require.NoError(t, docs.Delete(ctxA, doc2.ID, docDeleted(ada.ID, doc2.ID)))
+
+	drain(t, db)
 
 	// newest first, paging by cursor
 	f := domain.AuditFilter{Limit: 2}
@@ -333,6 +337,7 @@ func TestEveryActionWritesOneEntry(t *testing.T) {
 	for _, c := range cases {
 		require.NoError(t, c.do(), c.action)
 	}
+	drain(t, db)
 	for _, action := range domain.AuditActions {
 		want := 1
 		if action == domain.AuditInvite {

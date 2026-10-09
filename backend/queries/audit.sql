@@ -1,16 +1,23 @@
--- name: CreateAuditEntry :execrows
--- Copies the actor's name and email and the document's title so the entry
--- outlives both. A document or actor id that matches nothing inserts nothing.
-INSERT INTO audit_entries (tenant_id, actor_id, actor_name, actor_email, source, action,
-                           document_id, document_title, target_type, target_id, target, role, changed_fields)
-SELECT app_tenant_id(), u.id, COALESCE(u.display_name, ''), COALESCE(u.email, ''), sqlc.arg(source)::text, sqlc.arg(action)::text,
-       d.id, d.title, sqlc.arg(target_type)::text, sqlc.arg(target_id)::text, sqlc.arg(target)::text,
-       sqlc.arg(role)::text, sqlc.arg(changed_fields)::text[]
+-- name: AuditSnapshot :one
+-- Names copied into the audit message so the entry outlives the actor and the
+-- document (FR-12). An id that matches nothing returns no row (ErrNotFound).
+SELECT COALESCE(u.display_name, '')::text AS actor_name, COALESCE(u.email, '')::text AS actor_email,
+       d.title AS document_title
 FROM (SELECT 1) one
 LEFT JOIN users u ON u.id = sqlc.narg(actor_id)::uuid
 LEFT JOIN documents d ON d.id = sqlc.narg(document_id)::uuid
 WHERE (sqlc.narg(document_id)::uuid IS NULL OR d.id IS NOT NULL)
   AND (sqlc.narg(actor_id)::uuid IS NULL OR u.id IS NOT NULL);
+
+-- name: StoreAuditEntry :exec
+-- The consumer's insert; a redelivered message is a no-op (ADR-0015).
+INSERT INTO audit_entries (tenant_id, actor_id, actor_name, actor_email, source, action, document_id,
+                           document_title, target_type, target_id, target, role, changed_fields, at, outbox_id)
+VALUES (app_tenant_id(), sqlc.narg(actor_id), sqlc.arg(actor_name), sqlc.arg(actor_email), sqlc.arg(source),
+        sqlc.arg(action), sqlc.narg(document_id), sqlc.narg(document_title), sqlc.arg(target_type),
+        sqlc.arg(target_id), sqlc.arg(target), sqlc.arg(role), sqlc.arg(changed_fields), sqlc.arg(at),
+        sqlc.arg(outbox_id))
+ON CONFLICT (outbox_id) DO NOTHING;
 
 -- name: ListAudit :many
 -- Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).

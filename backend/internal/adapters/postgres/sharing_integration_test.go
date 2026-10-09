@@ -36,6 +36,7 @@ func TestSharing(t *testing.T) {
 
 	users, docs, sharing, tenants, logs := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db), NewLogRepo(db)
 	auditOf := func(ctx context.Context, docID string) ([]domain.AuditEntry, error) {
+		drain(t, db)
 		p, err := NewAuditRepo(db).List(ctx, domain.AuditFilter{DocumentID: docID, Limit: 100})
 		return p.Entries, err
 	}

@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -28,23 +30,15 @@ func idString(u pgtype.UUID) string {
 	return uuid.UUID(u.Bytes).String()
 }
 
-// audit writes one entry in the caller's transaction (PRD-0009 FR-1): a failed
-// insert fails the action. A DocumentID that matches nothing is ErrNotFound.
+// audit snapshots a and enqueues it in the caller's transaction (PRD-0009 FR-1,
+// ADR-0015): a failed enqueue fails the action. An actor or document id that
+// matches nothing is ErrNotFound. Only writes that open their own transaction
+// call it; the rest use write.
 func audit(ctx context.Context, q *sqlcgen.Queries, a domain.AuditEntry) error {
-	did, err := optID(a.DocumentID)
-	if err != nil {
+	if err := snapshot(ctx, q, &a); err != nil {
 		return err
 	}
-	aid, err := optID(a.ActorID)
-	if err != nil {
-		return err
-	}
-	n, err := q.CreateAuditEntry(ctx, sqlcgen.CreateAuditEntryParams{
-		ActorID: aid, DocumentID: did, Source: a.Source, Action: a.Action,
-		TargetType: a.TargetType, TargetID: a.TargetID, Target: a.Target, Role: string(a.Role),
-		ChangedFields: orEmpty(a.ChangedFields),
-	})
-	return rowsOrNotFound(n, err)
+	return enqueueAudit(ctx, q, a)
 }
 
 // AuditRepo implements ports.AuditRepo for the tenant in the context.
@@ -52,6 +46,31 @@ type AuditRepo struct{ db *DB }
 
 // NewAuditRepo wires the repository to the pool.
 func NewAuditRepo(db *DB) *AuditRepo { return &AuditRepo{db: db} }
+
+// Store saves one audit.entry message as an audit entry; a redelivered message
+// is a no-op (ADR-0015: at-least-once delivery, idempotent consumer).
+func (r *AuditRepo) Store(ctx context.Context, m domain.OutboxMessage) error {
+	var a auditMessage
+	if err := json.Unmarshal(m.Payload, &a); err != nil {
+		return fmt.Errorf("audit message %d: %w", m.ID, err) // poison: dead-lettered after retries
+	}
+	aid, err := optID(a.ActorID)
+	if err != nil {
+		return err
+	}
+	did, err := optID(a.DocumentID)
+	if err != nil {
+		return err
+	}
+	return r.db.WithTenant(ctx, m.TenantID, func(ctx context.Context, tx pgx.Tx) error {
+		return wrap(sqlcgen.New(tx).StoreAuditEntry(ctx, sqlcgen.StoreAuditEntryParams{
+			ActorID: aid, ActorName: a.ActorName, ActorEmail: a.ActorEmail, Source: a.Source, Action: a.Action,
+			DocumentID: did, DocumentTitle: pgtype.Text{String: a.DocumentTitle, Valid: a.DocumentID != ""},
+			TargetType: a.TargetType, TargetID: a.TargetID, Target: a.Target, Role: a.Role,
+			ChangedFields: orEmpty(a.ChangedFields), At: a.At, OutboxID: pgtype.Int8{Int64: m.ID, Valid: true},
+		}))
+	})
+}
 
 func (r *AuditRepo) List(ctx context.Context, f domain.AuditFilter) (domain.AuditPage, error) {
 	p := sqlcgen.ListAuditParams{Lim: int32(f.Limit + 1)} // one extra row tells whether a next page exists

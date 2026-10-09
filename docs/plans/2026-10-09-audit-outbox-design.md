@@ -54,15 +54,16 @@ func write[T any](ctx context.Context, db *DB, a domain.AuditEntry,
 
 `write` in one transaction:
 
-1. If `a.DocumentID` is known, enqueue the audit message **before** `fn`. This snapshots the document title while the row exists (`document.deleted`, FR-12) and rejects an unknown actor or document early (`ErrNotFound`). A rename names the title as it was, with `changed_fields: ["title"]`.
+1. If `a.DocumentID` is known, **snapshot** the actor (name, email) and the document title before `fn`. The title is captured while the row exists (`document.deleted`, FR-12), and an unknown actor or document is rejected early (`ErrNotFound`). A rename names the title as it was, with `changed_fields: ["title"]`.
 2. Run `fn`. It may fill ids the database assigns (`a.DocumentID` on document create, `a.TargetID` on log create and invitations).
-3. If `a.DocumentID` was only set by `fn`, enqueue **after** `fn`.
-4. `fn` returning `errNoChange` commits without a message (idempotent Telegram unlink).
-5. Commit. Any failure rolls back the action and its message (FR-1).
+3. If `a.DocumentID` was only set by `fn` (or never), snapshot after `fn`.
+4. Always **enqueue after** `fn`, once every id is filled.
+5. `fn` returning `errNoChange` commits without a message (idempotent Telegram unlink).
+6. Commit. Any failure rolls back the action and its message (FR-1).
 
-`EnqueueAuditEntry` (one query) builds the payload in SQL: `INSERT INTO outbox (tenant_id, topic, payload) SELECT app_tenant_id(), 'audit.entry', jsonb_build_object(...)` with the same LEFT JOINs on `users` and `documents` as the old direct insert, plus `at = now()`. An unknown actor or document inserts nothing.
+The snapshot is one query (`AuditSnapshot`, the same LEFT JOINs on `users` and `documents` as the old direct insert; no row when an id matches nothing). The payload is a Go struct with JSON tags (`auditMessage`, `at` set at enqueue time), so `enqueue` stays generic and the consumer decodes the same struct.
 
-`write` sits on a lower-level `inTenantTx[T]`. The two writes that open their own transaction (Telegram link with `WithTenant(l.TenantID)`; invitation-accept during provisioning) call `enqueueAudit` directly.
+`write` sits on a lower-level `inTenantTx[T]`. The two writes that open their own transaction (Telegram link with `WithTenant(l.TenantID)`; invitation-accept during provisioning) call `audit(ctx, q, a)` (snapshot then enqueue) directly.
 
 ## Relay and consumer
 
@@ -77,7 +78,7 @@ Both run in the worker (`bragdoc worker`, and `bragdoc all`). The `EXPORT_KEY` c
 
 **Consumer** (`redis.Stream.Consume`): consumer group `bragdoc` on `stream:audit.entry`; `XREADGROUP … BLOCK 5s`; call the handler; `XACK` on success. A failed handler leaves the message pending; `XAUTOCLAIM` retakes messages idle for over a minute. After 5 deliveries the message is copied to `stream:<topic>:dead`, acked, and logged at error.
 
-**Audit handler** (`AuditRepo.Store`): `WithTenant(msg.TenantID)` then `INSERT INTO audit_entries … SELECT … FROM jsonb_populate_record(...) ON CONFLICT (outbox_id) DO NOTHING`. `at` comes from the payload. The payload format is owned by SQL on both ends.
+**Audit handler** (`AuditRepo.Store`): decode `auditMessage`, then `WithTenant(msg.TenantID)` and `INSERT INTO audit_entries … ON CONFLICT (outbox_id) DO NOTHING` (`StoreAuditEntry`). `at` comes from the payload. The payload format is the `auditMessage` struct on both ends.
 
 No new ports: no use case calls the relay or the consumer; `cmd` wires the adapter functions together (`outbox.Relay(ctx, stream.Publish)`, `stream.Consume(ctx, "audit.entry", audits.Store)`).
 
@@ -93,7 +94,7 @@ Shared mutation helpers keep invalidating `["audit"]` immediately and once more 
 
 ## Testing
 
-- `write[T]` (Postgres integration): enqueue before/after `fn`; title survives a delete; `fn` error leaves no outbox row; unknown actor or document → `ErrNotFound` and rollback; `errNoChange` commits without a message.
+- `write[T]` (Postgres integration): snapshot before or after `fn`, enqueue after; title survives a delete; `fn` error leaves no outbox row; unknown actor or document → `ErrNotFound` and rollback; `errNoChange` commits without a message.
 - Relay + consumer (integration, Postgres and Redis via testcontainers): action → outbox → stream → `audit_entries`; duplicate delivery stores one entry; Redis stopped → rows stay unpublished, then publish once it is back; poison message lands in the dead stream.
 - `TestEveryActionWritesOneEntry` drains the outbox through relay and consumer before asserting one entry per action.
 - App unit tests unchanged (ports unchanged).

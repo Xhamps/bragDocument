@@ -44,9 +44,31 @@ func tgEntry(actorID, action string) domain.AuditEntry {
 	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceTelegram, Action: action}
 }
 
-// auditActions lists the tenant's audit actions, oldest first.
+// drain relays every pending outbox message straight into audit_entries, as the
+// worker does through Redis (ADR-0015), so Postgres-only tests need no Redis.
+func drain(t *testing.T, db *DB) {
+	t.Helper()
+	audits, outbox := NewAuditRepo(db), NewOutboxRepo(db)
+	for {
+		n, err := outbox.Relay(context.Background(), 100, func(ctx context.Context, ms []domain.OutboxMessage) error {
+			for _, m := range ms {
+				if err := audits.Store(ctx, m); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		require.NoError(t, err)
+		if n == 0 {
+			return
+		}
+	}
+}
+
+// auditActions drains the outbox and lists the tenant's audit actions, oldest first.
 func auditActions(t *testing.T, db *DB, tenantID string) []string {
 	t.Helper()
+	drain(t, db)
 	var out []string
 	require.NoError(t, db.WithTenant(context.Background(), tenantID, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, "SELECT action FROM audit_entries ORDER BY id")

@@ -78,10 +78,11 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 // flag (telegram_links and document_invitations read-only); documents, grants,
 // and audit entries are excluded and stay closed without app.tenant_id, so
 // provisionTx.AcceptInvitations sets app.tenant_id before writing them.
-// export_jobs opens fully under the flag: the worker claims across tenants.
-// Only UserRepo.Provision (the sign-in path),
-// TelegramLinkRepo.FindByTelegramID (the bot), and ExportRepo.Claim, Expired,
-// and Delete (the export worker) call this.
+// export_jobs and outbox open fully under the flag: the workers claim across
+// tenants. Only UserRepo.Provision (the sign-in path),
+// TelegramLinkRepo.FindByTelegramID (the bot), ExportRepo.Claim, Expired, and
+// Delete (the export worker), and OutboxRepo.Relay and Purge (the outbox
+// relay) call this.
 func (d *DB) WithProvisioning(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	return d.inTx(ctx, "app.provisioning", "1", fn)
 }

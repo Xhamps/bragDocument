@@ -14,11 +14,13 @@ import (
 type Querier interface {
 	// Turns every pending invitation for the email in the tenant into a grant.
 	AcceptDocumentInvitations(ctx context.Context, arg AcceptDocumentInvitationsParams) ([]AcceptDocumentInvitationsRow, error)
+	// Names copied into the audit message so the entry outlives the actor and the
+	// document (FR-12). An id that matches nothing returns no row (ErrNotFound).
+	AuditSnapshot(ctx context.Context, arg AuditSnapshotParams) (AuditSnapshotRow, error)
 	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
 	ClaimExportJob(ctx context.Context) (ExportJob, error)
-	// Copies the actor's name and email and the document's title so the entry
-	// outlives both. A document or actor id that matches nothing inserts nothing.
-	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
+	// Run under the provisioning flag; SKIP LOCKED lets several relays run.
+	ClaimOutbox(ctx context.Context, lim int32) ([]ClaimOutboxRow, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
@@ -46,6 +48,7 @@ type Querier interface {
 	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) (int64, error)
 	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	EnqueueOutbox(ctx context.Context, arg EnqueueOutboxParams) error
 	FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error)
 	// Tenant and document invitations compete; the oldest picks the tenant.
 	FindOldestInvitationByEmail(ctx context.Context, email string) (FindOldestInvitationByEmailRow, error)
@@ -94,8 +97,12 @@ type Querier interface {
 	// Active documents the user owns or edits; the bot's /docs order.
 	ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error)
 	MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error
+	MarkOutboxPublished(ctx context.Context, ids []int64) error
+	PurgeOutbox(ctx context.Context) error
 	SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error)
 	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)
+	// The consumer's insert; a redelivered message is a no-op (ADR-0015).
+	StoreAuditEntry(ctx context.Context, arg StoreAuditEntryParams) error
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
 	UpdateGrantRole(ctx context.Context, arg UpdateGrantRoleParams) (int64, error)
 	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)

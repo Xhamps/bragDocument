@@ -32,6 +32,7 @@ type AuditEntry struct {
 	TargetType    string
 	TargetID      string
 	ChangedFields []string
+	OutboxID      pgtype.Int8
 }
 
 type Document struct {
@@ -120,6 +121,15 @@ type LogTag struct {
 	TenantID uuid.UUID
 	LogID    uuid.UUID
 	TagName  string
+}
+
+type Outbox struct {
+	ID          int64
+	TenantID    uuid.UUID
+	Topic       string
+	Payload     []byte
+	CreatedAt   time.Time
+	PublishedAt pgtype.Timestamptz
 }
 
 type Tag struct {

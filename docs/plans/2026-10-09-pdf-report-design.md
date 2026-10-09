@@ -49,7 +49,7 @@ HTTP: `POST/GET /documents/:id/exports`, `GET /exports/:id` (status + progress),
 - Page 2: goals this year / next year (omitted when empty), summary table impact × status with totals.
 - Sections in template order with `<h2>`; empty sections are omitted.
 - Each log: `<h3>` name; date, impact, status; description as escaped text with `white-space: pre-wrap`; tags; `<a href>` links (FR-3). `break-inside: avoid`.
-- Footer page numbers through Gotenberg's footer HTML. `POST /forms/chromium/convert/html` with `pdfua=true`.
+- Footer page numbers through Gotenberg's footer HTML. `POST /forms/chromium/convert/html` with `generateDocumentOutline=true` (tagged PDF; see As built).
 
 ## 3. Frontend
 
@@ -72,4 +72,15 @@ HTTP: `POST/GET /documents/:id/exports`, `GET /exports/:id` (status + progress),
 
 ## 5. Delivery
 
-Branch `feat/pdf-report`, conventional commits per layer. PRD-0006 → `accepted` with the decisions above. ADR-0010 amended (PostgreSQL queue, Redis progress, AES-GCM, `pdfua`). `openapi.yaml` and `docs/README.md` updated. Pull request against `main` linking PRD-0006 and ADR-0010.
+Branch `feat/pdf-report`, conventional commits per layer. PRD-0006 → `accepted` with the decisions above. ADR-0010 amended (PostgreSQL queue, Redis progress, AES-GCM, `generateDocumentOutline`). `openapi.yaml` and `docs/README.md` updated. Pull request against `main` linking PRD-0006 and ADR-0010.
+
+## As built (deviations)
+
+- Job routes are nested: `/documents/:id/exports/:jobId` and `/documents/:id/exports/:jobId/file`. Only `GET /documents/:id/report-settings` exists; settings are saved by `POST /exports`, and only for owners and editors. A viewer's goals and mapping apply to that report only.
+- Tagged PDF uses `generateDocumentOutline=true` (which implies `generateTaggedPdf`), not `pdfua`.
+- Validation is `ReportSettings.Validate` + `LogFilter.Validate`. `Open` returns bytes (in memory, a few MB at most).
+- The button sits in the DocumentLogs and Dashboard headers; the hook is `useExportJob`.
+- The dialog takes period and filters from the page (shown read-only) instead of editing them. Change them on the list or dashboard first.
+- A job runs at most 4 minutes; a `running` job older than 5 minutes is reclaimed; finish and fail only apply to running jobs.
+- The worker re-checks the 2,000-log cap.
+- An empty `EXPORT_KEY` disables export: the api does not register the routes and the worker idles.

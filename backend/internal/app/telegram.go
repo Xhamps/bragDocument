@@ -36,6 +36,16 @@ Cut login support tickets by 40%.
 /docs list documents · /use <n> pick one · /last last 5 · /undo remove the last one`
 )
 
+// BotReply is what the bot sends back: text, plus inline buttons when the
+// user can act on it.
+type BotReply struct {
+	Text    string
+	Buttons []BotButton
+}
+
+// BotButton is one inline button; Data comes back to Callback when tapped.
+type BotButton struct{ Label, Data string }
+
 // Telegram is the bot's use cases (PRD-0003, ADR-0009) and the web side of
 // linking. Reply returns the text to send back; the adapter only transports it.
 type Telegram struct {

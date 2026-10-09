@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/xhamps/bragdocument/backend/internal/app"
 )
 
 type fakeReplier struct {
@@ -20,14 +22,14 @@ type fakeReplier struct {
 	texts []string
 }
 
-func (f *fakeReplier) Reply(_ context.Context, telegramID int64, text string) string {
+func (f *fakeReplier) Reply(_ context.Context, telegramID int64, text string) app.BotReply {
 	f.mu.Lock()
 	f.from, f.texts = telegramID, append(f.texts, text)
 	f.mu.Unlock()
 	if text == "boom" {
 		panic("replier exploded")
 	}
-	return "ok: " + text
+	return app.BotReply{Text: "ok: " + text}
 }
 
 func TestBotRepliesToPrivateMessagesAndSurvivesPanics(t *testing.T) {

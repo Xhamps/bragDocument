@@ -10,6 +10,8 @@ import (
 
 	tg "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+
+	"github.com/xhamps/bragdocument/backend/internal/app"
 )
 
 // replyTimeout bounds one reply (DB, LLM, send). It is detached from the polling
@@ -21,7 +23,7 @@ const failedReply = "Something went wrong and nothing was saved. Try again."
 
 // Replier is app.Telegram.Reply.
 type Replier interface {
-	Reply(ctx context.Context, telegramID int64, text string) string
+	Reply(ctx context.Context, telegramID int64, text string) app.BotReply
 }
 
 // Bot polls Telegram and answers private text messages.
@@ -71,7 +73,7 @@ func reply(ctx context.Context, r Replier, m *models.Message) (text string) {
 			text = failedReply
 		}
 	}()
-	return r.Reply(ctx, m.From.ID, m.Text)
+	return r.Reply(ctx, m.From.ID, m.Text).Text
 }
 
 // Run long-polls until ctx is done (ADR-0009: polling; webhook later).

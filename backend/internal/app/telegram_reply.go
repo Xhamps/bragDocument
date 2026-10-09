@@ -19,23 +19,37 @@ func undoKey(telegramID int64) string { return "tg:undo:" + strconv.FormatInt(te
 
 // Reply handles one private message from telegramID and returns the answer.
 // Nothing is stored for an unlinked account (FR-9); every failure gets a reply (NFR-3).
-func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) string {
+func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) BotReply {
 	cmd, arg := splitCommand(text)
 	if cmd == "/start" && arg != "" {
-		return t.start(ctx, telegramID, arg)
+		return BotReply{Text: t.start(ctx, telegramID, arg)}
 	}
+	link, failure := t.lookup(ctx, telegramID)
+	if failure != "" {
+		return BotReply{Text: failure}
+	}
+	ctx = t.scope(ctx, link.TenantID)
+	if cmd == "" {
+		return BotReply{Text: t.capture(ctx, link, telegramID, arg)}
+	}
+	return BotReply{Text: t.command(ctx, link, telegramID, cmd, arg)}
+}
+
+// lookup finds the caller's link; a non-empty reply means stop and send it.
+func (t *Telegram) lookup(ctx context.Context, telegramID int64) (domain.TelegramLink, string) {
 	link, err := t.links.FindByTelegramID(ctx, telegramID)
 	if errors.Is(err, domain.ErrNotFound) {
-		return msgNotLinked
+		return link, msgNotLinked
 	}
 	if err != nil {
 		slog.ErrorContext(ctx, "telegram link lookup failed", slog.Any("err", err))
-		return msgTryAgain
+		return link, msgTryAgain
 	}
-	ctx = t.scope(ctx, link.TenantID)
+	return link, ""
+}
+
+func (t *Telegram) command(ctx context.Context, link domain.TelegramLink, telegramID int64, cmd, arg string) string {
 	switch cmd {
-	case "":
-		return t.capture(ctx, link, telegramID, arg)
 	case "/start", "/help":
 		return msgHelp
 	case "/docs":

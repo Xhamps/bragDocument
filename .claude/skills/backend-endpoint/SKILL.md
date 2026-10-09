@@ -33,7 +33,7 @@ Read first: `docs/adr/0012-hexagonal-backend-layout.md`, then the PRD for the fe
 - DTO suffixes: `Request`, `Response`. Never expose sqlc or domain structs directly.
 - Context carries request id and tenant id (`telemetry.RequestID`, `telemetry.TenantID`). Use `slog.InfoContext(ctx, ...)` so they are attached.
 - Timeouts come from config (`DBTimeout`, `CacheTimeout`); do not hard-code.
-- Lint runs with `make lint` from `backend/`, which uses `backend/bin/golangci-lint` (v2) when present. The depguard rules exempt `_test.go` files in `domain`, `app`, and `ports` so tests may use testify.
+- Lint runs with `make lint` from the repo root, which uses `backend/bin/golangci-lint` (v2) when present. The depguard rules exempt `_test.go` files in `domain`, `app`, and `ports` so tests may use testify.
 
 ## Worked examples in the skeleton
 

@@ -54,3 +54,14 @@ func TestRequestIDRoundTrip(t *testing.T) {
 	require.Equal(t, "", RequestID(context.Background()))
 	require.Equal(t, "abc", RequestID(WithRequestID(context.Background(), "abc")))
 }
+
+func TestLoggerAttachesService(t *testing.T) {
+	for _, tc := range []struct{ format, want string }{
+		{"json", `"service":"bot"`},
+		{"text", `service=bot`},
+	} {
+		var buf bytes.Buffer
+		NewLogger("info", tc.format, &buf).InfoContext(WithService(context.Background(), "bot"), "hi")
+		require.Contains(t, buf.String(), tc.want, tc.format)
+	}
+}

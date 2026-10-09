@@ -15,19 +15,22 @@ import (
 )
 
 type fakeReplier struct {
-	mu   sync.Mutex
-	from int64
-	text string
+	mu    sync.Mutex
+	from  int64
+	texts []string
 }
 
 func (f *fakeReplier) Reply(_ context.Context, telegramID int64, text string) string {
 	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.from, f.text = telegramID, text
+	f.from, f.texts = telegramID, append(f.texts, text)
+	f.mu.Unlock()
+	if text == "boom" {
+		panic("replier exploded")
+	}
 	return "ok: " + text
 }
 
-func TestBotRepliesToPrivateMessages(t *testing.T) {
+func TestBotRepliesToPrivateMessagesAndSurvivesPanics(t *testing.T) {
 	var mu sync.Mutex
 	served := false
 	type sentMsg struct{ text, parseMode string }
@@ -42,7 +45,8 @@ func TestBotRepliesToPrivateMessages(t *testing.T) {
 			if first {
 				_, _ = io.WriteString(w, `{"ok":true,"result":[
 					{"update_id":1,"message":{"message_id":1,"date":0,"chat":{"id":99,"type":"group"},"from":{"id":7,"is_bot":false,"first_name":"G"},"text":"ignored"}},
-					{"update_id":2,"message":{"message_id":2,"date":0,"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false,"first_name":"A"},"text":"Shipped X"}}]}`)
+					{"update_id":2,"message":{"message_id":2,"date":0,"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false,"first_name":"A"},"text":"boom"}},
+					{"update_id":3,"message":{"message_id":3,"date":0,"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false,"first_name":"A"},"text":"Shipped X"}}]}`)
 				return
 			}
 			_, _ = io.WriteString(w, `{"ok":true,"result":[]}`)
@@ -72,14 +76,18 @@ func TestBotRepliesToPrivateMessages(t *testing.T) {
 	defer cancel()
 	go b.Run(ctx)
 
-	select {
-	case got := <-sent:
-		require.Equal(t, "ok: Shipped X", got.text)
-		require.Empty(t, got.parseMode, "replies carry user text; send them as plain text")
-	case <-ctx.Done():
-		t.Fatal("no reply sent")
+	// Handlers run in order, so the replies arrive in update order.
+	for _, want := range []string{failedReply, "ok: Shipped X"} {
+		select {
+		case got := <-sent:
+			require.Equal(t, want, got.text)
+			require.Empty(t, got.parseMode, "replies carry user text; send them as plain text")
+		case <-ctx.Done():
+			t.Fatalf("no reply %q sent", want)
+		}
 	}
 	rep.mu.Lock()
 	defer rep.mu.Unlock()
 	require.Equal(t, int64(42), rep.from)
+	require.Equal(t, []string{"boom", "Shipped X"}, rep.texts, "the group message never reaches the replier")
 }

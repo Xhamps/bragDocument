@@ -380,3 +380,114 @@ func (f *fakeTelegramLinks) Delete(_ context.Context, userID string) error {
 	delete(f.byUser, userID)
 	return nil
 }
+
+type fakeSharing struct {
+	docs    *fakeDocs
+	members map[string]domain.User // by id
+	invs    map[string][]domain.DocumentInvitation
+	audit   []domain.AuditEntry
+	seq     int
+}
+
+func newFakeSharing(docs *fakeDocs) *fakeSharing {
+	return &fakeSharing{docs: docs, members: map[string]domain.User{}, invs: map[string][]domain.DocumentInvitation{}}
+}
+
+func (f *fakeSharing) Get(_ context.Context, docID string) (domain.Sharing, error) {
+	sh := domain.Sharing{Grants: []domain.Grant{}, Invitations: append([]domain.DocumentInvitation{}, f.invs[docID]...)}
+	for uid, r := range f.docs.grants[docID] {
+		sh.Grants = append(sh.Grants, domain.Grant{DocumentID: docID, UserID: uid, Email: f.members[uid].Email, Role: r})
+	}
+	slices.SortFunc(sh.Grants, func(a, b domain.Grant) int { return strings.Compare(a.UserID, b.UserID) })
+	return sh, nil
+}
+func (f *fakeSharing) MemberByEmail(_ context.Context, email string) (domain.User, error) {
+	for _, u := range f.members {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return domain.User{}, domain.ErrNotFound
+}
+func (f *fakeSharing) Member(_ context.Context, id string) (domain.User, error) {
+	u, ok := f.members[id]
+	if !ok {
+		return domain.User{}, domain.ErrNotFound
+	}
+	return u, nil
+}
+func (f *fakeSharing) Grant(_ context.Context, g domain.Grant, a domain.AuditEntry) error {
+	if _, ok := f.docs.grants[g.DocumentID][g.UserID]; ok {
+		return domain.ErrConflict
+	}
+	f.docs.grant(g.DocumentID, g.UserID, g.Role)
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeSharing) Invite(_ context.Context, inv domain.DocumentInvitation, a domain.AuditEntry) (domain.DocumentInvitation, error) {
+	for _, i := range f.invs[inv.DocumentID] {
+		if i.Email == inv.Email {
+			return domain.DocumentInvitation{}, domain.ErrConflict
+		}
+	}
+	f.seq++
+	inv.ID = "inv" + strconv.Itoa(f.seq)
+	f.invs[inv.DocumentID] = append(f.invs[inv.DocumentID], inv)
+	f.audit = append(f.audit, a)
+	return inv, nil
+}
+func (f *fakeSharing) SetRole(_ context.Context, docID, userID string, r domain.Role, a domain.AuditEntry) error {
+	if _, ok := f.docs.grants[docID][userID]; !ok {
+		return domain.ErrNotFound
+	}
+	f.docs.grants[docID][userID] = r
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeSharing) Revoke(_ context.Context, docID, userID string, a domain.AuditEntry) error {
+	if _, ok := f.docs.grants[docID][userID]; !ok {
+		return domain.ErrNotFound
+	}
+	delete(f.docs.grants[docID], userID)
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeSharing) CancelInvitation(_ context.Context, docID, invID string, a domain.AuditEntry) error {
+	i := slices.IndexFunc(f.invs[docID], func(x domain.DocumentInvitation) bool { return x.ID == invID })
+	if i < 0 {
+		return domain.ErrNotFound
+	}
+	f.invs[docID] = slices.Delete(f.invs[docID], i, i+1)
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeSharing) Transfer(_ context.Context, docID, from, to string, a domain.AuditEntry) error {
+	d := f.docs.docs[docID]
+	d.OwnerID = to
+	f.docs.docs[docID] = d
+	delete(f.docs.grants[docID], to)
+	f.docs.grant(docID, from, domain.RoleEditor)
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeSharing) Audit(_ context.Context, docID string) ([]domain.AuditEntry, error) {
+	out := []domain.AuditEntry{}
+	for _, a := range slices.Backward(f.audit) {
+		if docID == "" || a.DocumentID == docID {
+			out = append(out, a)
+		}
+	}
+	return out, nil
+}
+
+type fakeMailer struct {
+	sent []string // "to: subject"
+	html string   // last body
+	err  error
+}
+
+func (f *fakeMailer) Send(_ context.Context, to, subject, html string) error {
+	f.sent = append(f.sent, to+": "+subject)
+	f.html = html
+	return f.err
+}

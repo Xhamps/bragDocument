@@ -33,6 +33,8 @@ const supabaseMock = vi.hoisted(() => ({
     signInWithOtp: vi.fn(async () => ({ error: null })),
     signInWithOAuth: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => ({ error: null })),
+    resetPasswordForEmail: vi.fn(async () => ({ error: null })),
+    updateUser: vi.fn(async () => ({ error: null })),
   },
 }));
 

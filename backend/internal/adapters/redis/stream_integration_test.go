@@ -106,6 +106,9 @@ func TestStreamPublishConsume(t *testing.T) {
 	require.Equal(t, map[string]any{"id": "3", "tenant_id": "00000000-0000-0000-0000-00000000000a",
 		"payload": `{"n":3}`}, entries[0].Values)
 	require.Equal(t, 1, rec.count(1), "acked messages are not redelivered")
+	n, err := cache.client.XLen(ctx, key).Result()
+	require.NoError(t, err)
+	require.Zero(t, n, "handled and dead-lettered entries are deleted from the stream")
 
 	cancel()
 	select {

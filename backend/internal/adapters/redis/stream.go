@@ -118,20 +118,40 @@ func (s *Stream) poll(ctx context.Context, k, topic string, ready *bool, handle 
 func (s *Stream) deliver(ctx context.Context, k, topic string, x redis.XMessage, handle func(context.Context, domain.OutboxMessage) error) error {
 	c := s.cache.client
 	herr := decodeAndHandle(ctx, topic, x, handle)
+	// Acks outlive shutdown: a handled message must not be redelivered just
+	// because ctx was cancelled meanwhile. The cache timeout still bounds them.
+	actx, cancel := s.cache.withTimeout(context.WithoutCancel(ctx))
+	defer cancel()
+	// ponytail: one group per stream, so an acked entry is done and XDEL keeps
+	// the stream down to unacked work. With more groups, switch to XTRIM MINID
+	// below the oldest pending entry across groups.
 	if herr == nil {
-		return c.XAck(ctx, k, s.group, x.ID).Err()
+		_, err := c.TxPipelined(actx, func(tx redis.Pipeliner) error {
+			tx.XAck(actx, k, s.group, x.ID)
+			tx.XDel(actx, k, x.ID)
+			return nil
+		})
+		return err
 	}
 	p, err := c.XPendingExt(ctx, &redis.XPendingExtArgs{Stream: k, Group: s.group,
 		Start: x.ID, End: x.ID, Count: 1}).Result()
 	if err != nil {
 		return fmt.Errorf("pending: %w", err)
 	}
-	if len(p) == 0 || p[0].RetryCount < s.maxDeliveries {
+	if len(p) == 0 {
+		return nil
+	}
+	if p[0].RetryCount < s.maxDeliveries {
+		slog.DebugContext(ctx, "stream handler failed; will retry", slog.String("stream", k),
+			slog.String("entry", x.ID), slog.Int64("deliveries", p[0].RetryCount), slog.Any("err", herr))
 		return nil // stays pending; XAUTOCLAIM retakes it after claimIdle
 	}
-	_, err = c.TxPipelined(ctx, func(tx redis.Pipeliner) error {
-		tx.XAdd(ctx, &redis.XAddArgs{Stream: k + ":dead", Values: x.Values})
-		tx.XAck(ctx, k, s.group, x.ID)
+	// ponytail: "<stream>:dead" is never trimmed; it only holds poison
+	// messages, which an operator inspects and clears by hand.
+	_, err = c.TxPipelined(actx, func(tx redis.Pipeliner) error {
+		tx.XAdd(actx, &redis.XAddArgs{Stream: k + ":dead", Values: x.Values})
+		tx.XAck(actx, k, s.group, x.ID)
+		tx.XDel(actx, k, x.ID)
 		return nil
 	})
 	if err != nil {

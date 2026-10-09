@@ -126,6 +126,35 @@ test("polls to done and offers the download outside the dialog", async () => {
   ).toBeInTheDocument();
 });
 
+test("a job that errors shows the error and stops polling", async () => {
+  const calls = mockFetch({
+    ...base,
+    "POST /documents/d1/exports": { status: 202, body: job() },
+    "GET /documents/d1/exports/j1": {
+      status: 404,
+      body: { message: "export not found" },
+    },
+  });
+  renderAt("/documents/d1");
+  await userEvent.click(
+    await screen.findByRole("button", { name: /export pdf/i }),
+  );
+  await userEvent.click(
+    await within(await screen.findByRole("dialog")).findByRole("button", {
+      name: /generate/i,
+    }),
+  );
+  const status = screen.getByRole("status");
+  expect(
+    await within(status).findByText(/export not found/i),
+  ).toBeInTheDocument();
+  const polls = () =>
+    calls.filter((c) => c.path === "/documents/d1/exports/j1").length;
+  const seen = polls();
+  await new Promise((r) => setTimeout(r, 1500));
+  expect(polls()).toBe(seen);
+});
+
 test("dashboard export carries the period", async () => {
   const calls = mockFetch({
     ...base,

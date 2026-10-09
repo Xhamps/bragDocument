@@ -25,6 +25,7 @@ import {
 /** Filters only: paging, sorting, and UI params do not change the report. */
 function exportQuery(params: URLSearchParams) {
   const q = new URLSearchParams(params);
+  // Must match the UI-only params of DocumentLogs and Dashboard.
   for (const k of ["page", "per_page", "sort", "period", "edit"]) q.delete(k);
   return q.toString();
 }

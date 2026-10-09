@@ -41,6 +41,8 @@ export async function download(path: string, filename: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.append(a); // Firefox ignores clicks on detached anchors
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0); // let the download start first
 }

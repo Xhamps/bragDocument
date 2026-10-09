@@ -48,15 +48,27 @@ test("download fetches with the bearer token and clicks a link", async () => {
     vi.fn(async () => new Response("pdf")),
   );
   // jsdom has no object URLs
+  const { createObjectURL, revokeObjectURL } = URL;
   URL.createObjectURL = vi.fn(() => "blob:x");
   URL.revokeObjectURL = vi.fn();
   const click = vi
     .spyOn(HTMLAnchorElement.prototype, "click")
-    .mockImplementation(() => {});
-  await download("/documents/d1/exports/j1/file", "r.pdf");
-  const [url, init] = vi.mocked(fetch).mock.calls[0];
-  expect(String(url)).toMatch(/\/documents\/d1\/exports\/j1\/file$/);
-  expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer tok");
-  expect(click).toHaveBeenCalled();
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:x");
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.isConnected).toBe(true);
+    });
+  try {
+    await download("/documents/d1/exports/j1/file", "r.pdf");
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toMatch(/\/documents\/d1\/exports\/j1\/file$/);
+    expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer tok");
+    expect(click).toHaveBeenCalled();
+    expect(document.querySelector("a[download]")).toBeNull();
+    await vi.waitFor(() =>
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:x"),
+    );
+  } finally {
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+    click.mockRestore();
+  }
 });

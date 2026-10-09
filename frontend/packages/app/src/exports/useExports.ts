@@ -37,7 +37,8 @@ export function useExportJob(docId: string, jobId: string | null) {
       return j;
     },
     enabled: !!jobId,
-    refetchInterval: (q) => (settled(q.state.data) ? false : 1000),
+    refetchInterval: (q) =>
+      q.state.error || settled(q.state.data) ? false : 1000,
   });
 }
 

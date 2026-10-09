@@ -106,3 +106,30 @@ func TestOversizedBodyIs413(t *testing.T) {
 	require.Equal(t, 413, rec.Code)
 	require.Contains(t, rec.Body.String(), `"error":"too_large"`)
 }
+
+func TestCORS(t *testing.T) {
+	e, _ := newTestEngine(t)
+	e.Use(CORS("http://app.test"))
+	e.GET("/me", func(c *gin.Context) { c.String(200, "ok") })
+
+	serve := func(method, origin string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(method, "/me", nil)
+		req.Header.Set("Origin", origin)
+		e.ServeHTTP(rec, req)
+		return rec
+	}
+
+	// Preflight: no OPTIONS route exists, the middleware still answers.
+	rec := serve(http.MethodOptions, "http://app.test")
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, "http://app.test", rec.Header().Get("Access-Control-Allow-Origin"))
+	require.Contains(t, rec.Header().Get("Access-Control-Allow-Headers"), "Authorization")
+
+	rec = serve(http.MethodGet, "http://app.test")
+	require.Equal(t, 200, rec.Code)
+	require.Equal(t, "http://app.test", rec.Header().Get("Access-Control-Allow-Origin"))
+
+	rec = serve(http.MethodGet, "http://evil.test")
+	require.Empty(t, rec.Header().Get("Access-Control-Allow-Origin"))
+}

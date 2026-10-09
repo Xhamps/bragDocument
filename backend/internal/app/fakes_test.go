@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ type fakeUsers struct {
 	createUserErrOnce   error // returned by the first CreateUser, then cleared; a conflict inserts the winner's row
 	createUserErrAlways error // returned by every CreateUser, no row inserted
 	createUserCalls     int
+	accepted            []string // user ids passed to AcceptInvitations
 }
 
 func newFakeUsers() *fakeUsers {
@@ -78,40 +80,86 @@ func (f *fakeUsers) CreateUser(_ context.Context, u domain.User) (domain.User, e
 	f.users[u.ID] = u
 	return u, nil
 }
-func (f *fakeUsers) DeleteInvitation(_ context.Context, id string) error {
-	for email, i := range f.invitations {
-		if i.ID == id {
-			delete(f.invitations, email)
-			return nil
-		}
-	}
-	return domain.ErrNotFound
+func (f *fakeUsers) AcceptInvitations(_ context.Context, u domain.User) error {
+	delete(f.invitations, u.Email)
+	f.accepted = append(f.accepted, u.ID)
+	return nil
 }
 
 type fakeDocs struct {
 	docs     map[string]domain.Document
+	grants   map[string]map[string]domain.Role // document → user → role
+	seen     []string                          // "doc/user" passed to MarkSeen
 	examples []domain.Log
 	seq      int
 }
 
-func newFakeDocs() *fakeDocs { return &fakeDocs{docs: map[string]domain.Document{}} }
+func newFakeDocs() *fakeDocs {
+	return &fakeDocs{docs: map[string]domain.Document{}, grants: map[string]map[string]domain.Role{}}
+}
+
+func (f *fakeDocs) grant(docID, userID string, r domain.Role) {
+	if f.grants[docID] == nil {
+		f.grants[docID] = map[string]domain.Role{}
+	}
+	f.grants[docID][userID] = r
+}
+
+func (f *fakeDocs) roleOf(d domain.Document, userID string) domain.Role {
+	if d.OwnerID == userID {
+		return domain.RoleOwner
+	}
+	return f.grants[d.ID][userID]
+}
+
+func (f *fakeDocs) sorted() []domain.Document {
+	out := slices.Collect(maps.Values(f.docs))
+	slices.SortFunc(out, func(a, b domain.Document) int { return strings.Compare(a.ID, b.ID) })
+	return out
+}
 
 func (f *fakeDocs) ListByOwner(_ context.Context, ownerID string) ([]domain.Document, error) {
 	out := []domain.Document{}
-	for _, d := range f.docs {
+	for _, d := range f.sorted() {
 		if d.OwnerID == ownerID {
 			out = append(out, d)
 		}
 	}
-	slices.SortFunc(out, func(a, b domain.Document) int { return strings.Compare(a.ID, b.ID) })
 	return out, nil
 }
-func (f *fakeDocs) Get(_ context.Context, id string) (domain.Document, error) {
+func (f *fakeDocs) ListShared(_ context.Context, userID string) ([]domain.Document, error) {
+	out := []domain.Document{}
+	for _, d := range f.sorted() {
+		if r := f.grants[d.ID][userID]; r != "" {
+			d.Role = r
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+func (f *fakeDocs) ListWritable(_ context.Context, userID string) ([]domain.Document, error) {
+	out := []domain.Document{}
+	for _, d := range f.sorted() {
+		if d.State == domain.DocumentActive && domain.Can(f.roleOf(d, userID), domain.PermWriteLogs) {
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+func (f *fakeDocs) GetForUser(_ context.Context, id, userID string) (domain.Document, error) {
 	d, ok := f.docs[id]
 	if !ok {
 		return domain.Document{}, domain.ErrNotFound
 	}
+	if d.Role = f.roleOf(d, userID); d.Role == "" {
+		return domain.Document{}, domain.ErrNotFound
+	}
+	d.IsNew = d.Role != domain.RoleOwner && !slices.Contains(f.seen, id+"/"+userID)
 	return d, nil
+}
+func (f *fakeDocs) MarkSeen(_ context.Context, id, userID string) error {
+	f.seen = append(f.seen, id+"/"+userID)
+	return nil
 }
 func (f *fakeDocs) Create(_ context.Context, d domain.Document, examples []domain.Log) (domain.Document, error) {
 	f.examples = examples

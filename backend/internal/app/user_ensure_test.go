@@ -103,3 +103,15 @@ func TestUserEnsureRejectsBadEmail(t *testing.T) {
 	var ve *domain.ValidationError
 	require.ErrorAs(t, err, &ve)
 }
+
+func TestUserEnsureAcceptsDocumentInvitation(t *testing.T) {
+	f := newFakeUsers()
+	f.tenants["t1"] = domain.Tenant{ID: "t1", Name: "Acme"}
+	f.invitations["new@acme.com"] = domain.Invitation{ID: "di1", TenantID: "t1", Email: "new@acme.com", ForDocument: true}
+
+	p, err := NewUserEnsure(f).Execute(context.Background(), EnsureUserInput{ID: "u2", Email: "new@acme.com"})
+	require.NoError(t, err)
+	require.Equal(t, "t1", p.User.TenantID, "a document invitation joins its tenant")
+	require.Equal(t, domain.RoleMember, p.User.Role)
+	require.Equal(t, []string{"u2"}, f.accepted)
+}

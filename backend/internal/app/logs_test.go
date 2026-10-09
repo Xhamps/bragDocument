@@ -23,6 +23,7 @@ func newLogsFixture() logsFixture {
 	f.docs.docs["d1"] = domain.Document{ID: "d1", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
 	f.docs.docs["d2"] = domain.Document{ID: "d2", TenantID: "t1", OwnerID: "u1", State: domain.DocumentArchived}
 	f.docs.docs["d3"] = domain.Document{ID: "d3", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
+	f.docs.grant("d1", "u2", domain.RoleViewer)
 	f.s = NewLogs(f.docs, f.logs, f.impact)
 	f.s.now = func() time.Time { return time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC) }
 	return f
@@ -144,8 +145,10 @@ func TestLogsList(t *testing.T) {
 	var ve *domain.ValidationError
 	require.ErrorAs(t, err, &ve)
 
+	_, err = f.s.List(ctx, "d1", "u3", domain.LogFilter{})
+	require.ErrorIs(t, err, domain.ErrNotFound)
 	_, err = f.s.List(ctx, "d1", "u2", domain.LogFilter{})
-	require.ErrorIs(t, err, domain.ErrForbidden)
+	require.NoError(t, err, "viewers read")
 
 	_, err = f.s.List(ctx, "d2", "u1", domain.LogFilter{})
 	require.NoError(t, err, "archived documents are readable")
@@ -240,7 +243,7 @@ func TestLogsGet(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, l.ID, got.ID)
 	_, err = f.s.Get(ctx, "d1", l.ID, "u9")
-	require.ErrorIs(t, err, domain.ErrForbidden)
+	require.ErrorIs(t, err, domain.ErrNotFound)
 	_, err = f.s.Get(ctx, "d3", l.ID, "u1")
 	require.ErrorIs(t, err, domain.ErrNotFound, "log of another document")
 }

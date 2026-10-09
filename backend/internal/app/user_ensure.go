@@ -27,8 +27,9 @@ type Principal struct {
 	Tenant domain.Tenant
 }
 
-// UserEnsure loads the caller or provisions them: into the tenant that invited
-// their email, or into a brand-new tenant as its admin.
+// UserEnsure loads the caller or provisions them: into the tenant of their
+// oldest pending invitation (tenant or document; document invitations become
+// grants), or into a brand-new tenant as its admin.
 type UserEnsure struct{ users ports.UserRepo }
 
 // NewUserEnsure wires the use case.
@@ -81,8 +82,8 @@ func (uc *UserEnsure) provision(ctx context.Context, in EnsureUserInput, email s
 			if p.User, err = tx.CreateUser(ctx, user); err != nil {
 				return err
 			}
-			if err := tx.DeleteInvitation(ctx, inv.ID); err != nil {
-				return fmt.Errorf("delete invitation %s: %w", inv.ID, err)
+			if err := tx.AcceptInvitations(ctx, p.User); err != nil {
+				return fmt.Errorf("accept invitations for %s: %w", p.User.ID, err)
 			}
 			return nil
 		case errors.Is(err, domain.ErrNotFound):

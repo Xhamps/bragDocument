@@ -10,10 +10,13 @@ import (
 )
 
 func TestDocumentsDelete(t *testing.T) {
-	s := NewDocuments(newFakeDocs())
+	f := newFakeDocs()
+	s := NewDocuments(f)
 	d, err := s.Create(context.Background(), CreateDocumentInput{TenantID: "t1", OwnerID: "u1", Title: "mine"})
 	require.NoError(t, err)
 
+	require.ErrorIs(t, s.Delete(context.Background(), d.ID, "u2"), domain.ErrNotFound)
+	f.grant(d.ID, "u2", domain.RoleEditor)
 	require.ErrorIs(t, s.Delete(context.Background(), d.ID, "u2"), domain.ErrForbidden)
 	require.NoError(t, s.Delete(context.Background(), d.ID, "u1"))
 	require.ErrorIs(t, s.Delete(context.Background(), d.ID, "u1"), domain.ErrNotFound)

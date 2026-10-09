@@ -1,10 +1,14 @@
 package app
 
-import "context"
+import (
+	"context"
 
-// Delete removes a document the caller owns. Rows referencing the document cascade in the database.
+	"github.com/xhamps/bragdocument/backend/internal/domain"
+)
+
+// Delete removes a document; owner only. Rows referencing the document cascade in the database.
 func (s *Documents) Delete(ctx context.Context, id, userID string) error {
-	if _, err := ownedDocument(ctx, s.docs, id, userID); err != nil {
+	if _, err := access(ctx, s.docs, id, userID, domain.PermDelete); err != nil {
 		return err
 	}
 	return s.docs.Delete(ctx, id)

@@ -8,7 +8,7 @@ import (
 
 // List returns one page of the document's logs. Archived documents are readable.
 func (s *Logs) List(ctx context.Context, docID, userID string, f domain.LogFilter) (domain.LogPage, error) {
-	if _, err := ownedDocument(ctx, s.docs, docID, userID); err != nil {
+	if _, err := access(ctx, s.docs, docID, userID, domain.PermRead); err != nil {
 		return domain.LogPage{}, err
 	}
 	if err := f.Validate(); err != nil {

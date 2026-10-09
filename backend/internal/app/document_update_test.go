@@ -29,7 +29,13 @@ func TestDocumentsUpdate(t *testing.T) {
 	require.Equal(t, domain.DocumentArchived, got.State)
 
 	_, err = s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "intruder", State: &archived})
-	require.ErrorIs(t, err, domain.ErrForbidden)
+	require.ErrorIs(t, err, domain.ErrNotFound, "no grant: the document does not exist for them")
+
+	f.grant(d.ID, "u2", domain.RoleEditor)
+	_, err = s.Update(context.Background(), UpdateDocumentInput{ID: d.ID, UserID: "u2", State: &archived})
+	var ae *domain.AccessError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, domain.PermManage, ae.Perm)
 
 	_, err = s.Update(context.Background(), UpdateDocumentInput{ID: "missing", UserID: "u1"})
 	require.ErrorIs(t, err, domain.ErrNotFound)

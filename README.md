@@ -37,7 +37,7 @@ make lint      # run from backend/; uses backend/bin/golangci-lint when present
 
 `make migrate` reads `DATABASE_OWNER_URL` (the `brag` superuser); `make run` reads `DATABASE_URL` (the `bragdoc_app` role, so row-level security applies), `REDIS_URL` and `SUPABASE_URL` (JWKS). `OPENAI_API_KEY` is optional: without it, logs save without an extracted impact statement (ADR-0013). `RESEND_API_KEY` is optional: without it, shares work but send no email (ADR-0014). `EXPORT_KEY` is optional: empty disables PDF export (no export routes; the worker idles); generate one with `openssl rand -base64 32` (ADR-0010). `.env.example` has the local values (`set -a; source .env; set +a` or an equivalent). `docker compose --profile app up` runs migrations before starting the api.
 
-Subcommands: `bragdoc api | bot | worker | all | migrate`. Every log line is JSON with `service` (`api`, `bot`, `worker`); filter with `jq 'select(.service=="bot")'`. Layout and rules: `docs/adr/0012-hexagonal-backend-layout.md`. Adding a feature: `.claude/skills/backend-endpoint/SKILL.md`.
+Subcommands: `bragdoc api | bot | worker | all | migrate`. With the default `LOG_FORMAT=json`, every log line is JSON with `service` (`api`, `bot`, `worker`); filter with `jq 'select(.service=="bot")'`. Layout and rules: `docs/adr/0012-hexagonal-backend-layout.md`. Adding a feature: `.claude/skills/backend-endpoint/SKILL.md`.
 
 ## Frontend
 

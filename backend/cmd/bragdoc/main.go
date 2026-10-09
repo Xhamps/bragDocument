@@ -30,8 +30,9 @@ func main() {
 	context.AfterFunc(ctx, stop)
 	defer stop()
 
-	if err := root.ExecuteContext(ctx); err != nil {
-		slog.Error("exit", slog.Any("err", err))
+	// service is the subcommand, so a lone bot's fatal error filters with the rest of its lines.
+	if c, err := root.ExecuteContextC(ctx); err != nil {
+		slog.Error("exit", slog.String("service", c.Name()), slog.Any("err", err))
 		os.Exit(1)
 	}
 }

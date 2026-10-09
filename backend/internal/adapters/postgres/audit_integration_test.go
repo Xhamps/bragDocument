@@ -184,3 +184,167 @@ func actorIDs(as []domain.AuditActor) []string {
 	}
 	return out
 }
+
+// TestEveryActionWritesOneEntry performs each audited action once through the
+// real repos with the entry the app builds, then expects exactly one entry per
+// action: a new action without a case fails here (PRD-0009 success metric).
+func TestEveryActionWritesOneEntry(t *testing.T) {
+	ownerURL := startPostgres(t)
+	require.NoError(t, Migrate(ownerURL))
+	db, err := Connect(context.Background(), appRoleURL(t, ownerURL), 5*time.Second)
+	require.NoError(t, err)
+	defer db.Close()
+
+	users, docs, logs, sharing := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db), NewSharingRepo(db)
+	links, exports, audits := NewTelegramLinkRepo(db), NewExportRepo(db), NewAuditRepo(db)
+	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
+	bob := addMember(t, users, ta, "bob@example.com")
+	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
+
+	var doc domain.Document
+	var lg domain.Log
+	var invID, newID string
+	share := func(action, targetType, targetID, target string, role domain.Role) domain.AuditEntry {
+		return domain.AuditEntry{ActorID: ada.ID, Source: domain.SourceWeb, Action: action, DocumentID: doc.ID,
+			TargetType: targetType, TargetID: targetID, Target: target, Role: role}
+	}
+	updateDoc := func(change func(*domain.Document)) func() error {
+		return func() error {
+			next := doc
+			change(&next)
+			action, fields := domain.DocumentChange(doc, next)
+			a := docCreated(ada.ID)
+			a.Action, a.DocumentID, a.ChangedFields = action, doc.ID, fields
+			var err error
+			doc, err = docs.Update(ctxA, next, a)
+			return err
+		}
+	}
+	updateLog := func(change func(*domain.Log)) func() error {
+		return func() error {
+			next := lg
+			change(&next)
+			action, fields := domain.LogChange(lg, next)
+			a := logEntry(ada.ID, doc.ID, action)
+			a.TargetID, a.Target, a.ChangedFields = lg.ID, next.Name, fields
+			var err error
+			lg, err = logs.Update(ctxA, next, a)
+			return err
+		}
+	}
+
+	cases := []struct {
+		action string
+		do     func() error
+	}{
+		{domain.AuditDocumentCreated, func() error {
+			doc, err = docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
+			return err
+		}},
+		{domain.AuditDocumentRenamed, updateDoc(func(d *domain.Document) { d.Title = "2026 brag" })},
+		{domain.AuditDocumentEdited, updateDoc(func(d *domain.Document) { d.Description = "the year" })},
+		{domain.AuditDocumentArchived, updateDoc(func(d *domain.Document) { d.State = domain.DocumentArchived })},
+		{domain.AuditDocumentUnarchived, updateDoc(func(d *domain.Document) { d.State = domain.DocumentActive })},
+
+		{domain.AuditLogCreated, func() error {
+			a := logEntry(ada.ID, doc.ID, domain.AuditLogCreated)
+			a.Target = "Shipped"
+			lg, err = logs.Create(ctxA, testLog(ta.ID, doc.ID, ada.ID), a)
+			return err
+		}},
+		{domain.AuditLogEdited, updateLog(func(l *domain.Log) { l.Name = "Shipped v2" })},
+		{domain.AuditLogStatusChanged, updateLog(func(l *domain.Log) { l.Status = "in_progress" })},
+		{domain.AuditLogDeleted, func() error {
+			a := logEntry(ada.ID, doc.ID, domain.AuditLogDeleted)
+			a.TargetID, a.Target = lg.ID, lg.Name
+			return logs.Delete(ctxA, doc.ID, lg.ID, a)
+		}},
+
+		{domain.AuditGrant, func() error {
+			return sharing.Grant(ctxA, domain.Grant{DocumentID: doc.ID, UserID: bob.ID, Role: domain.RoleViewer, GrantedBy: ada.ID},
+				share(domain.AuditGrant, domain.TargetUser, bob.ID, bob.Email, domain.RoleViewer))
+		}},
+		{domain.AuditRoleChange, func() error {
+			return sharing.SetRole(ctxA, doc.ID, bob.ID, domain.RoleEditor, share(domain.AuditRoleChange, domain.TargetUser, bob.ID, bob.Email, domain.RoleEditor))
+		}},
+		{domain.AuditInvite, func() error {
+			inv, err := sharing.Invite(ctxA, domain.DocumentInvitation{DocumentID: doc.ID, Email: "new@example.com", Role: domain.RoleViewer, InvitedBy: ada.ID},
+				share(domain.AuditInvite, domain.TargetInvitation, "", "new@example.com", domain.RoleViewer))
+			invID = inv.ID
+			return err
+		}},
+		{domain.AuditInviteCancel, func() error {
+			return sharing.CancelInvitation(ctxA, doc.ID, invID, share(domain.AuditInviteCancel, domain.TargetInvitation, invID, "new@example.com", domain.RoleViewer))
+		}},
+		{domain.AuditInviteAccept, func() error {
+			if _, err := sharing.Invite(ctxA, domain.DocumentInvitation{DocumentID: doc.ID, Email: "new@example.com", Role: domain.RoleViewer, InvitedBy: ada.ID},
+				share(domain.AuditInvite, domain.TargetInvitation, "", "new@example.com", domain.RoleViewer)); err != nil {
+				return err
+			}
+			newID = uuid.NewString()
+			return users.Provision(context.Background(), func(ctx context.Context, tx ports.ProvisionTx) error {
+				u, err := tx.CreateUser(ctx, domain.User{ID: newID, TenantID: ta.ID, Email: "new@example.com", Role: domain.RoleMember})
+				if err != nil {
+					return err
+				}
+				return tx.AcceptInvitations(ctx, u)
+			})
+		}},
+		{domain.AuditTransfer, func() error {
+			return sharing.Transfer(ctxA, doc.ID, ada.ID, bob.ID, share(domain.AuditTransfer, domain.TargetUser, bob.ID, bob.Email, domain.RoleOwner))
+		}},
+		{domain.AuditRevoke, func() error {
+			return sharing.Revoke(ctxA, doc.ID, newID, share(domain.AuditRevoke, domain.TargetUser, newID, "new@example.com", domain.RoleViewer))
+		}},
+
+		{domain.AuditTelegramLinked, func() error {
+			return links.Link(context.Background(), domain.TelegramLink{UserID: ada.ID, TenantID: ta.ID, TelegramUserID: 42, LinkedAt: time.Now()},
+				tgEntry(ada.ID, domain.AuditTelegramLinked))
+		}},
+		{domain.AuditTelegramUnlinked, func() error { return links.Delete(ctxA, ada.ID, tgEntry(ada.ID, domain.AuditTelegramUnlinked)) }},
+
+		{domain.AuditExportRequested, func() error {
+			a := docCreated(ada.ID)
+			a.Action, a.DocumentID = domain.AuditExportRequested, doc.ID
+			_, err := exports.Create(ctxA, domain.ExportJob{TenantID: ta.ID, DocumentID: doc.ID, RequestedBy: ada.ID}, a)
+			return err
+		}},
+		{domain.AuditDocumentDeleted, func() error { return docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)) }},
+	}
+	for _, c := range cases {
+		require.NoError(t, c.do(), c.action)
+	}
+	for _, action := range domain.AuditActions {
+		want := 1
+		if action == domain.AuditInvite {
+			want = 2 // sent twice: once to cancel, once to accept
+		}
+		page, err := audits.List(ctxA, domain.AuditFilter{Action: action, Limit: 50})
+		require.NoError(t, err)
+		require.Len(t, page.Entries, want, action)
+	}
+}
+
+// TestFailedAuditRollsBackTheAction: an entry whose DocumentID matches nothing
+// makes audit() return ErrNotFound; the action in the same transaction must not
+// persist (FR-1).
+func TestFailedAuditRollsBackTheAction(t *testing.T) {
+	ownerURL := startPostgres(t)
+	require.NoError(t, Migrate(ownerURL))
+	db, err := Connect(context.Background(), appRoleURL(t, ownerURL), 5*time.Second)
+	require.NoError(t, err)
+	defer db.Close()
+
+	users, docs, logs := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db)
+	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
+	ctxA := telemetry.WithTenantID(context.Background(), ta.ID)
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
+	require.NoError(t, err)
+
+	_, err = logs.Create(ctxA, testLog(ta.ID, doc.ID, ada.ID), logEntry(ada.ID, uuid.NewString(), domain.AuditLogCreated))
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	page, err := logs.List(ctxA, doc.ID, domain.LogFilter{Sort: "created_at", Page: 1, PerPage: 50})
+	require.NoError(t, err)
+	require.Zero(t, page.Total, "the log was rolled back with its entry")
+	require.Equal(t, []string{domain.AuditDocumentCreated}, auditActions(t, db, ta.ID))
+}

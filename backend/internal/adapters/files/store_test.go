@@ -43,7 +43,8 @@ func TestStoreRejectsTamperingAndSwaps(t *testing.T) {
 	require.NoError(t, s.Put(ctx, "t2/b.pdf", []byte("B")))
 
 	// A file copied under another key does not decrypt: the key is the AAD.
-	raw, _ := os.ReadFile(filepath.Join(dir, "t1", "a.pdf"))
+	raw, err := os.ReadFile(filepath.Join(dir, "t1", "a.pdf"))
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "t2", "b.pdf"), raw, 0o600))
 	_, err = s.Get(ctx, "t2/b.pdf")
 	require.Error(t, err)

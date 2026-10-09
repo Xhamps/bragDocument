@@ -102,5 +102,12 @@ func (c *Client) Render(ctx context.Context, r domain.Report) ([]byte, error) {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("%w: gotenberg %d: %s", domain.ErrUnavailable, resp.StatusCode, msg)
 	}
-	return io.ReadAll(io.LimitReader(resp.Body, maxPDF))
+	pdf, err := io.ReadAll(io.LimitReader(resp.Body, maxPDF+1))
+	if err != nil {
+		return nil, fmt.Errorf("%w: gotenberg: read: %v", domain.ErrUnavailable, err)
+	}
+	if len(pdf) > maxPDF {
+		return nil, fmt.Errorf("gotenberg: PDF larger than %d bytes", maxPDF)
+	}
+	return pdf, nil
 }

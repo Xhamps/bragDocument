@@ -56,9 +56,11 @@ func (s *Store) Put(_ context.Context, key string, data []byte) error {
 	}
 	tmp := key + ".tmp"
 	if err := s.root.WriteFile(tmp, sealed, 0o600); err != nil {
+		_ = s.root.Remove(tmp)
 		return fmt.Errorf("files: %w", err)
 	}
 	if err := s.root.Rename(tmp, key); err != nil {
+		_ = s.root.Remove(tmp)
 		return fmt.Errorf("files: %w", err)
 	}
 	return nil

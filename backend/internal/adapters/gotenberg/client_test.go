@@ -68,6 +68,24 @@ func TestRenderPostsToGotenberg(t *testing.T) {
 	require.Equal(t, "true", fields["generateDocumentOutline"], "implies tagged PDF (NFR-3)")
 }
 
+func TestRenderEscapesJavascriptLinks(t *testing.T) {
+	r := fixture()
+	r.Sections[0].Logs[0].Links = []domain.Link{{URL: "javascript:alert(1)"}}
+	var b bytes.Buffer
+	require.NoError(t, RenderHTML(&b, r))
+	require.Contains(t, b.String(), `href="#ZgotmplZ"`)
+}
+
+func TestRenderTruncatedBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", "100")
+		_, _ = io.WriteString(w, "%PDF") // short body: the server closes the connection
+	}))
+	defer srv.Close()
+	_, err := New(srv.URL, time.Second).Render(context.Background(), fixture())
+	require.ErrorIs(t, err, domain.ErrUnavailable)
+}
+
 func TestRenderUnavailable(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusServiceUnavailable)

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres/sqlcgen"
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -34,4 +35,31 @@ func toInvitation(i sqlcgen.TenantInvitation) domain.Invitation {
 func toDocument(d sqlcgen.Document) domain.Document {
 	return domain.Document{ID: d.ID.String(), TenantID: d.TenantID.String(), OwnerID: d.OwnerID.String(),
 		Title: d.Title, Description: d.Description, State: d.State, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt}
+}
+
+func toLog(l sqlcgen.Log) domain.Log {
+	out := domain.Log{ID: l.ID.String(), TenantID: l.TenantID.String(), DocumentID: l.DocumentID.String(),
+		Name: l.Name, Description: l.Description, Impact: l.Impact, Status: l.Status, IsExample: l.IsExample,
+		Tags: []string{}, Links: []domain.Link{},
+		CreatedAt: l.CreatedAt, CreatedBy: l.CreatedBy.String(), UpdatedAt: l.UpdatedAt, UpdatedBy: l.UpdatedBy.String()}
+	if l.ImpactStatement.Valid {
+		s := l.ImpactStatement.String
+		out.ImpactStatement = &s
+	}
+	return out
+}
+
+func textOrNull(s *string) pgtype.Text {
+	if s == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *s, Valid: true}
+}
+
+// orEmpty turns nil into an empty slice: pgx encodes nil as NULL, and JSON as null.
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
 }

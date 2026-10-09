@@ -58,6 +58,83 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /documents/{id}/logs:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Filtered, sorted, paged logs of a document (owner only)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Substring of name or description, case-insensitive }
+        - { name: tag, in: query, schema: { type: array, items: { type: string } }, explode: true, description: Any-of }
+        - { name: status, in: query, schema: { type: array, items: { $ref: "#/components/schemas/LogStatus" } }, explode: true }
+        - { name: impact, in: query, schema: { type: array, items: { $ref: "#/components/schemas/Impact" } }, explode: true }
+        - { name: from, in: query, schema: { type: string, format: date }, description: created_at on or after, UTC }
+        - { name: to, in: query, schema: { type: string, format: date }, description: created_at on or before, UTC }
+        - { name: domain, in: query, schema: { type: string }, description: Link host or any subdomain of it }
+        - { name: sort, in: query, schema: { type: string, enum: [created_at, -created_at, name, -name, impact, -impact, status, -status], default: -created_at } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LogList" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    post:
+      summary: Create a log; the impact statement is extracted from the text (PRD-0007)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateLog" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Log" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /documents/{id}/logs/{logId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: logId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      summary: Update a log; re-extracts the impact statement when name or description changed
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateLog" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Log" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a log
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /documents/{id}/example-logs:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Delete the document's example logs
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /tags:
+    get:
+      summary: The tenant's tag vocabulary, sorted
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, required: [tags], properties: { tags: { type: array, items: { type: string } } } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /tenant/members:
     get:
       summary: List tenant members (admin only)
@@ -143,6 +220,8 @@ components:
         state: { type: string, enum: [active, archived] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        log_count: { type: integer, description: "Logs excluding examples. Set only by GET /documents (list); absent or zero elsewhere." }
+        last_log_at: { type: string, format: date-time, nullable: true, description: "Newest created_at, null without logs. Set only by GET /documents (list); absent or zero elsewhere." }
     DocumentList:
       type: object
       required: [owned, shared]
@@ -191,3 +270,57 @@ components:
         message: { type: string }
         request_id: { type: string }
         fields: { type: object, additionalProperties: { type: string } }
+    Impact: { type: string, enum: [low, medium, high, critical] }
+    LogStatus: { type: string, enum: [idea, in_progress, done, dropped] }
+    Link:
+      type: object
+      required: [url, label]
+      properties:
+        url: { type: string, format: uri, description: http or https only }
+        label: { type: string, maxLength: 100, description: Optional in requests; always present in responses. }
+    Log:
+      type: object
+      required: [id, document_id, name, description, impact, impact_statement, status, is_example, tags, links, created_at, created_by, updated_at, updated_by]
+      properties:
+        id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 20000, description: Markdown }
+        impact: { $ref: "#/components/schemas/Impact" }
+        impact_statement: { type: string, nullable: true, maxLength: 280, description: 'null: not checked; "": none found (PRD-0007)' }
+        status: { $ref: "#/components/schemas/LogStatus" }
+        is_example: { type: boolean }
+        tags: { type: array, items: { type: string } }
+        links: { type: array, items: { $ref: "#/components/schemas/Link" } }
+        created_at: { type: string, format: date-time }
+        created_by: { type: string, format: uuid }
+        updated_at: { type: string, format: date-time }
+        updated_by: { type: string, format: uuid }
+    LogList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Log" } }
+        total: { type: integer }
+    CreateLog:
+      type: object
+      required: [name, impact]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 20000 }
+        impact: { $ref: "#/components/schemas/Impact" }
+        status: { $ref: "#/components/schemas/LogStatus" }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
+        links: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/Link" } }
+        created_at: { type: string, format: date-time, description: Defaults to now; set to back-date. Not more than 24 h in the future }
+    UpdateLog:
+      type: object
+      description: Absent fields are unchanged; tags and links replace the whole set when present. null is treated as absent.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 20000 }
+        impact: { $ref: "#/components/schemas/Impact" }
+        status: { $ref: "#/components/schemas/LogStatus" }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
+        links: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/Link" } }
+        created_at: { type: string, format: date-time, description: Not more than 24 h in the future }

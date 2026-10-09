@@ -13,6 +13,10 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, lazy: () => import("./routes/Documents") },
           { path: "tenant", lazy: () => import("./routes/Tenant") },
+          {
+            path: "documents/:id",
+            lazy: () => import("./routes/DocumentLogs"),
+          },
           ...(import.meta.env.DEV
             ? [
                 {

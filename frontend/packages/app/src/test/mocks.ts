@@ -46,7 +46,12 @@ export { supabaseMock };
 export type Routes = Record<string, unknown>;
 
 export function mockFetch(table: Routes) {
-  const calls: { method: string; path: string; body?: unknown }[] = [];
+  const calls: {
+    method: string;
+    path: string;
+    search: string;
+    body?: unknown;
+  }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,6 +61,7 @@ export function mockFetch(table: Routes) {
       calls.push({
         method,
         path: url.pathname,
+        search: url.search,
         body: init?.body ? JSON.parse(String(init.body)) : undefined,
       });
       if (!(key in table))
@@ -63,11 +69,16 @@ export function mockFetch(table: Routes) {
           status: 404,
         });
       const v = table[key];
-      const r =
-        typeof v === "function" ? (v as (i?: RequestInit) => unknown)(init) : v;
+      const r: unknown =
+        typeof v === "function"
+          ? await (v as (i?: RequestInit) => unknown)(init) // may be async
+          : v;
       if (r instanceof Response) return r;
       const { status, body } =
-        r !== null && typeof r === "object" && "status" in r
+        r !== null &&
+        typeof r === "object" &&
+        "status" in r &&
+        typeof r.status === "number" // a Log's own `status` is a string
           ? (r as { status: number; body?: unknown })
           : { status: method === "POST" ? 201 : 200, body: r };
       if (body === undefined) return new Response(null, { status: 204 });

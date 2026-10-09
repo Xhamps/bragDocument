@@ -10,7 +10,7 @@ var (
 	ErrNotFound    = errors.New("not found")
 	ErrForbidden   = errors.New("forbidden")
 	ErrConflict    = errors.New("conflict")
-	ErrUnavailable = errors.New("dependency unavailable") // required dependency (Postgres) down
+	ErrUnavailable = errors.New("dependency unavailable") // required dependency (Postgres) down; also returned by llm.Disabled when extraction is off
 )
 
 // ValidationError reports per-field problems with an input.

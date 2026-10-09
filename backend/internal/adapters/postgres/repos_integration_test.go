@@ -56,7 +56,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	ctxA := telemetry.WithTenantID(context.Background(), tenantA.ID)
 	ctxB := telemetry.WithTenantID(context.Background(), tenantB.ID)
 
-	doc, err := docs.Create(ctxA, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "2026"})
+	doc, err := docs.Create(ctxA, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "2026"}, nil)
 	require.NoError(t, err)
 
 	// Tenant B sees nothing of A, by id or by list, on every table.
@@ -73,7 +73,7 @@ func TestTenantIsolationAsAppRole(t *testing.T) {
 	require.NotEqual(t, adminA.ID, members[0].ID)
 
 	// Inserting into another tenant is rejected by WITH CHECK.
-	_, err = docs.Create(ctxB, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "x"})
+	_, err = docs.Create(ctxB, domain.Document{TenantID: tenantA.ID, OwnerID: adminA.ID, Title: "x"}, nil)
 	require.ErrorIs(t, err, domain.ErrForbidden)
 
 	// Provisioning reads users and tenants across tenants, but documents stays closed.

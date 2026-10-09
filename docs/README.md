@@ -28,6 +28,7 @@ The article's guidance that shapes the product:
 - Logs are added from the web UI or by sending a message to a **Telegram bot** linked to the user.
 - Document owners **invite** other users and assign a role (owner, editor, viewer) on the document.
 - A **logs page** lists and filters logs by every field.
+- When a log is saved, an LLM extracts its impact statement from the description and warns when none is stated.
 - A **dashboard** shows metrics about the logs (volume over time, by tag, by status, by impact).
 - A **PDF report** of a document, or a filtered subset, can be generated to share with a manager or team.
 
@@ -48,6 +49,7 @@ Detailed requirements live in the PRDs under [`prd/`](prd/).
 | Telegram | Bot built on the Telegram Bot API, long polling locally, webhook in production | [ADR-0009](adr/0009-telegram-bot-integration.md) |
 | PDF | Server-rendered HTML converted by Gotenberg | [ADR-0010](adr/0010-pdf-generation-with-gotenberg.md) |
 | Authorization | Role-based access control per document, enforced in the API | [ADR-0011](adr/0011-rbac-model.md) |
+| Impact extraction | OpenAI Chat Completions with structured output, optional (disabled without a key) | [ADR-0013](adr/0013-openai-for-impact-extraction.md) |
 
 ## Repository layout
 
@@ -86,11 +88,12 @@ Every decision is written down. There are two kinds of decision, with one folder
 | # | Title | Status |
 |---|---|---|
 | [0001](prd/0001-tenants-users-and-brag-documents.md) | Tenants, users, and brag documents | accepted |
-| [0002](prd/0002-logs.md) | Logs: fields, creation, and the filtered list page | proposed |
+| [0002](prd/0002-logs.md) | Logs: fields, creation, and the filtered list page | accepted |
 | [0003](prd/0003-telegram-bot.md) | Adding logs through a Telegram bot | proposed |
 | [0004](prd/0004-sharing-and-rbac.md) | Sharing documents: invitations and roles | proposed |
 | [0005](prd/0005-dashboard.md) | Dashboard with log metrics | proposed |
 | [0006](prd/0006-pdf-report.md) | PDF report for sharing with the team | proposed |
+| [0007](prd/0007-impact-extraction.md) | Impact statement extracted from the description | accepted |
 
 ### ADRs
 
@@ -109,3 +112,4 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0010](adr/0010-pdf-generation-with-gotenberg.md) | PDF generation with Gotenberg | proposed |
 | [0011](adr/0011-rbac-model.md) | RBAC model for documents | proposed |
 | [0012](adr/0012-hexagonal-backend-layout.md) | Hexagonal backend layout with a single Cobra binary | accepted |
+| [0013](adr/0013-openai-for-impact-extraction.md) | OpenAI for impact extraction | accepted |

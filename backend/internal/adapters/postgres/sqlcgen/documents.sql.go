@@ -7,6 +7,7 @@ package sqlcgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -77,27 +78,44 @@ func (q *Queries) GetDocument(ctx context.Context, id uuid.UUID) (Document, erro
 }
 
 const listDocumentsByOwner = `-- name: ListDocumentsByOwner :many
-SELECT id, tenant_id, owner_id, title, description, state, created_at, updated_at FROM documents WHERE owner_id = $1 ORDER BY updated_at DESC
+SELECT d.id, d.tenant_id, d.owner_id, d.title, d.description, d.state, d.created_at, d.updated_at,
+       count(l.id)::int AS log_count,
+       coalesce(max(l.created_at), d.created_at)::timestamptz AS last_log_at
+FROM documents d
+LEFT JOIN logs l ON l.document_id = d.id AND NOT l.is_example
+WHERE d.owner_id = $1
+GROUP BY d.id
+ORDER BY d.updated_at DESC
 `
 
-func (q *Queries) ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]Document, error) {
+type ListDocumentsByOwnerRow struct {
+	Document  Document
+	LogCount  int32
+	LastLogAt time.Time
+}
+
+// last_log_at falls back to d.created_at so the column is never NULL; it is
+// meaningful only when log_count > 0. Examples are not counted.
+func (q *Queries) ListDocumentsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListDocumentsByOwnerRow, error) {
 	rows, err := q.db.Query(ctx, listDocumentsByOwner, ownerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Document
+	var items []ListDocumentsByOwnerRow
 	for rows.Next() {
-		var i Document
+		var i ListDocumentsByOwnerRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.OwnerID,
-			&i.Title,
-			&i.Description,
-			&i.State,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.Document.ID,
+			&i.Document.TenantID,
+			&i.Document.OwnerID,
+			&i.Document.Title,
+			&i.Document.Description,
+			&i.Document.State,
+			&i.Document.CreatedAt,
+			&i.Document.UpdatedAt,
+			&i.LogCount,
+			&i.LastLogAt,
 		); err != nil {
 			return nil, err
 		}

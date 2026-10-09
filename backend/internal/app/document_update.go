@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
+	"github.com/xhamps/bragdocument/backend/internal/ports"
 )
 
 // UpdateDocumentInput: nil fields are left unchanged.
@@ -17,7 +18,7 @@ type UpdateDocumentInput struct {
 
 // Update renames, re-describes, archives, or unarchives a document the caller owns.
 func (s *Documents) Update(ctx context.Context, in UpdateDocumentInput) (domain.Document, error) {
-	d, err := s.owned(ctx, in.ID, in.UserID)
+	d, err := ownedDocument(ctx, s.docs, in.ID, in.UserID)
 	if err != nil {
 		return domain.Document{}, err
 	}
@@ -36,10 +37,10 @@ func (s *Documents) Update(ctx context.Context, in UpdateDocumentInput) (domain.
 	return s.docs.Update(ctx, d)
 }
 
-// owned loads a document and checks ownership. RLS already hides other
+// ownedDocument loads a document and checks ownership. RLS already hides other
 // tenants' documents (404); a same-tenant non-owner gets 403.
-func (s *Documents) owned(ctx context.Context, id, userID string) (domain.Document, error) {
-	d, err := s.docs.Get(ctx, id)
+func ownedDocument(ctx context.Context, docs ports.DocumentRepo, id, userID string) (domain.Document, error) {
+	d, err := docs.Get(ctx, id)
 	if err != nil {
 		return domain.Document{}, err
 	}

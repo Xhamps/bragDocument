@@ -25,6 +25,10 @@ type Config struct {
 	TelegramToken string `env:"TELEGRAM_BOT_TOKEN"`
 	TelegramMode  string `env:"TELEGRAM_MODE" envDefault:"polling"`
 
+	OpenAIAPIKey string        `env:"OPENAI_API_KEY"` // empty: impact extraction disabled (PRD-0007)
+	OpenAIModel  string        `env:"OPENAI_MODEL" envDefault:"gpt-4.1-mini"`
+	LLMTimeout   time.Duration `env:"LLM_TIMEOUT" envDefault:"5s"`
+
 	DBTimeout       time.Duration `env:"DB_TIMEOUT" envDefault:"5s"`
 	CacheTimeout    time.Duration `env:"CACHE_TIMEOUT" envDefault:"200ms"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`
@@ -38,6 +42,9 @@ func Load() (Config, error) {
 	}
 	if c.LogFormat != "json" && c.LogFormat != "text" {
 		return Config{}, fmt.Errorf("config: LOG_FORMAT must be json or text, got %q", c.LogFormat)
+	}
+	if c.LLMTimeout <= 0 {
+		return Config{}, fmt.Errorf("config: LLM_TIMEOUT must be positive, got %s", c.LLMTimeout)
 	}
 	if c.DatabaseOwnerURL == "" {
 		c.DatabaseOwnerURL = c.DatabaseURL

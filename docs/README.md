@@ -28,6 +28,7 @@ The article's guidance that shapes the product:
 - Logs are added from the web UI or by sending a message to a **Telegram bot** linked to the user.
 - Document owners **invite** other users and assign a role (owner, editor, viewer) on the document.
 - A **logs page** lists and filters logs by every field.
+- When a log is saved, an LLM extracts its impact statement from the description and warns when none is stated.
 - A **dashboard** shows metrics about the logs (volume over time, by tag, by status, by impact).
 - A **PDF report** of a document, or a filtered subset, can be generated to share with a manager or team.
 
@@ -48,6 +49,7 @@ Detailed requirements live in the PRDs under [`prd/`](prd/).
 | Telegram | Bot built on the Telegram Bot API, long polling locally, webhook in production | [ADR-0009](adr/0009-telegram-bot-integration.md) |
 | PDF | Server-rendered HTML converted by Gotenberg | [ADR-0010](adr/0010-pdf-generation-with-gotenberg.md) |
 | Authorization | Role-based access control per document, enforced in the API | [ADR-0011](adr/0011-rbac-model.md) |
+| Impact extraction | OpenAI Chat Completions with structured output, optional (disabled without a key) | [ADR-0013](adr/0013-openai-for-impact-extraction.md) |
 
 ## Repository layout
 

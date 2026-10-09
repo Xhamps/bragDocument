@@ -17,6 +17,29 @@ import (
 
 func undoKey(telegramID int64) string { return "tg:undo:" + strconv.FormatInt(telegramID, 10) }
 
+// impactKey holds the last bot log that stated no impact, and the answer mode
+// once one of its buttons is tapped (PRD-0007 FR-4 on the bot).
+func impactKey(telegramID int64) string { return "tg:impact:" + strconv.FormatInt(telegramID, 10) }
+
+type impactEntry struct {
+	undoEntry
+	Mode string `json:"mode,omitempty"` // "" until a button is tapped, then impactAdd or impactReplace
+}
+
+func impactButtons(logID string) []BotButton {
+	return []BotButton{
+		{Label: "Add to description", Data: "impact:" + impactAdd + ":" + logID},
+		{Label: "Replace description", Data: "impact:" + impactReplace + ":" + logID},
+	}
+}
+
+// askImpact remembers e so a tapped button can find its log, and returns the buttons.
+func (t *Telegram) askImpact(ctx context.Context, telegramID int64, e undoEntry) []BotButton {
+	v, _ := json.Marshal(impactEntry{undoEntry: e})
+	_ = t.undo.Set(ctx, impactKey(telegramID), v, undoTTL) // Degrading: a miss only expires the buttons
+	return impactButtons(e.LogID)
+}
+
 // Reply handles one private message from telegramID and returns the answer.
 // Nothing is stored for an unlinked account (FR-9); every failure gets a reply (NFR-3).
 func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) BotReply {
@@ -30,7 +53,7 @@ func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) Bot
 	}
 	ctx = t.scope(ctx, link.TenantID)
 	if cmd == "" {
-		return BotReply{Text: t.capture(ctx, link, telegramID, arg)}
+		return t.capture(ctx, link, telegramID, arg)
 	}
 	return BotReply{Text: t.command(ctx, link, telegramID, cmd, arg)}
 }
@@ -127,20 +150,21 @@ type undoEntry struct {
 	Name       string `json:"name"`
 }
 
-func (t *Telegram) capture(ctx context.Context, link domain.TelegramLink, telegramID int64, text string) string {
+func (t *Telegram) capture(ctx context.Context, link domain.TelegramLink, telegramID int64, text string) BotReply {
 	if link.DocumentID == "" {
-		return msgPickDoc
+		return BotReply{Text: msgPickDoc}
 	}
 	d, err := domain.ParseLogMessage(text)
 	if err != nil {
-		return t.failed(ctx, err)
+		return BotReply{Text: t.failed(ctx, err)}
 	}
 	l, err := t.logs.Create(ctx, CreateLogInput{DocumentID: link.DocumentID, UserID: link.UserID,
 		Name: d.Name, Description: d.Description, Impact: d.Impact, Tags: d.Tags, Links: d.Links})
 	if err != nil {
-		return t.failed(ctx, err)
+		return BotReply{Text: t.failed(ctx, err)}
 	}
-	v, _ := json.Marshal(undoEntry{UserID: link.UserID, DocumentID: l.DocumentID, LogID: l.ID, Name: l.Name})
+	e := undoEntry{UserID: link.UserID, DocumentID: l.DocumentID, LogID: l.ID, Name: l.Name}
+	v, _ := json.Marshal(e)
 	_ = t.undo.Set(ctx, undoKey(telegramID), v, undoTTL) // Degrading: never fails
 
 	var b strings.Builder
@@ -151,14 +175,16 @@ func (t *Telegram) capture(ctx context.Context, link domain.TelegramLink, telegr
 	for _, k := range l.Links {
 		b.WriteString("\nLink: " + k.URL)
 	}
+	var buttons []BotButton
 	if l.ImpactStatement != nil && *l.ImpactStatement == "" {
-		b.WriteString("\n\nNo impact stated. What changed because of this?")
+		b.WriteString("\n\n" + msgNoImpact)
+		buttons = t.askImpact(ctx, telegramID, e)
 	}
 	if t.appURL != "" {
 		fmt.Fprintf(&b, "\nEdit: %s/documents/%s?edit=%s", t.appURL, l.DocumentID, l.ID)
 	}
 	b.WriteString("\n/undo to remove it.")
-	return b.String()
+	return BotReply{Text: b.String(), Buttons: buttons}
 }
 
 func (t *Telegram) last(ctx context.Context, link domain.TelegramLink) string {

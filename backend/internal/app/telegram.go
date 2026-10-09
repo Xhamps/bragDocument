@@ -14,6 +14,9 @@ const (
 	// No 0/O/1/I/L: codes are read off a screen and typed.
 	linkCodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 	linkCodeLen      = 8
+
+	impactAdd     = "add"
+	impactReplace = "replace"
 )
 
 const (
@@ -25,6 +28,7 @@ const (
 	msgPickDoc         = "Pick a document first: /docs, then /use <number>."
 	msgNoAccess        = "You no longer have access to that document. Pick another with /docs."
 	msgArchived        = "That document is archived. Pick another with /docs."
+	msgNoImpact        = "No impact stated. What changed because of this?"
 	msgNothingToUndo   = "Nothing to undo. /undo removes the last log I created, within 5 minutes."
 	msgHelp            = `Send a message to log it: first line is the name, the rest the description.
 #tag adds a tag, !low !medium !high !critical sets impact (default medium), links are kept.

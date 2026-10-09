@@ -177,10 +177,18 @@ func TestTelegramNoImpactWarning(t *testing.T) {
 	f := newTGFixture()
 	f.linked("d1")
 	f.lf.impact.statement = ""
-	require.Contains(t, f.say(42, "Did a thing"), "No impact stated")
+	r := f.tg.Reply(context.Background(), 42, "Did a thing")
+	require.Contains(t, r.Text, msgNoImpact)
+	require.Equal(t, []BotButton{
+		{Label: "Add to description", Data: "impact:add:l1"},
+		{Label: "Replace description", Data: "impact:replace:l1"},
+	}, r.Buttons)
+	require.Equal(t, undoTTL, f.undo.ttl["tg:impact:42"])
 
 	f.lf.impact.err = domain.ErrUnavailable // extraction off: nil statement, no nagging
-	require.NotContains(t, f.say(42, "Did a thing"), "No impact stated")
+	r = f.tg.Reply(context.Background(), 42, "Did a thing")
+	require.NotContains(t, r.Text, msgNoImpact)
+	require.Empty(t, r.Buttons)
 }
 
 func TestTelegramMessageErrors(t *testing.T) {

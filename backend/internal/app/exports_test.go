@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -83,4 +84,100 @@ func TestExportVisibleOnlyToRequester(t *testing.T) {
 	list, err := f.uc.List(context.Background(), "d1", "u2")
 	require.NoError(t, err)
 	require.Len(t, list, 1)
+}
+
+func TestExportRunNextRendersAndStores(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a", "project")
+	f.addLog(t, "b", "learning")
+	j, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u2", TenantName: "Acme",
+		Settings: domain.DefaultReportSettings()})
+	require.NoError(t, err)
+
+	ran, err := f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+	require.True(t, ran)
+	require.Equal(t, "2026", f.pdf.got.Title)
+	require.Equal(t, "Ada", f.pdf.got.Author)
+	require.Equal(t, "Acme", f.pdf.got.Tenant)
+	require.Equal(t, 2, f.pdf.got.Total)
+
+	done, err := f.uc.Get(context.Background(), "d1", j.ID, "u2")
+	require.NoError(t, err)
+	require.Equal(t, domain.ExportDone, done.Status)
+	require.Equal(t, 100, done.Progress)
+	require.Equal(t, "t1/"+j.ID+".pdf", done.FileKey, "per tenant (NFR-2)")
+	pdf, err := f.uc.Open(context.Background(), "d1", j.ID, "u2")
+	require.NoError(t, err)
+	require.Equal(t, "%PDF", string(pdf))
+
+	ran, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+	require.False(t, ran, "queue empty")
+}
+
+func TestExportRunNextPagesPastOneHundred(t *testing.T) {
+	f := newExportsFixture(t)
+	for i := range 250 {
+		f.addLog(t, "l"+strconv.Itoa(i))
+	}
+	_, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	_, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 250, f.pdf.got.Total)
+}
+
+func TestExportRunNextFailures(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	j, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u2"})
+	require.NoError(t, err)
+	f.pdf.err = domain.ErrUnavailable
+	_, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err, "a failed job is not a worker error")
+	require.Equal(t, domain.ExportFailed, f.jobs.jobs[j.ID].Status)
+	require.Contains(t, f.jobs.jobs[j.ID].Error, "PDF service")
+
+	// Access revoked between request and run (FR-6).
+	f.pdf.err = nil
+	j2, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u2"})
+	require.NoError(t, err)
+	delete(f.docs.grants["d1"], "u2")
+	_, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, domain.ExportFailed, f.jobs.jobs[j2.ID].Status)
+	require.Contains(t, f.jobs.jobs[j2.ID].Error, "access")
+	require.Empty(t, f.files.files)
+}
+
+func TestExportCleanupAndExpiredDownload(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	j, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	_, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+
+	f.uc.now = func() time.Time { return time.Now().Add(25 * time.Hour) }
+	_, err = f.uc.Open(context.Background(), "d1", j.ID, "u1")
+	require.ErrorIs(t, err, domain.ErrNotFound, "past 24 h")
+
+	job := f.jobs.jobs[j.ID]
+	job.ExpiresAt = time.Now().Add(-time.Second)
+	f.jobs.jobs[j.ID] = job
+	require.NoError(t, f.uc.Cleanup(context.Background()))
+	require.Empty(t, f.files.files)
+	require.Empty(t, f.jobs.jobs)
+}
+
+func TestExportRunNextSuperseded(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	_, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	f.jobs.finishErr = domain.ErrNotFound // reclaimed by another worker
+	ran, err := f.uc.RunNext(context.Background())
+	require.NoError(t, err, "a superseded job is not a worker error")
+	require.True(t, ran)
 }

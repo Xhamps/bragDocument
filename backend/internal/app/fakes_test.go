@@ -505,10 +505,11 @@ func (f *fakeMailer) Send(_ context.Context, to, subject, html string) error {
 }
 
 type fakeExports struct {
-	jobs     map[string]domain.ExportJob
-	order    []string
-	settings map[string]domain.ReportSettings
-	seq      int
+	jobs      map[string]domain.ExportJob
+	order     []string
+	settings  map[string]domain.ReportSettings
+	seq       int
+	finishErr error // returned by Finish and Fail (e.g. ErrNotFound: job reclaimed)
 }
 
 func newFakeExports() *fakeExports {
@@ -550,12 +551,18 @@ func (f *fakeExports) Claim(context.Context) (domain.ExportJob, error) {
 	return domain.ExportJob{}, domain.ErrNotFound
 }
 func (f *fakeExports) Finish(_ context.Context, id, key string) error {
+	if f.finishErr != nil {
+		return f.finishErr
+	}
 	j := f.jobs[id]
 	j.Status, j.FileKey, j.ExpiresAt = domain.ExportDone, key, time.Now().Add(24*time.Hour)
 	f.jobs[id] = j
 	return nil
 }
 func (f *fakeExports) Fail(_ context.Context, id, reason string) error {
+	if f.finishErr != nil {
+		return f.finishErr
+	}
 	j := f.jobs[id]
 	j.Status, j.Error = domain.ExportFailed, reason
 	f.jobs[id] = j

@@ -9,7 +9,7 @@ Date: 2026-10-09. Status: approved. Implements [PRD-0009](../prd/0009-audit-log.
 | Editors and Activity | No. Only owners and tenant admins read entries (PRD open question, default kept). |
 | Previous owner after transfer | No access. Read access follows `documents.owner_id` at read time. |
 | Write mechanism | Extend the PRD-0004 pattern: every repo write method takes a `domain.AuditEntry` and writes it in its own transaction. Rejected: Postgres triggers (tags and links live in side tables, so field lists would be wrong; logic leaves the domain), entry carried in ctx (a forgotten entry fails silently, breaking FR-1). |
-| Source | Derived from `telemetry.Service(ctx)`: `bot` → `telegram`, `worker` → `system`, else `web`. No new plumbing. |
+| Source | A domain context value: `cmd` sets `domain.WithSource` per service (api → `web`, bot → `telegram`, worker → `system`); `app` reads `domain.SourceOf`. Keeps `app` free of `telemetry` (ADR-0012). |
 | One entry per action | A document update that renames and archives writes one entry; the action is the biggest change (archive/unarchive > rename > edit) and `changed_fields` lists every field. |
 | Extra action | `document.edited` for a description-only change; every state change must be audited and "renamed" would mislead. |
 | Example logs | Covered by `document.created`; `DeleteExamples` writes one `log.deleted` with target "example logs". |
@@ -46,7 +46,7 @@ Migration `0007_audit_log` alters `audit_entries`:
 
 - Log update: only `status` changed → `log.status_changed`; otherwise `log.edited` with field names only (FR-13).
 - Document update: biggest change wins, all changed fields listed.
-- Telegram link: the use case looks up the user's name and email (the link code carries only the user ID).
+- Actor name and email, and the document title, are copied by the insert itself (`INSERT … SELECT` joining `users` and `documents`); callers pass ids only. An unknown actor or document id inserts nothing (`ErrNotFound`).
 - Entries for the bot get `source=telegram` through the service mapping.
 
 **Reads.** `AuditRepo.List(ctx, f)` returns entries newest first plus the next cursor. `OwnerID`, when set, restricts to `document_id IN (SELECT id FROM documents WHERE owner_id = $owner)`. `AuditRepo.Filters(ctx, ownerID)` returns distinct actors and documents. `ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.`
@@ -67,7 +67,7 @@ Entry JSON: `{ id, at, source, action, actor: {id|null, name, email}, document: 
 - `audit/` folder: `useAudit(filters)` and `useDocumentActivity(id)` (`useInfiniteQuery` on `next_before`), `useAuditFilters()`, and `describe.ts` (one sentence per action, replacing `sharing/audit.ts`).
 - Route `/audit` (`routes/Audit.tsx`): table *Time, User, Action, Target, Source*; filters for user, document, action, and from/to (`<input type="date">`) kept in the URL via `useSearchParams`; "Load more"; clicking a user or document applies that filter; relative time with the exact local timestamp in `title` (NFR-4); empty, filtered-empty with "Clear filters", skeleton, and inline error with Retry.
 - `Root.tsx` nav link when `me.role === "admin"` or the user owns at least one document (from the documents list already loaded).
-- `DocumentLogs.tsx`: an **Activity** section for owners, the latest 10 entries, with "View all" → `/audit?document=<id>`.
+- `DocumentLogs.tsx`: an **Activity** section for owners and tenant admins who can open the page, the latest 10 entries, with "View all" → `/audit?document=<id>`.
 - Removed: SharePanel history view and the Tenant page "Sharing audit" section.
 
 ## Errors
@@ -80,7 +80,7 @@ Entry JSON: `{ id, at, source, action, actor: {id|null, name, email}, document: 
 - App unit tests (fakes): each state-changing use case records exactly one entry with the right action, source, target, and `changed_fields`; status-only edit → `log.status_changed`; bot call → `source=telegram`. Read-permission matrix for admin, owner, editor, viewer, and member without grant.
 - Postgres integration: one test per action type (PRD success metric); a failing audit insert rolls back the action; filters and keyset paging; the app role cannot UPDATE or DELETE; RLS hides other tenants; a deleted document's entry keeps its title.
 - HTTP handler tests: query parsing and response shape.
-- Frontend: Audit page filters sync to the URL; empty and filtered-empty states; Activity shows for owners only.
+- Frontend: Audit page filters sync to the URL; empty and filtered-empty states; Activity shows for owners and admins only.
 - NFR-3: no load test in v1; run `EXPLAIN` on the four filter shapes against 1M seeded rows once, by hand.
 
 ## Performance check (NFR-3)

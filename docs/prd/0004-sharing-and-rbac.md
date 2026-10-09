@@ -53,7 +53,7 @@ The article recommends sharing the document with your manager before reviews and
 | FR-5 | An owner MUST be able to change a grant's role or revoke it. Revocation takes effect immediately. | Must |
 | FR-6 | Invitees MUST receive an in-app notification and an email. | Must |
 | FR-7 | Every API operation MUST check the caller's role on the document; failures return 403 without revealing whether the document exists to users outside the tenant (404). | Must |
-| FR-8 | Grants and their changes MUST be recorded in an audit log readable by the owner and tenant admins. | Must |
+| FR-8 | Grants and their changes MUST be recorded in an audit log readable by the owner and tenant admins. Superseded by [PRD-0009](0009-audit-log.md), which audits every action. | Must |
 | FR-9 | Tenant admins MUST NOT read document content without a grant. | Must |
 
 Permission matrix:

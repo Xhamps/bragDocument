@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-09
 owner: Product
 stakeholders: Engineering, Security
@@ -65,7 +65,7 @@ Audited actions:
 
 | Area | Actions |
 |---|---|
-| Document | created, renamed, archived, unarchived, deleted, ownership transferred |
+| Document | created, renamed, edited (description), archived, unarchived, deleted, ownership transferred |
 | Log | created, edited (fields changed listed by name), deleted, status changed |
 | Sharing | invitation sent, invitation accepted, invitation cancelled, role changed, grant revoked |
 | Telegram | account linked, account unlinked |
@@ -108,8 +108,6 @@ Read permission:
 
 | Question | Owner | Due |
 |---|---|---|
-| Should editors see the Activity section of documents they edit? | Product | before build |
-| Should a previous owner keep reading entries from before an ownership transfer? (Default: no, access follows current ownership.) | Security | before build |
 | Do we need a retention limit for tenants with high volume? | Engineering | after v1 |
 
 ## 13. Decisions log
@@ -119,3 +117,8 @@ Read permission:
 | 2026-10-09 | Audit writes only; reads are not audited except PDF export | Read auditing multiplies volume; export is the read that takes data out of the product |
 | 2026-10-09 | Entry written in the same transaction as the action | An action without its entry is worse than a failed action |
 | 2026-10-09 | No content or diffs in entries | Tenant admins must not read content without a grant (PRD-0004 FR-9) |
+| 2026-10-09 | Editors do not see Activity | Keeps FR-7: only owners and tenant admins read entries |
+| 2026-10-09 | Access follows current ownership | No ownership history needed; a transfer hands over the audit trail with the document |
+| 2026-10-09 | `document.edited` added for description-only changes | Every state change is audited, and "renamed" would mislead |
+| 2026-10-09 | Source set per service (web, telegram, system) as a domain context value | No extra plumbing; each service tags its root context once |
+| 2026-10-09 | Owners see entries on documents they own; Telegram link/unlink entries (no document) are visible to tenant admins only | FR-6 scopes owners to documents |

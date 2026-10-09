@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 )
@@ -88,6 +89,11 @@ func toAuditPage(p domain.AuditPage) AuditPageResponse {
 func auditFilter(q url.Values) (domain.AuditFilter, error) {
 	f := domain.AuditFilter{ActorID: q.Get("actor"), DocumentID: q.Get("document"), Action: q.Get("action")}
 	fields := map[string]string{}
+	for key, v := range map[string]string{"actor": f.ActorID, "document": f.DocumentID} {
+		if v != "" && uuid.Validate(v) != nil {
+			fields[key] = "must be a uuid"
+		}
+	}
 	if v := q.Get("before"); v != "" {
 		n, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {

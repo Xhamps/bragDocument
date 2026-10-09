@@ -51,21 +51,22 @@ func TestAuditRoutes(t *testing.T) {
 	uc := &fakeAuditUC{}
 	e := auditEngine(t, uc)
 
-	rec := do(e, http.MethodGet, "/audit?actor=u1&document=d1&action=log.edited&from=2026-10-01&to=2026-10-09&before=99&limit=20", "")
+	const u1, d1 = "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"
+	rec := do(e, http.MethodGet, "/audit?actor="+u1+"&document="+d1+"&action=log.edited&from=2026-10-01&to=2026-10-09&before=99&limit=20", "")
 	require.Equal(t, 200, rec.Code)
 	require.JSONEq(t, `{"next_before":41,"entries":[{"id":42,"at":"2026-10-09T12:00:00Z","source":"web","action":"log.edited",
 		"actor":{"id":"u1","name":"Ana","email":"ana@acme.com"},"document":{"id":"d1","title":"2026"},
 		"target":{"type":"log","id":"l1","name":"Migrated billing"},"role":"","changed_fields":["name"]}]}`, rec.Body.String())
 	require.Equal(t, adminP.User, uc.actor)
-	require.Equal(t, "u1", uc.f.ActorID)
-	require.Equal(t, "d1", uc.f.DocumentID)
+	require.Equal(t, u1, uc.f.ActorID)
+	require.Equal(t, d1, uc.f.DocumentID)
 	require.Equal(t, domain.AuditLogEdited, uc.f.Action)
 	require.Equal(t, int64(99), uc.f.Before)
 	require.Equal(t, 20, uc.f.Limit)
 	require.Equal(t, "2026-10-01", uc.f.From.Format(time.DateOnly))
 	require.Equal(t, "2026-10-10", uc.f.To.Format(time.DateOnly), "to is inclusive in the URL")
 
-	rec = do(e, http.MethodGet, "/documents/d9/audit?document=d1&limit=10", "")
+	rec = do(e, http.MethodGet, "/documents/d9/audit?document="+d1+"&limit=10", "")
 	require.Equal(t, 200, rec.Code)
 	require.Equal(t, "d9", uc.f.DocumentID, "the path wins")
 	require.Equal(t, 10, uc.f.Limit)
@@ -77,6 +78,10 @@ func TestAuditRoutes(t *testing.T) {
 	require.Equal(t, 422, do(e, http.MethodGet, "/audit?before=abc", "").Code)
 	require.Equal(t, 422, do(e, http.MethodGet, "/audit?limit=x", "").Code)
 	require.Equal(t, 422, do(e, http.MethodGet, "/audit?from=yesterday", "").Code)
+	rec = do(e, http.MethodGet, "/audit?actor=u1&document=d1", "")
+	require.Equal(t, 422, rec.Code)
+	require.Contains(t, rec.Body.String(), `"actor":"must be a uuid"`)
+	require.Contains(t, rec.Body.String(), `"document":"must be a uuid"`)
 }
 
 func TestAuditNullActorAndDocument(t *testing.T) {

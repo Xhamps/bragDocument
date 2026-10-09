@@ -19,6 +19,9 @@ func TestAuditReadPermissions(t *testing.T) {
 	docs.docs["d1"] = domain.Document{ID: "d1", OwnerID: "u1"}
 	docs.grant("d1", "u2", domain.RoleEditor)
 	docs.grant("d1", "u3", domain.RoleViewer)
+	docs.docs["d2"] = domain.Document{ID: "d2", OwnerID: "u9"}
+	docs.grant("d2", "u1", domain.RoleEditor)
+	docs.docs["d3"] = domain.Document{ID: "d3", OwnerID: "u9"}
 	ctx := context.Background()
 
 	cases := []struct {
@@ -36,6 +39,8 @@ func TestAuditReadPermissions(t *testing.T) {
 		{"editor document", editor, "d1", domain.ErrForbidden, ""},
 		{"viewer document", viewer, "d1", domain.ErrForbidden, ""},
 		{"outsider document", outsider, "d1", domain.ErrNotFound, ""},
+		{"owner, another owner's document they edit", owner, "d2", domain.ErrForbidden, ""},
+		{"owner, another owner's document without a grant", owner, "d3", domain.ErrNotFound, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

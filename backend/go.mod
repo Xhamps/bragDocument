@@ -14,6 +14,7 @@ require (
 	github.com/openai/openai-go/v3 v3.74.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/redis/go-redis/v9 v9.23.0
+	github.com/resend/resend-go/v2 v2.28.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0

@@ -11,8 +11,8 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/ports"
 )
 
-// Logs groups the log use cases; one method per file. Owner-only until
-// PRD-0004 adds grants.
+// Logs groups the log use cases; one method per file. Access per PRD-0004:
+// reads need PermRead, writes PermWriteLogs.
 type Logs struct {
 	docs   ports.DocumentRepo
 	logs   ports.LogRepo
@@ -25,9 +25,9 @@ func NewLogs(docs ports.DocumentRepo, logs ports.LogRepo, impact ports.ImpactExt
 	return &Logs{docs: docs, logs: logs, impact: impact, now: time.Now}
 }
 
-// writable is ownedDocument plus the archive rule: archived documents are read-only.
+// writable checks PermWriteLogs plus the archive rule: archived documents are read-only.
 func (s *Logs) writable(ctx context.Context, docID, userID string) (domain.Document, error) {
-	d, err := ownedDocument(ctx, s.docs, docID, userID)
+	d, err := access(ctx, s.docs, docID, userID, domain.PermWriteLogs)
 	if err != nil {
 		return domain.Document{}, err
 	}

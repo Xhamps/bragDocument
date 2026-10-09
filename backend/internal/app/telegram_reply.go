@@ -65,13 +65,9 @@ func splitCommand(text string) (cmd, arg string) {
 	return strings.ToLower(cmd), arg
 }
 
-// activeDocs is the owner's active documents in web list order; /use indexes into it.
+// activeDocs is the active documents the user owns or edits, in web list order; /use indexes into it.
 func (t *Telegram) activeDocs(ctx context.Context, userID string) ([]domain.Document, error) {
-	all, err := t.docs.ListByOwner(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return slices.DeleteFunc(all, func(d domain.Document) bool { return d.State != domain.DocumentActive }), nil
+	return t.docs.ListWritable(ctx, userID)
 }
 
 func (t *Telegram) listDocs(ctx context.Context, link domain.TelegramLink) string {

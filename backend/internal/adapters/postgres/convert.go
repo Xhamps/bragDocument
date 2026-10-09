@@ -63,3 +63,13 @@ func orEmpty[T any](s []T) []T {
 	}
 	return s
 }
+
+func toDocumentInvitation(i sqlcgen.DocumentInvitation) domain.DocumentInvitation {
+	return domain.DocumentInvitation{ID: i.ID.String(), DocumentID: i.DocumentID.String(), Email: i.Email,
+		Role: domain.Role(i.Role), InvitedBy: i.InvitedBy.String(), CreatedAt: i.CreatedAt}
+}
+
+func toAuditEntry(a sqlcgen.AuditEntry) domain.AuditEntry {
+	return domain.AuditEntry{ID: a.ID, ActorID: a.ActorID.String(), ActorEmail: a.ActorEmail, Action: a.Action,
+		DocumentID: a.DocumentID.String(), DocumentTitle: a.DocumentTitle, Target: a.Target, Role: domain.Role(a.Role), At: a.At}
+}

@@ -12,7 +12,9 @@ import {
 } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Log } from "../lib/types";
-import { useDocuments } from "../documents/useDocuments";
+import { useDocument } from "../documents/useDocuments";
+import { ApiError } from "../lib/api";
+import { SharePanel } from "../sharing/SharePanel";
 import { LogFormDialog } from "../logs/LogFormDialog";
 import { ActiveFilters, LogFilters } from "../logs/LogFilters";
 import { LogRow } from "../logs/LogRow";
@@ -31,7 +33,8 @@ const PER_PAGE = 50; // the API default; the URL may override it with per_page
 export function Component() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const docs = useDocuments();
+  const docQuery = useDocument(id);
+  const [sharing, setSharing] = useState(false);
   // The bot's deep link (PRD-0003 FR-6): `edit` is a UI param, not a filter.
   const editId = params.get("edit");
   const listParams = new URLSearchParams(params);
@@ -62,19 +65,21 @@ export function Component() {
     );
   }, [editId, deepLinked.isPending, setParams]);
 
-  if (docs.isPending) return <p className="text-muted-foreground">Loading…</p>;
-  const doc = [...(docs.data?.owned ?? []), ...(docs.data?.shared ?? [])].find(
-    (d) => d.id === id,
-  );
+  if (docQuery.isPending)
+    return <p className="text-muted-foreground">Loading…</p>;
+  const doc = docQuery.data;
   if (!doc)
     return (
       <p role="alert" className="text-destructive">
-        {errorText(docs.error) ?? "Document not found."}
+        {docQuery.error instanceof ApiError && docQuery.error.status === 404
+          ? "Document not found."
+          : errorText(docQuery.error)}
       </p>
     );
-  const readOnly = doc.state === "archived";
+  const archived = doc.state === "archived";
+  const readOnly = archived || doc.role === "viewer";
   // Open the deep-linked log (adjusting state during render); a missing log or
-  // an archived document is ignored.
+  // a read-only (archived or viewer) document is ignored.
   if (editId && deepLinked.data && editing === null && !readOnly)
     setEditing(deepLinked.data);
 
@@ -141,13 +146,25 @@ export function Component() {
           ← Documents
         </Link>
         <h2 className="text-xl font-semibold">{doc.title}</h2>
-        {readOnly ? (
-          <Badge variant="secondary">Archived · read-only</Badge>
-        ) : (
-          <Button className="ml-auto" onClick={() => setEditing("new")}>
-            New log
-          </Button>
+        {doc.role !== "owner" && (
+          <span className="text-sm text-muted-foreground">
+            {`Shared by ${doc.owner_name} · you are ${doc.role}`}
+          </span>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          {archived ? (
+            <Badge variant="secondary">Archived · read-only</Badge>
+          ) : doc.role === "viewer" ? (
+            <Badge variant="secondary">Viewer · read-only</Badge>
+          ) : (
+            <Button onClick={() => setEditing("new")}>New log</Button>
+          )}
+          {doc.role === "owner" && (
+            <Button variant="outline" onClick={() => setSharing(true)}>
+              Share
+            </Button>
+          )}
+        </div>
       </div>
 
       <LogFilters params={params} onChange={setFilter} />
@@ -300,6 +317,8 @@ export function Component() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SharePanel doc={doc} open={sharing} onOpenChange={setSharing} />
     </div>
   );
 }

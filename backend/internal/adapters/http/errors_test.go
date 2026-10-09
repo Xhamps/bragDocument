@@ -31,6 +31,7 @@ func TestRespondErrorMapping(t *testing.T) {
 		{"timeout", context.DeadlineExceeded, 504, "timeout"},
 		{"unavailable", domain.ErrUnavailable, 503, "unavailable"},
 		{"unknown", errors.New("boom"), 500, "internal"},
+		{"access", &domain.AccessError{Role: domain.RoleViewer, Perm: domain.PermWriteLogs}, 403, "forbidden"},
 	}
 
 	for _, tc := range cases {
@@ -52,6 +53,9 @@ func TestRespondErrorMapping(t *testing.T) {
 			}
 			if tc.code == "validation" {
 				require.Equal(t, "required", body.Fields["name"])
+			}
+			if tc.name == "access" {
+				require.Equal(t, "you are viewer on this document and cannot create, edit, or delete logs", body.Message)
 			}
 			if tc.code == "unavailable" {
 				require.Equal(t, "5", rec.Header().Get("Retry-After"))

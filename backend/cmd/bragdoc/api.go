@@ -12,6 +12,7 @@ import (
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/spf13/cobra"
 
+	"github.com/xhamps/bragdocument/backend/internal/adapters/email"
 	httpadapter "github.com/xhamps/bragdocument/backend/internal/adapters/http"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/llm"
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres"
@@ -72,6 +73,12 @@ func apiCmd() *cobra.Command {
 			} else {
 				impact = llm.NewOpenAIExtractor(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.LLMTimeout, reg)
 			}
+			var mailer ports.Mailer = email.Disabled{}
+			if cfg.ResendAPIKey == "" {
+				slog.WarnContext(ctx, "RESEND_API_KEY not set; share emails disabled")
+			} else {
+				mailer = email.NewResend(cfg.ResendAPIKey, cfg.MailFrom, cfg.MailTimeout, reg)
+			}
 			cache := redis.NewDegrading(rc, reg)
 
 			engine := httpadapter.NewEngine(reg)
@@ -89,6 +96,7 @@ func apiCmd() *cobra.Command {
 			tgUC := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docRepo, logs, rc, cache, cfg.AppURL, telemetry.WithTenantID)
 			httpadapter.RegisterTelegram(authed, tgUC, cfg.TelegramBotUsername)
 			httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
+			httpadapter.RegisterSharing(authed, app.NewSharing(docRepo, postgres.NewSharingRepo(db), mailer, cfg.AppURL))
 
 			srv := &http.Server{
 				Addr:              cfg.HTTPAddr,

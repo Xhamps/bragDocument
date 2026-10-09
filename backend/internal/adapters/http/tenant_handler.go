@@ -30,9 +30,10 @@ type MemberResponse struct {
 
 // InvitationResponse is one pending invitation.
 type InvitationResponse struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	CreatedAt     time.Time `json:"created_at"`
+	DocumentTitle string    `json:"document_title,omitempty"`
 }
 
 // CreateInvitationRequest is the POST body.
@@ -70,7 +71,7 @@ func RegisterTenant(r gin.IRouter, uc TenantUseCases) {
 		}
 		out := make([]InvitationResponse, 0, len(is))
 		for _, i := range is {
-			out = append(out, InvitationResponse{ID: i.ID, Email: i.Email, CreatedAt: i.CreatedAt})
+			out = append(out, InvitationResponse{ID: i.ID, Email: i.Email, CreatedAt: i.CreatedAt, DocumentTitle: i.DocumentTitle})
 		}
 		c.JSON(http.StatusOK, out)
 	})

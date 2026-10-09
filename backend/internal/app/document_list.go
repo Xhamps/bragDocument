@@ -12,12 +12,18 @@ type DocumentListOutput struct {
 	Shared []domain.Document
 }
 
-// List returns the caller's documents. Shared is always empty until PRD-0004
-// adds grants; the shape is fixed now so the client does not change later.
-func (s *Documents) List(ctx context.Context, ownerID string) (DocumentListOutput, error) {
-	owned, err := s.docs.ListByOwner(ctx, ownerID)
+// List returns the caller's own documents and those shared with them (PRD-0001 FR-9).
+func (s *Documents) List(ctx context.Context, userID string) (DocumentListOutput, error) {
+	owned, err := s.docs.ListByOwner(ctx, userID)
 	if err != nil {
 		return DocumentListOutput{}, err
 	}
-	return DocumentListOutput{Owned: owned, Shared: []domain.Document{}}, nil
+	for i := range owned {
+		owned[i].Role = domain.RoleOwner
+	}
+	shared, err := s.docs.ListShared(ctx, userID)
+	if err != nil {
+		return DocumentListOutput{}, err
+	}
+	return DocumentListOutput{Owned: owned, Shared: shared}, nil
 }

@@ -28,9 +28,13 @@ type Document struct {
 	State       string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	// LogCount and LastLogAt exclude example logs. Only ListByOwner sets them.
+	// LogCount and LastLogAt exclude example logs. Only the list methods set them.
 	LogCount  int
 	LastLogAt *time.Time
+	// Caller-relative: set by DocumentRepo.GetForUser and the list methods.
+	Role      Role
+	OwnerName string
+	IsNew     bool // shared with the caller and not opened yet
 }
 
 // Validate trims the title and checks lengths and state. It mutates the receiver.

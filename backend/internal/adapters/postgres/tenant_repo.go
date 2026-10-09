@@ -72,6 +72,14 @@ func (r *TenantRepo) ListInvitations(ctx context.Context) ([]domain.Invitation, 
 		for _, i := range rows {
 			out = append(out, toInvitation(i))
 		}
+		docInvs, err := q.ListPendingDocumentInvitationsByTenant(ctx, tid)
+		if err != nil {
+			return wrap(err)
+		}
+		for _, i := range docInvs {
+			out = append(out, domain.Invitation{ID: i.ID.String(), TenantID: tid.String(), Email: i.Email,
+				CreatedAt: i.CreatedAt, ForDocument: true, DocumentTitle: i.DocumentTitle})
+		}
 		return nil
 	})
 	return out, err

@@ -13,6 +13,10 @@ type Invitation struct {
 	Email     string
 	CreatedBy string
 	CreatedAt time.Time
+	// ForDocument marks a pending document invitation (PRD-0004 FR-4) found at
+	// sign-in or listed for admins; DocumentTitle is set in the admin list.
+	ForDocument   bool
+	DocumentTitle string
 }
 
 // NormalizeEmail trims, lowercases, and validates an email address.

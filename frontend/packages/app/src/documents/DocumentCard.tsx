@@ -71,7 +71,7 @@ export function DocumentCard({
           </CardAction>
         )}
       </CardHeader>
-      <CardContent className="flex items-center gap-2 text-muted-foreground">
+      <CardContent className="flex flex-wrap items-center gap-2 text-muted-foreground">
         <span>
           {doc.log_count} {doc.log_count === 1 ? "log" : "logs"}
           {doc.last_log_at &&
@@ -80,6 +80,13 @@ export function DocumentCard({
         </span>
         <span>Updated {new Date(doc.updated_at).toLocaleDateString()}</span>
         {archived && <Badge variant="secondary">Archived</Badge>}
+        {doc.role !== "owner" && (
+          <>
+            <span>Shared by {doc.owner_name}</span>
+            <Badge variant="outline">{doc.role}</Badge>
+            {doc.is_new && <Badge>New</Badge>}
+          </>
+        )}
       </CardContent>
     </Card>
   );

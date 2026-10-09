@@ -13,6 +13,8 @@ const doc = (over: Partial<Document>): Document => ({
   updated_at: "2026-01-02T00:00:00Z",
   log_count: 0,
   last_log_at: null,
+  role: "owner",
+  is_new: false,
   ...over,
 });
 
@@ -136,4 +138,33 @@ test("rename prefills the dialog and PATCHes the new title", async () => {
       body: { title: "2027", description: "" },
     }),
   );
+});
+
+test("shared documents show owner, role, and New, without the actions menu", async () => {
+  mockFetch({
+    "GET /me": me,
+    "GET /documents": {
+      owned: [doc({ id: "d1", title: "Mine" })],
+      shared: [
+        doc({
+          id: "d2",
+          title: "Bob 2026",
+          owner_id: "u2",
+          role: "viewer",
+          owner_name: "Bob",
+          is_new: true,
+        }),
+      ],
+    },
+  });
+  renderAt("/");
+  const heading = await screen.findByRole("heading", {
+    name: /shared with you/i,
+  });
+  const s = within(heading.closest("section")!);
+  expect(s.getByText("Bob 2026")).toBeInTheDocument();
+  expect(s.getByText("Shared by Bob")).toBeInTheDocument();
+  expect(s.getByText("viewer")).toBeInTheDocument();
+  expect(s.getByText("New")).toBeInTheDocument();
+  expect(s.queryByRole("button", { name: /actions/i })).not.toBeInTheDocument();
 });

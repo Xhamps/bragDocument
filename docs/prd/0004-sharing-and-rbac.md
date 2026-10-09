@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 owner: Product
 stakeholders: Engineering, Security
@@ -93,10 +93,16 @@ Permission matrix:
 
 | Question | Owner | Due |
 |---|---|---|
-| Should managers be able to request access, or only be invited? | Product | before build |
+| ~~Should managers be able to request access, or only be invited?~~ Answered 2026-10-09: invite only; request access deferred. | Product | before build |
 
 ## 13. Decisions log
 
 | Date | Decision | Why |
 |---|---|---|
 | 2026-10-08 | Three fixed roles | Covers the article's sharing cases; custom roles are speculative |
+| 2026-10-09 | Invite only; request access deferred | Owners share deliberately; a request flow needs its own notifications and UI |
+| 2026-10-09 | Email via Resend (ADR-0014); a failed email never fails the share | FR-6 without making email a required dependency |
+| 2026-10-09 | A document invitation for an unknown email joins the invitee to the tenant on first sign-in, then becomes a grant | FR-4 without asking an admin first |
+| 2026-10-09 | On transfer the previous owner becomes an editor | Nobody loses access by accident; the new owner can revoke |
+| 2026-10-09 | A same-tenant user without a grant gets 404, like other tenants | FR-7: outsiders cannot learn a document exists |
+| 2026-10-09 | The Telegram bot logs into owned documents and documents where the caller is editor | The matrix already lets editors create logs |

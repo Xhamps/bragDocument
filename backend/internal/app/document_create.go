@@ -27,5 +27,7 @@ func (s *Documents) Create(ctx context.Context, in CreateDocumentInput) (domain.
 			return domain.Document{}, err // a broken example is a bug; TestExampleLogsAreValid guards it
 		}
 	}
-	return s.docs.Create(ctx, d, examples)
+	out, err := s.docs.Create(ctx, d, examples)
+	out.Role = domain.RoleOwner
+	return out, err
 }

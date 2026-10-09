@@ -14,7 +14,7 @@ WHERE (sqlc.narg(document_id)::uuid IS NULL OR d.id IS NOT NULL)
 
 -- name: ListAudit :many
 -- Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
--- ponytail: one query with optional filters; split per filter shape if EXPLAIN shows a generic plan ignoring the indexes (NFR-3).
+-- ponytail: one query with optional filters; AuditRepo.List pins a custom plan (a generic one seq-scans). Split per shape if custom plans ever miss the indexes (NFR-3).
 SELECT * FROM audit_entries
 WHERE (sqlc.narg(actor_id)::uuid IS NULL OR actor_id = sqlc.narg(actor_id)::uuid)
   AND (sqlc.narg(document_id)::uuid IS NULL OR document_id = sqlc.narg(document_id)::uuid)

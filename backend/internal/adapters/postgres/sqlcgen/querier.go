@@ -65,7 +65,7 @@ type Querier interface {
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
 	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
 	// Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
-	// ponytail: one query with optional filters; split per filter shape if EXPLAIN shows a generic plan ignoring the indexes (NFR-3).
+	// ponytail: one query with optional filters; AuditRepo.List pins a custom plan (a generic one seq-scans). Split per shape if custom plans ever miss the indexes (NFR-3).
 	ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEntry, error)
 	// ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.
 	ListAuditActors(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditActorsRow, error)

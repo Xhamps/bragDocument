@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres/sqlcgen"
 	"github.com/xhamps/bragdocument/backend/internal/domain"
+	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
 // optID turns "" into NULL and anything else into a uuid (bad → ErrNotFound).
@@ -75,8 +77,13 @@ func (r *AuditRepo) List(ctx context.Context, f domain.AuditFilter) (domain.Audi
 		p.Before = pgtype.Int8{Int64: f.Before, Valid: true}
 	}
 	out := domain.AuditPage{Entries: []domain.AuditEntry{}}
-	err = withQueries(ctx, r.db, func(ctx context.Context, q *sqlcgen.Queries) error {
-		rows, err := q.ListAudit(ctx, p)
+	err = r.db.WithTenant(ctx, telemetry.TenantID(ctx), func(ctx context.Context, tx pgx.Tx) error {
+		// The optional filters defeat a generic plan (a full seq scan per page); a custom
+		// plan picks the matching index. Auto mode already keeps custom here; this pins it (NFR-3).
+		if _, err := tx.Exec(ctx, "SET LOCAL plan_cache_mode = force_custom_plan"); err != nil {
+			return wrap(err)
+		}
+		rows, err := sqlcgen.New(tx).ListAudit(ctx, p)
 		if err != nil {
 			return wrap(err)
 		}

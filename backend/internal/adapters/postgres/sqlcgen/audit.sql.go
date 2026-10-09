@@ -81,7 +81,7 @@ type ListAuditParams struct {
 }
 
 // Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
-// ponytail: one query with optional filters; split per filter shape if EXPLAIN shows a generic plan ignoring the indexes (NFR-3).
+// ponytail: one query with optional filters; AuditRepo.List pins a custom plan (a generic one seq-scans). Split per shape if custom plans ever miss the indexes (NFR-3).
 func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEntry, error) {
 	rows, err := q.db.Query(ctx, listAudit,
 		arg.ActorID,

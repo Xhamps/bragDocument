@@ -57,6 +57,11 @@ paths:
   /documents/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: One document with the caller's role; clears the "New" badge (PRD-0004)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Document" } } } }
+        "404": { description: Not found, or no role on the document, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     patch:
       summary: Update title, description or state (owner only)
       requestBody:
@@ -154,6 +159,64 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /documents/{id}/sharing:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Grants and pending invitations; owner only
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Sharing" } } } }
+        "403": { description: Not the owner; message names the caller's role, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    post:
+      summary: Share with a member (grant) or an unknown email (held invitation); emails the recipient
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/Share" } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { kind: { type: string, enum: [grant, invitation] } } } } } }
+        "409": { description: Already shared or invited }
+        "422": { description: Bad email or role, or the caller's own email }
+  /documents/{id}/grants/{userId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      summary: Change a grant's role; owner only
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [role], properties: { role: { type: string, enum: [editor, viewer] } } } } } }
+      responses:
+        "204": { description: Changed }
+    delete:
+      summary: Revoke a grant; takes effect on the next request
+      responses:
+        "204": { description: Revoked }
+  /documents/{id}/invitations/{invId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: invId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Cancel a pending invitation; owner only
+      responses:
+        "204": { description: Cancelled }
+  /documents/{id}/transfer:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      summary: Make another member the owner; the previous owner becomes an editor
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [user_id], properties: { user_id: { type: string, format: uuid } } } } } }
+      responses:
+        "204": { description: Transferred }
+        "422": { description: Caller already owns it, or not a member }
+  /documents/{id}/audit:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: The document's sharing history, newest first; owner only
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } } } } }
+  /tenant/audit:
+    get:
+      summary: Every sharing change in the tenant; admin only, no content (PRD-0004 FR-8, FR-9)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } } } } }
+        "403": { description: Not an admin }
   /tags:
     get:
       summary: The tenant's tag vocabulary, sorted
@@ -245,6 +308,9 @@ components:
         state: { type: string, enum: [active, archived] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        role: { type: string, enum: [owner, editor, viewer] }
+        owner_name: { type: string, description: Present on shared documents }
+        is_new: { type: boolean, description: Shared and not opened yet }
         log_count: { type: integer, description: "Logs excluding examples. Set only by GET /documents (list); absent or zero elsewhere." }
         last_log_at: { type: string, format: date-time, nullable: true, description: "Newest created_at, null without logs. Set only by GET /documents (list); absent or zero elsewhere." }
     DocumentList:
@@ -252,7 +318,7 @@ components:
       required: [owned, shared]
       properties:
         owned: { type: array, items: { $ref: "#/components/schemas/Document" } }
-        shared: { type: array, items: { $ref: "#/components/schemas/Document" }, description: Always empty in v1 }
+        shared: { type: array, items: { $ref: "#/components/schemas/Document" } }
     CreateDocument:
       type: object
       required: [title]
@@ -282,11 +348,51 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         created_at: { type: string, format: date-time }
+        document_title: { type: string, description: Set for document invitations; read-only here }
     CreateInvitation:
       type: object
       required: [email]
       properties:
         email: { type: string, format: email }
+    Share:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role: { type: string, enum: [editor, viewer] }
+    Sharing:
+      type: object
+      properties:
+        grants:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id: { type: string, format: uuid }
+              email: { type: string }
+              display_name: { type: string }
+              role: { type: string, enum: [editor, viewer] }
+              granted_at: { type: string, format: date-time }
+        invitations:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              email: { type: string }
+              role: { type: string, enum: [editor, viewer] }
+              created_at: { type: string, format: date-time }
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        actor_email: { type: string }
+        action: { type: string, enum: [grant, invite, role_change, revoke, invite_cancel, invite_accept, transfer] }
+        document_id: { type: string, format: uuid }
+        document_title: { type: string }
+        target: { type: string }
+        role: { type: string }
+        at: { type: string, format: date-time }
     Error:
       type: object
       required: [error, message, request_id]

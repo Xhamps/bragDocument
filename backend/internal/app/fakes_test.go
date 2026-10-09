@@ -361,6 +361,7 @@ type fakeTelegramLinks struct {
 	byUser  map[string]domain.TelegramLink
 	err     error // returned by Link when set
 	findErr error // returned by FindByTelegramID when set
+	audit   []domain.AuditEntry
 }
 
 func newFakeTelegramLinks() *fakeTelegramLinks {
@@ -384,7 +385,7 @@ func (f *fakeTelegramLinks) Get(_ context.Context, userID string) (domain.Telegr
 	}
 	return l, nil
 }
-func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink) error {
+func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink, a domain.AuditEntry) error {
 	if f.err != nil {
 		return f.err
 	}
@@ -394,6 +395,7 @@ func (f *fakeTelegramLinks) Link(_ context.Context, l domain.TelegramLink) error
 		}
 	}
 	f.byUser[l.UserID] = l
+	f.audit = append(f.audit, a)
 	return nil
 }
 func (f *fakeTelegramLinks) SetDocument(_ context.Context, userID, docID string) error {
@@ -402,8 +404,11 @@ func (f *fakeTelegramLinks) SetDocument(_ context.Context, userID, docID string)
 	f.byUser[userID] = l
 	return nil
 }
-func (f *fakeTelegramLinks) Delete(_ context.Context, userID string) error {
-	delete(f.byUser, userID)
+func (f *fakeTelegramLinks) Delete(_ context.Context, userID string, a domain.AuditEntry) error {
+	if _, ok := f.byUser[userID]; ok {
+		delete(f.byUser, userID)
+		f.audit = append(f.audit, a)
+	}
 	return nil
 }
 

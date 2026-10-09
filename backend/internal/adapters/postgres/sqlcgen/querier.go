@@ -43,7 +43,7 @@ type Querier interface {
 	DeleteLogLinks(ctx context.Context, logID uuid.UUID) error
 	DeleteLogTags(ctx context.Context, logID uuid.UUID) error
 	DeletePendingDocumentInvitation(ctx context.Context, arg DeletePendingDocumentInvitationParams) (int64, error)
-	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
+	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) (int64, error)
 	DeleteTenantInvitationByEmail(ctx context.Context, arg DeleteTenantInvitationByEmailParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	FailExportJob(ctx context.Context, arg FailExportJobParams) (int64, error)

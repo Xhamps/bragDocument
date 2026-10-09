@@ -39,6 +39,26 @@ func logEntry(actorID, docID, action string) domain.AuditEntry {
 	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceWeb, Action: action, DocumentID: docID, TargetType: domain.TargetLog}
 }
 
+// tgEntry is the audit entry the app passes for a Telegram link or unlink.
+func tgEntry(actorID, action string) domain.AuditEntry {
+	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceTelegram, Action: action}
+}
+
+// auditActions lists the tenant's audit actions, oldest first.
+func auditActions(t *testing.T, db *DB, tenantID string) []string {
+	t.Helper()
+	var out []string
+	require.NoError(t, db.WithTenant(context.Background(), tenantID, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, "SELECT action FROM audit_entries ORDER BY id")
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	}))
+	return out
+}
+
 // provisionTenant creates a tenant with one admin through the real provisioning path.
 func provisionTenant(t *testing.T, users *UserRepo, name, email string) (domain.User, domain.Tenant) {
 	t.Helper()

@@ -19,6 +19,7 @@ type exportsFixture struct {
 	pdf   *fakeRenderer
 	files *fakeFiles
 	cache *fakeCache
+	scope *string // the tenant the worker scoped its context to
 }
 
 func newExportsFixture(t *testing.T) exportsFixture {
@@ -26,8 +27,13 @@ func newExportsFixture(t *testing.T) exportsFixture {
 	fd := newFakeDocs()
 	fd.docs["d1"] = domain.Document{ID: "d1", TenantID: "t1", OwnerID: "u1", OwnerName: "Ada", Title: "2026", State: domain.DocumentActive}
 	fd.grant("d1", "u2", domain.RoleViewer)
-	f := exportsFixture{docs: fd, logs: newFakeLogs(), jobs: newFakeExports(), pdf: &fakeRenderer{}, files: newFakeFiles(), cache: newFakeCache()}
-	f.uc = NewExports(fd, f.logs, f.jobs, f.pdf, f.files, f.cache, func(ctx context.Context, _ string) context.Context { return ctx })
+	fd.grant("d1", "u3", domain.RoleEditor)
+	f := exportsFixture{docs: fd, logs: newFakeLogs(), jobs: newFakeExports(), pdf: &fakeRenderer{}, files: newFakeFiles(),
+		cache: newFakeCache(), scope: new(string)}
+	f.uc = NewExports(fd, f.logs, f.jobs, f.pdf, f.files, f.cache, func(ctx context.Context, tenantID string) context.Context {
+		*f.scope = tenantID
+		return ctx
+	})
 	return f
 }
 
@@ -40,10 +46,10 @@ func (f exportsFixture) addLog(t *testing.T, name string, tags ...string) {
 func TestExportCreateQueuesAndSavesSettings(t *testing.T) {
 	f := newExportsFixture(t)
 	f.addLog(t, "a", "project")
-	in := CreateExportInput{DocumentID: "d1", UserID: "u2", TenantName: "Acme",
+	in := CreateExportInput{DocumentID: "d1", UserID: "u3", TenantName: "Acme",
 		Settings: domain.ReportSettings{GoalsThisYear: "ship", SectionMap: map[string]string{"Project": "Projects"}}}
 	j, err := f.uc.Create(context.Background(), in)
-	require.NoError(t, err, "viewers can export (PermRead)")
+	require.NoError(t, err)
 	require.Equal(t, domain.ExportQueued, j.Status)
 	require.True(t, j.Params.Filter.HideExamples, "examples never in the report")
 	require.Equal(t, "Acme", j.Params.TenantName)
@@ -100,6 +106,10 @@ func TestExportRunNextRendersAndStores(t *testing.T) {
 	require.Equal(t, "2026", f.pdf.got.Title)
 	require.Equal(t, "Ada", f.pdf.got.Author)
 	require.Equal(t, "Acme", f.pdf.got.Tenant)
+	require.Equal(t, "t1", *f.scope, "worker runs inside the job's tenant")
+	require.Equal(t, "created_at", f.logs.filter.Sort)
+	require.False(t, f.logs.filter.Desc)
+	require.True(t, f.logs.filter.HideExamples)
 	require.Equal(t, 2, f.pdf.got.Total)
 
 	done, err := f.uc.Get(context.Background(), "d1", j.ID, "u2")
@@ -180,4 +190,56 @@ func TestExportRunNextSuperseded(t *testing.T) {
 	ran, err := f.uc.RunNext(context.Background())
 	require.NoError(t, err, "a superseded job is not a worker error")
 	require.True(t, ran)
+}
+
+func TestExportCreateSettingsOnlyForWriters(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	ctx := context.Background()
+	mine := domain.ReportSettings{GoalsThisYear: "owner goals", SectionMap: map[string]string{"project": "Projects"}}
+	_, err := f.uc.Create(ctx, CreateExportInput{DocumentID: "d1", UserID: "u1", Settings: mine})
+	require.NoError(t, err)
+
+	_, err = f.uc.Create(ctx, CreateExportInput{DocumentID: "d1", UserID: "u2",
+		Settings: domain.ReportSettings{GoalsThisYear: "viewer goals"}})
+	require.NoError(t, err, "viewers can export (PermRead)")
+	s, err := f.uc.Settings(ctx, "d1", "u1")
+	require.NoError(t, err)
+	require.Equal(t, "owner goals", s.GoalsThisYear, "a viewer does not overwrite shared settings")
+
+	_, err = f.uc.Create(ctx, CreateExportInput{DocumentID: "d1", UserID: "u3",
+		Settings: domain.ReportSettings{GoalsThisYear: "editor goals"}})
+	require.NoError(t, err)
+	s, err = f.uc.Settings(ctx, "d1", "u1")
+	require.NoError(t, err)
+	require.Equal(t, "editor goals", s.GoalsThisYear)
+}
+
+func TestExportRunNextTooManyLogsNow(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	j, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	for i := range domain.MaxReportLogs {
+		f.addLog(t, "l"+strconv.Itoa(i))
+	}
+	_, err = f.uc.RunNext(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, domain.ExportFailed, f.jobs.jobs[j.ID].Status)
+	require.Contains(t, f.jobs.jobs[j.ID].Error, "More than 2,000")
+	require.Empty(t, f.files.files)
+}
+
+func TestExportRunNextShutdownLeavesJobRunning(t *testing.T) {
+	f := newExportsFixture(t)
+	f.addLog(t, "a")
+	j, err := f.uc.Create(context.Background(), CreateExportInput{DocumentID: "d1", UserID: "u1"})
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	f.pdf.err = context.Canceled
+	ran, err := f.uc.RunNext(ctx)
+	require.True(t, ran)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, domain.ExportRunning, f.jobs.jobs[j.ID].Status, "reclaimed later, not failed")
 }

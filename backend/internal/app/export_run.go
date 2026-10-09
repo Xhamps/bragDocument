@@ -9,6 +9,9 @@ import (
 	"github.com/xhamps/bragdocument/backend/internal/domain"
 )
 
+// errTooManyLogs: logs were added after the request and the filters now match more than FR-7 allows.
+var errTooManyLogs = errors.New("too many logs match")
+
 const (
 	reportPageSize = 100             // the list's maximum page
 	jobTimeout     = 4 * time.Minute // below the 5-minute reclaim in ClaimExportJob
@@ -28,6 +31,9 @@ func (s *Exports) RunNext(ctx context.Context) (bool, error) {
 	runCtx, cancel := context.WithTimeout(ctx, jobTimeout)
 	key, err := s.run(runCtx, j)
 	cancel()
+	if err != nil && ctx.Err() != nil {
+		return true, ctx.Err() // shutdown: leave it running; it is reclaimed later
+	}
 	if err != nil {
 		slog.WarnContext(ctx, "export failed", slog.String("job_id", j.ID), slog.Any("err", err))
 		return true, superseded(ctx, j.ID, s.jobs.Fail(ctx, j.ID, failReason(err)))
@@ -36,8 +42,8 @@ func (s *Exports) RunNext(ctx context.Context) (bool, error) {
 	return true, superseded(ctx, j.ID, s.jobs.Finish(ctx, j.ID, key))
 }
 
-// superseded swallows ErrNotFound from Finish/Fail: the job was reclaimed by
-// another worker (it is no longer running), whose result wins.
+// superseded swallows ErrNotFound from Finish/Fail: the job was reclaimed and
+// both workers saw it running; the first to finish wins, the later one lands here.
 func superseded(ctx context.Context, jobID string, err error) error {
 	if errors.Is(err, domain.ErrNotFound) {
 		slog.InfoContext(ctx, "export superseded", slog.String("job_id", jobID))
@@ -59,6 +65,9 @@ func (s *Exports) run(ctx context.Context, j domain.ExportJob) (string, error) {
 		page, err := s.logs.List(ctx, d.ID, f)
 		if err != nil {
 			return "", err
+		}
+		if page.Total > domain.MaxReportLogs {
+			return "", errTooManyLogs
 		}
 		logs = append(logs, page.Items...)
 		s.setProgress(ctx, j.ID, 80*len(logs)/max(page.Total, 1))
@@ -83,6 +92,8 @@ func failReason(err error) string {
 	switch {
 	case errors.Is(err, domain.ErrNotFound), errors.As(err, &ae):
 		return "You no longer have access to this document."
+	case errors.Is(err, errTooManyLogs):
+		return "More than 2,000 logs match now; narrow the filters and export again."
 	case errors.Is(err, domain.ErrUnavailable):
 		return "The PDF service is unavailable. Try again in a minute."
 	}

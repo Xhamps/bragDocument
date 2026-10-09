@@ -14,9 +14,11 @@ CREATE INDEX outbox_tenant_id_idx ON outbox (tenant_id);
 
 ALTER TABLE outbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outbox FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON outbox
-    USING (tenant_id = app_tenant_id() OR app_provisioning())
-    WITH CHECK (tenant_id = app_tenant_id() OR app_provisioning());
+-- Tenants may only append (and read their own), like audit_entries; only the
+-- relay, under provisioning, marks rows published and purges them.
+CREATE POLICY tenant_read ON outbox FOR SELECT USING (tenant_id = app_tenant_id());
+CREATE POLICY tenant_append ON outbox FOR INSERT WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY provisioning_all ON outbox USING (app_provisioning()) WITH CHECK (app_provisioning());
 GRANT SELECT, INSERT, UPDATE, DELETE ON outbox TO bragdoc_app;
 
 -- The consumer is at-least-once; one entry per message.

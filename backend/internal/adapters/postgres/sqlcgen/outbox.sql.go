@@ -76,6 +76,7 @@ const purgeOutbox = `-- name: PurgeOutbox :exec
 DELETE FROM outbox WHERE published_at < now() - interval '7 days'
 `
 
+// ponytail: seq-scans published rows; index published_at if the table grows.
 func (q *Queries) PurgeOutbox(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, purgeOutbox)
 	return err

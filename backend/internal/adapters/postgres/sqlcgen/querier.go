@@ -98,6 +98,7 @@ type Querier interface {
 	ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error)
 	MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error
 	MarkOutboxPublished(ctx context.Context, ids []int64) error
+	// ponytail: seq-scans published rows; index published_at if the table grows.
 	PurgeOutbox(ctx context.Context) error
 	SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error)
 	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)

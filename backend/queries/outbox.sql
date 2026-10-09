@@ -10,4 +10,5 @@ WHERE published_at IS NULL ORDER BY id LIMIT sqlc.arg(lim) FOR UPDATE SKIP LOCKE
 UPDATE outbox SET published_at = now() WHERE id = ANY(sqlc.arg(ids)::bigint[]);
 
 -- name: PurgeOutbox :exec
+-- ponytail: seq-scans published rows; index published_at if the table grows.
 DELETE FROM outbox WHERE published_at < now() - interval '7 days';

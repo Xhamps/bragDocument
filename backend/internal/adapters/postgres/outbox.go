@@ -103,6 +103,8 @@ func snapshot(ctx context.Context, q *sqlcgen.Queries, a *domain.AuditEntry) err
 }
 
 // enqueueAudit enqueues a, already snapshotted, as an audit.entry message.
+// ponytail: at is the app clock at enqueue, and entries are listed in consume
+// order (ListAudit by id); order by (at, id) if strict ordering matters.
 func enqueueAudit(ctx context.Context, q *sqlcgen.Queries, a domain.AuditEntry) error {
 	return enqueue(ctx, q, domain.TopicAudit, auditMessage{
 		ActorID: a.ActorID, ActorName: a.ActorName, ActorEmail: a.ActorEmail, Source: a.Source, Action: a.Action,

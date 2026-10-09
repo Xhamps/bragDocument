@@ -83,6 +83,23 @@ func TestOutboxRelayAndStore(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, n, "already published")
 
+	// Tenants may only append: UPDATE and DELETE match nothing under RLS, and
+	// tenant B sees none of A's messages.
+	for _, stmt := range []string{"UPDATE outbox SET published_at = NULL", "DELETE FROM outbox"} {
+		require.NoError(t, db.WithTenant(ctxA, ta.ID, func(ctx context.Context, tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, stmt)
+			require.Zero(t, tag.RowsAffected(), stmt)
+			return err
+		}))
+	}
+	_, tb := provisionTenant(t, users, "B", "zed@example.com")
+	require.Zero(t, count(t, db, tb.ID, "outbox"))
+
+	// Store takes audit.entry messages only.
+	other := m
+	other.Topic = "other.topic"
+	require.Error(t, audits.Store(context.Background(), other))
+
 	// A rolled-back action leaves no message.
 	_, err = docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "x"}, nil, docCreated(uuid.NewString()))
 	require.ErrorIs(t, err, domain.ErrNotFound)

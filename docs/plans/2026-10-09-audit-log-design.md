@@ -82,3 +82,25 @@ Entry JSON: `{ id, at, source, action, actor: {id|null, name, email}, document: 
 - HTTP handler tests: query parsing and response shape.
 - Frontend: Audit page filters sync to the URL; empty and filtered-empty states; Activity shows for owners only.
 - NFR-3: no load test in v1; run `EXPLAIN` on the four filter shapes against 1M seeded rows once, by hand.
+
+## Performance check (NFR-3)
+
+Run on 2026-10-09: throwaway `postgres:16-alpine`, laptop Docker, warm cache. One tenant has 1,000,005 entries, with 49 actors, 500 documents and 20 actions spread at random over one year. A second tenant has 1,000. One rare actor has 5 entries with the oldest ids. The query is the `ListAudit` SQL, `LIMIT 51`, run as `bragdoc_app` with `app.tenant_id` set, through `PREPARE`/`EXPLAIN (ANALYZE, BUFFERS) EXECUTE`.
+
+| Shape | Generic plan | Custom plan (index) |
+|---|---|---|
+| no filter | 458 ms, seq scan + top-N sort | 0.4 ms, `audit_entries_pkey` backward |
+| actor | 60 ms, seq scan | 0.1 ms, `audit_entries_actor_idx` |
+| document | 54 ms, seq scan | 0.1 ms, `audit_entries_document_idx` |
+| action | 83 ms, seq scan | 0.1 ms, `audit_entries_action_idx` |
+| document + actor | 49 ms, seq scan | 2.5 ms, BitmapAnd of document + actor indexes |
+| action + 1-month range | 66 ms, seq scan | 14 ms, `audit_entries_action_idx` |
+| owner scope (10 docs) | 294 ms, seq scan | 1.1 ms, `pkey` backward + hashed subplan |
+| rare actor (5 old rows) | 49 ms, seq scan | 0.03 ms, `audit_entries_actor_idx` |
+| date only, old month | 100 ms, seq scan | 69 ms, `pkey` backward (filters 855k rows) |
+| owner + rare actor (0 rows) | 50 ms, seq scan | 0.3 ms, `audit_entries_actor_idx` |
+
+- **Generic plan.** The `$n IS NULL OR ...` filters cannot use an index in a generic plan, so every shape seq-scans the whole tenant. The unfiltered page sits at the budget (458 ms) and grows linearly with table size.
+- **Auto mode.** Under the default `plan_cache_mode = auto`, which is what pgx's cached statements get, Postgres kept custom plans after 10 executions (`custom_plans = 10`, `generic_plans = 0`), because the generic plan's estimated cost is far higher.
+- **The pin.** `AuditRepo.List` now runs `SET LOCAL plan_cache_mode = force_custom_plan` in its transaction, so the cost heuristic can no longer flip it to the generic plan.
+- **Verdict.** NFR-3 holds: the worst custom shape is 69 ms, a date-only filter on an old month, which walks the id index back to it. If that range ever gets slow, the fix is an index on `(tenant_id, at)`.

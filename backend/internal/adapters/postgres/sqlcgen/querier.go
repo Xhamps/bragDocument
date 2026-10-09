@@ -22,11 +22,14 @@ type Querier interface {
 	DeleteLog(ctx context.Context, arg DeleteLogParams) (int64, error)
 	DeleteLogLinks(ctx context.Context, logID uuid.UUID) error
 	DeleteLogTags(ctx context.Context, logID uuid.UUID) error
+	DeleteTelegramLink(ctx context.Context, userID uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	GetDocument(ctx context.Context, id uuid.UUID) (Document, error)
 	GetInvitationByEmail(ctx context.Context, email string) (TenantInvitation, error)
 	GetLog(ctx context.Context, arg GetLogParams) (Log, error)
 	GetMeta(ctx context.Context, key string) (string, error)
+	GetTelegramLink(ctx context.Context, userID uuid.UUID) (TelegramLink, error)
+	GetTelegramLinkByTelegramID(ctx context.Context, telegramUserID int64) (TelegramLink, error)
 	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
@@ -43,9 +46,12 @@ type Querier interface {
 	ListTags(ctx context.Context) ([]string, error)
 	ListTagsForLogs(ctx context.Context, ids []uuid.UUID) ([]ListTagsForLogsRow, error)
 	ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error)
+	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)
 	UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error)
 	UpdateLog(ctx context.Context, arg UpdateLogParams) (Log, error)
 	UpsertTags(ctx context.Context, arg UpsertTagsParams) error
+	// Re-linking the same Telegram account keeps the target document.
+	UpsertTelegramLink(ctx context.Context, arg UpsertTelegramLinkParams) error
 }
 
 var _ Querier = (*Queries)(nil)

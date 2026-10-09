@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -31,7 +32,8 @@ func (s *Logs) Update(ctx context.Context, in UpdateLogInput) (domain.Log, error
 	if err != nil {
 		return domain.Log{}, err
 	}
-	oldName, oldDesc := l.Name, l.Description
+	old := l
+	old.Tags, old.Links = slices.Clone(l.Tags), slices.Clone(l.Links) // Validate normalizes l's in place
 	if in.Name != nil {
 		l.Name = *in.Name
 	}
@@ -61,10 +63,19 @@ func (s *Logs) Update(ctx context.Context, in UpdateLogInput) (domain.Log, error
 	if err := l.Validate(); err != nil {
 		return domain.Log{}, err
 	}
-	if l.Name != oldName || l.Description != oldDesc {
+	action, fields := domain.LogChange(old, l)
+	if action == "" && !old.IsExample {
+		return old, nil // nothing changed: no write, no entry
+	}
+	if action == "" {
+		action = domain.AuditLogEdited // saving an example unchanged still makes it the user's log
+	}
+	if l.Name != old.Name || l.Description != old.Description {
 		l.ImpactStatement = s.extract(ctx, l)
 	}
-	out, err := s.logs.Update(ctx, l)
+	a := entry(ctx, in.UserID, action, in.DocumentID)
+	a.TargetType, a.TargetID, a.Target, a.ChangedFields = domain.TargetLog, l.ID, l.Name, fields
+	out, err := s.logs.Update(ctx, l, a)
 	if err == nil {
 		s.touch(ctx, in.DocumentID)
 	}

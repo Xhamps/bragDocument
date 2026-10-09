@@ -212,7 +212,7 @@ func TestSharing(t *testing.T) {
 	l := domain.Log{TenantID: ta.ID, DocumentID: doc2.ID, Name: "Shipped", Impact: "high", Status: "done",
 		CreatedAt: time.Now().UTC(), CreatedBy: bob.ID, UpdatedBy: bob.ID}
 	require.NoError(t, l.Validate())
-	_, err = logs.Create(ctxA, l)
+	_, err = logs.Create(ctxA, l, logEntry(bob.ID, doc2.ID, domain.AuditLogCreated))
 	require.NoError(t, err)
 	require.NoError(t, tenants.DeleteMember(ctxA, bob.ID))
 	sh, err = sharing.Get(ctxA, doc2.ID)

@@ -244,6 +244,7 @@ type fakeLogs struct {
 	examples  int // DeleteExamples calls
 	seq       int
 	dashCalls int
+	audit     []domain.AuditEntry // entries of successful writes
 }
 
 func newFakeLogs() *fakeLogs { return &fakeLogs{logs: map[string]domain.Log{}} }
@@ -274,28 +275,36 @@ func (f *fakeLogs) Get(_ context.Context, documentID, id string) (domain.Log, er
 	}
 	return l, nil
 }
-func (f *fakeLogs) Create(_ context.Context, l domain.Log) (domain.Log, error) {
+func (f *fakeLogs) Create(_ context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
 	f.seq++
 	l.ID = "l" + strconv.Itoa(f.seq)
 	f.logs[l.ID] = l
+	a.TargetID = l.ID
+	f.audit = append(f.audit, a)
 	return l, nil
 }
-func (f *fakeLogs) Update(_ context.Context, l domain.Log) (domain.Log, error) {
+func (f *fakeLogs) Update(_ context.Context, l domain.Log, a domain.AuditEntry) (domain.Log, error) {
 	if _, ok := f.logs[l.ID]; !ok {
 		return domain.Log{}, domain.ErrNotFound
 	}
 	f.logs[l.ID] = l
+	f.audit = append(f.audit, a)
 	return l, nil
 }
-func (f *fakeLogs) Delete(ctx context.Context, documentID, id string) error {
+func (f *fakeLogs) Delete(ctx context.Context, documentID, id string, a domain.AuditEntry) error {
 	if _, err := f.Get(ctx, documentID, id); err != nil {
 		return err
 	}
 	delete(f.logs, id)
+	f.audit = append(f.audit, a)
 	return nil
 }
-func (f *fakeLogs) DeleteExamples(context.Context, string) error { f.examples++; return nil }
-func (f *fakeLogs) ListTags(context.Context) ([]string, error)   { return []string{"project"}, nil }
+func (f *fakeLogs) DeleteExamples(_ context.Context, _ string, a domain.AuditEntry) error {
+	f.examples++
+	f.audit = append(f.audit, a)
+	return nil
+}
+func (f *fakeLogs) ListTags(context.Context) ([]string, error) { return []string{"project"}, nil }
 func (f *fakeLogs) Dashboard(_ context.Context, documentID string, p domain.Period) (domain.Dashboard, error) {
 	f.dashCalls++
 	d := domain.Dashboard{From: p.From, To: p.To}

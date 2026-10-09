@@ -43,7 +43,9 @@ func (s *Logs) Create(ctx context.Context, in CreateLogInput) (domain.Log, error
 		return domain.Log{}, err
 	}
 	l.ImpactStatement = s.extract(ctx, l)
-	out, err := s.logs.Create(ctx, l)
+	a := entry(ctx, in.UserID, domain.AuditLogCreated, d.ID)
+	a.TargetType, a.Target = domain.TargetLog, l.Name
+	out, err := s.logs.Create(ctx, l, a)
 	if err == nil {
 		s.touch(ctx, d.ID)
 	}

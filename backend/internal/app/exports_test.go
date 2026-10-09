@@ -40,7 +40,7 @@ func newExportsFixture(t *testing.T) exportsFixture {
 
 func (f exportsFixture) addLog(t *testing.T, name string, tags ...string) {
 	t.Helper()
-	_, err := f.logs.Create(context.Background(), domain.Log{DocumentID: "d1", Name: name, Impact: "high", Status: domain.StatusDone, Tags: tags})
+	_, err := f.logs.Create(context.Background(), domain.Log{DocumentID: "d1", Name: name, Impact: "high", Status: domain.StatusDone, Tags: tags}, domain.AuditEntry{})
 	require.NoError(t, err)
 }
 

@@ -34,6 +34,11 @@ func docDeleted(actorID, docID string) domain.AuditEntry {
 	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceWeb, Action: domain.AuditDocumentDeleted, DocumentID: docID}
 }
 
+// logEntry is the audit entry the app passes for a log write in docID.
+func logEntry(actorID, docID, action string) domain.AuditEntry {
+	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceWeb, Action: action, DocumentID: docID, TargetType: domain.TargetLog}
+}
+
 // provisionTenant creates a tenant with one admin through the real provisioning path.
 func provisionTenant(t *testing.T, users *UserRepo, name, email string) (domain.User, domain.Tenant) {
 	t.Helper()

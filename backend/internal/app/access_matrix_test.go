@@ -35,7 +35,7 @@ func newMatrixFixture(t *testing.T, role domain.Role) matrixFixture {
 	inv, err := repo.Invite(context.Background(), domain.DocumentInvitation{DocumentID: "d1", Email: "new@acme.com", Role: domain.RoleViewer}, domain.AuditEntry{})
 	require.NoError(t, err)
 	fl := newFakeLogs()
-	l, err := fl.Create(context.Background(), domain.Log{DocumentID: "d1", Name: "x", Impact: "low", Status: domain.StatusDone})
+	l, err := fl.Create(context.Background(), domain.Log{DocumentID: "d1", Name: "x", Impact: "low", Status: domain.StatusDone}, domain.AuditEntry{})
 	require.NoError(t, err)
 	return matrixFixture{docs: NewDocuments(fd), logs: NewLogs(fd, fl, &fakeImpact{}, newFakeCache()),
 		sharing: NewSharing(fd, repo, &fakeMailer{}, ""), logID: l.ID, invID: inv.ID,

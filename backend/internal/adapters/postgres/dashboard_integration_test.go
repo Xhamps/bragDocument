@@ -34,7 +34,7 @@ func TestDashboard(t *testing.T) {
 		l := domain.Log{TenantID: ta.ID, DocumentID: doc.ID, Name: name, Impact: impact, Status: status,
 			Tags: tags, Links: []domain.Link{}, CreatedAt: at, CreatedBy: admin.ID, UpdatedBy: admin.ID}
 		require.NoError(t, l.Validate())
-		_, err := logs.Create(ctx, l)
+		_, err := logs.Create(ctx, l, logEntry(admin.ID, doc.ID, domain.AuditLogCreated))
 		require.NoError(t, err)
 	}
 	at := func(m time.Month, d int) time.Time { return time.Date(2026, m, d, 12, 0, 0, 0, time.UTC) }

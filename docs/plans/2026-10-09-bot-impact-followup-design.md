@@ -19,7 +19,7 @@ Date: 2026-10-09. Status: approved. Extends [PRD-0007](../prd/0007-impact-extrac
 2. A tap: the `tg:impact:<telegramID>` entry, written when the warning is sent, gains the mode (`{user_id, document_id, log_id, mode}`, 5-minute TTL), and replies "Send the text to add." or "Send the new description.".
 3. The next plain message, when a pending answer exists for the same linked user, consumes the key and calls `Logs.Update` with the new description. `Update` re-extracts because the description changed.
 4. Reply: "Updated: <name>" plus "Impact found: <statement>"; still none → the warning and buttons again; not checked (disabled, failed) → "Updated" only.
-5. Commands work normally while an answer is pending. An expired pending answer, or one stored for another user (relink), is ignored and the message creates a log. A log deleted in the meantime replies "That log is gone.".
+5. Commands work normally while an answer is pending. An expired pending answer, or one stored for another user (relink), is ignored and the message creates a log. A log deleted in the meantime replies "I can't find that log anymore. Nothing was changed.". A save that fails validation or unexpectedly keeps the answer pending, so the resend retries it; a blank answer gets the prompt again.
 
 ## Components
 

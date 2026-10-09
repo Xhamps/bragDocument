@@ -87,11 +87,18 @@ export function Component() {
       setNoImpact(true);
     } else closeForm();
   };
-  const submit = (form: LogForm) =>
-    editing === "new"
-      ? create.mutate(form, { onSuccess: saved })
-      : editing &&
-        update.mutate({ id: editing.id, ...form }, { onSuccess: saved });
+  const submit = (form: LogForm) => {
+    if (editing === "new") create.mutate(form, { onSuccess: saved });
+    else if (editing) {
+      // The backend re-extracts only when name or description changed.
+      const extracted =
+        form.name !== editing.name || form.description !== editing.description;
+      update.mutate(
+        { id: editing.id, ...form },
+        { onSuccess: extracted ? saved : closeForm },
+      );
+    }
+  };
 
   const page = Number(params.get("page") ?? 1);
   const perPage = Number(params.get("per_page") ?? PER_PAGE);
@@ -153,9 +160,14 @@ export function Component() {
               >
                 Remove examples
               </Button>
+              {removeExamples.error && (
+                <p role="alert" className="text-destructive">
+                  {errorText(removeExamples.error)}
+                </p>
+              )}
             </div>
           )}
-          {items.length === 0 ? (
+          {total === 0 ? (
             filtered ? (
               <p className="text-muted-foreground">
                 No logs match these filters.{" "}
@@ -169,6 +181,13 @@ export function Component() {
                 the details.
               </p>
             )
+          ) : items.length === 0 ? (
+            <p className="text-muted-foreground">
+              This page is empty.{" "}
+              <Button variant="link" onClick={() => setPage(1)}>
+                Go to page 1
+              </Button>
+            </p>
           ) : (
             <ul className="flex flex-col divide-y rounded-md border">
               {items.map((l) => (

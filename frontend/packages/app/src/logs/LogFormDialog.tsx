@@ -22,6 +22,7 @@ import {
   STATUS_LABEL,
   SUGGESTED_TAGS,
 } from "./constants";
+import { ExternalLink } from "./LogRow";
 import { useTags, type LogForm } from "./useLogs";
 
 type Props = {
@@ -93,6 +94,8 @@ function Form({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    // Cmd/Ctrl+Enter's requestSubmit ignores the disabled Save button.
+    if (busy || !f.name.trim()) return;
     onSubmit({
       name: f.name.trim(),
       description: f.description,
@@ -100,7 +103,7 @@ function Form({
       status: f.status,
       tags: withDraft(f.tags),
       links: f.links.filter((l) => l.url.trim()),
-      // Noon local time keeps the chosen calendar day in every UTC offset up to ±12 h.
+      // Noon local time keeps the chosen calendar day for UTC offsets from -12 h to +11 h.
       ...(f.date !== startDate && {
         created_at: new Date(`${f.date}T12:00:00`).toISOString(),
       }),
@@ -211,7 +214,9 @@ function Form({
         </div>
         {preview ? (
           <div className="min-h-32 rounded-md border p-3 text-sm [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
-            <Markdown>{f.description || "_Nothing to preview._"}</Markdown>
+            <Markdown components={{ a: ExternalLink }}>
+              {f.description || "_Nothing to preview._"}
+            </Markdown>
           </div>
         ) : (
           <textarea

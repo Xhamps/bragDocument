@@ -23,6 +23,10 @@ export function LogFilters({
   };
   const single = (key: string) => (value: string) =>
     onChange(key, value.trim() ? [value.trim()] : []);
+  // Blur fires on every tab-past; only an actual change may reset page/push history.
+  const commitDomain = (value: string) => {
+    if (value.trim() !== (params.get("domain") ?? "")) single("domain")(value);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -47,9 +51,9 @@ export function LogFilters({
           placeholder="Domain, e.g. github.com"
           className="w-52"
           defaultValue={params.get("domain") ?? ""}
-          onBlur={(e) => single("domain")(e.target.value)}
+          onBlur={(e) => commitDomain(e.target.value)}
           onKeyDown={(e) =>
-            e.key === "Enter" && single("domain")(e.currentTarget.value)
+            e.key === "Enter" && commitDomain(e.currentTarget.value)
           }
         />
         <Input
@@ -154,7 +158,7 @@ function SearchInput({
   const [seen, setSeen] = useState(value);
   if (value !== seen) {
     setSeen(value);
-    setText(value);
+    if (value !== text.trim()) setText(value); // keep a trailing space being typed
   }
   const commit = useEffectEvent(onCommit);
   useEffect(() => {
@@ -194,7 +198,7 @@ export function ActiveFilters({
   onRemove: (key: string, value: string) => void;
   onClear: () => void;
 }) {
-  const chips = [...params.entries()].filter(([k]) => k in LABELS);
+  const chips = [...params.entries()].filter(([k]) => Object.hasOwn(LABELS, k));
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-2">

@@ -17,7 +17,7 @@ import { STATUS_LABEL } from "./constants";
  * Evidence links open elsewhere and never leak the referrer (PRD-0002 NFR-3).
  * Picks props explicitly: react-markdown also passes its hast `node`, which must not reach the DOM.
  */
-function ExternalLink({ href, title, children }: ComponentProps<"a">) {
+export function ExternalLink({ href, title, children }: ComponentProps<"a">) {
   return (
     <a
       href={href}
@@ -118,8 +118,8 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
           )}
           {log.links.length > 0 && (
             <ul>
-              {log.links.map((k) => (
-                <li key={k.url}>
+              {log.links.map((k, i) => (
+                <li key={i}>
                   <ExternalLink href={k.url}>{k.label || k.url}</ExternalLink>
                 </li>
               ))}

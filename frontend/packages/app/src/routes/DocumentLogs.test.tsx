@@ -120,6 +120,64 @@ test("Cmd+Enter creates; the dialog stays open when no impact was found", async 
   });
 });
 
+test("no-impact warning only follows a save that re-extracted", async () => {
+  const calls = mockFetch({
+    ...routes([]),
+    "POST /documents/d1/logs": log({ id: "l2", impact_statement: "" }),
+    "PATCH /documents/d1/logs/l2": log({
+      id: "l2",
+      impact_statement: "",
+      status: "in_progress",
+    }),
+  });
+  renderAt("/documents/d1");
+  await userEvent.click(await screen.findByRole("button", { name: "New log" }));
+  await userEvent.type(screen.getByLabelText("Name"), "Moved billing jobs");
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(
+    await screen.findByText(/couldn't find an impact/i),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Edit log" })).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("Status"), "in_progress");
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(
+    calls.some(
+      (c) => c.method === "PATCH" && c.path === "/documents/d1/logs/l2",
+    ),
+  ).toBe(true);
+});
+
+test("Cmd+Enter while saving does not submit twice", async () => {
+  const calls = mockFetch({
+    ...routes([]),
+    "POST /documents/d1/logs": () => new Promise(() => {}),
+  });
+  renderAt("/documents/d1");
+  await userEvent.click(await screen.findByRole("button", { name: "New log" }));
+  await userEvent.type(screen.getByLabelText("Name"), "Wrote docs");
+  await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+  await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+  await waitFor(() =>
+    expect(calls.some((c) => c.method === "POST")).toBe(true),
+  );
+  expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
+});
+
+test("a page past the end offers page 1", async () => {
+  mockFetch({
+    ...routes(),
+    "GET /documents/d1/logs": { items: [], total: 3 },
+  });
+  renderAt("/documents/d1?page=9");
+  expect(
+    await screen.findByRole("button", { name: "Go to page 1" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/no logs yet/i)).not.toBeInTheDocument();
+});
+
 test("removes example logs in one click", async () => {
   const calls = mockFetch({
     ...routes([log({ is_example: true })]),

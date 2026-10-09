@@ -69,8 +69,10 @@ export function mockFetch(table: Routes) {
           status: 404,
         });
       const v = table[key];
-      const r =
-        typeof v === "function" ? (v as (i?: RequestInit) => unknown)(init) : v;
+      const r: unknown =
+        typeof v === "function"
+          ? await (v as (i?: RequestInit) => unknown)(init) // may be async
+          : v;
       if (r instanceof Response) return r;
       const { status, body } =
         r !== null &&

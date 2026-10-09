@@ -26,14 +26,15 @@ var likeEscaper = strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`)
 
 func listParams(did uuid.UUID, f domain.LogFilter) sqlcgen.ListLogsParams {
 	p := sqlcgen.ListLogsParams{
-		DocumentID: did,
-		Statuses:   orEmpty(f.Statuses),
-		Impacts:    orEmpty(f.Impacts),
-		Tags:       orEmpty(f.Tags),
-		Sort:       f.Sort,
-		Descending: f.Desc,
-		Lim:        int32(f.PerPage),
-		Off:        int32((f.Page - 1) * f.PerPage),
+		DocumentID:   did,
+		Statuses:     orEmpty(f.Statuses),
+		Impacts:      orEmpty(f.Impacts),
+		Tags:         orEmpty(f.Tags),
+		HideExamples: f.HideExamples,
+		Sort:         f.Sort,
+		Descending:   f.Desc,
+		Lim:          int32(f.PerPage),
+		Off:          int32((f.Page - 1) * f.PerPage),
 	}
 	if f.Query != "" {
 		p.Q = pgtype.Text{String: likeEscaper.Replace(f.Query), Valid: true}
@@ -283,4 +284,39 @@ func (r *LogRepo) ListTags(ctx context.Context) ([]string, error) {
 		return wrap(err)
 	})
 	return orEmpty(out), err
+}
+
+// Dashboard returns the sparse aggregates for p in one transaction.
+func (r *LogRepo) Dashboard(ctx context.Context, documentID string, p domain.Period) (domain.Dashboard, error) {
+	did, err := parseID(documentID)
+	if err != nil {
+		return domain.Dashboard{}, err
+	}
+	d := domain.Dashboard{From: p.From, To: p.To}
+	err = r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
+		t, err := q.DashboardTotals(ctx, sqlcgen.DashboardTotalsParams{DocumentID: did, FromAt: p.From, ToAt: p.To})
+		if err != nil {
+			return wrap(err)
+		}
+		d.Total, d.InPeriod, d.HighImpact, d.InProgress = int(t.Total), int(t.InPeriod), int(t.HighImpact), int(t.InProgress)
+		rows, err := q.DashboardBuckets(ctx, sqlcgen.DashboardBucketsParams{DocumentID: did, FromAt: p.From, ToAt: p.To})
+		if err != nil {
+			return wrap(err)
+		}
+		for _, row := range rows {
+			b := domain.Bucket{Key: row.Key, Count: int(row.Count)}
+			switch row.Kind {
+			case "month":
+				d.Months = append(d.Months, b)
+			case "status":
+				d.Statuses = append(d.Statuses, b)
+			case "impact":
+				d.Impacts = append(d.Impacts, b)
+			case "tag":
+				d.Tags = append(d.Tags, b)
+			}
+		}
+		return nil
+	})
+	return d, err
 }

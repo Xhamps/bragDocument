@@ -55,9 +55,10 @@ func botCmd() *cobra.Command {
 				impact = llm.NewOpenAIExtractor(cfg.OpenAIAPIKey, cfg.OpenAIModel, min(cfg.LLMTimeout, botLLMTimeout), reg)
 			}
 			docs := postgres.NewDocumentRepo(db)
-			logs := app.NewLogs(docs, postgres.NewLogRepo(db), impact)
+			cache := redis.NewDegrading(rc, reg)
+			logs := app.NewLogs(docs, postgres.NewLogRepo(db), impact, cache)
 			// codes: raw rc so a Redis outage fails linking loudly; undo: Degrading (a miss is harmless).
-			uc := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docs, logs, rc, redis.NewDegrading(rc, reg), cfg.AppURL, telemetry.WithTenantID)
+			uc := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docs, logs, rc, cache, cfg.AppURL, telemetry.WithTenantID)
 
 			b, err := telegram.New(cfg.TelegramToken, uc)
 			if err != nil {

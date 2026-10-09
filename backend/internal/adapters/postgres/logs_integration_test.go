@@ -162,11 +162,29 @@ func TestLogRepo(t *testing.T) {
 
 // TestLogListTiming reports (does not assert) the list latency at 10k logs (NFR-1).
 func TestLogListTiming(t *testing.T) {
+	ctx, doc, logs := seedTenThousand(t)
+	for _, f := range []domain.LogFilter{
+		{},
+		{Query: "migrations", Impacts: []string{"high", "critical"}},
+		{Tags: []string{"project"}, Sort: "impact", Desc: true, Page: 50},
+	} {
+		require.NoError(t, f.Validate())
+		start := time.Now()
+		p, err := logs.List(ctx, doc.ID, f)
+		require.NoError(t, err)
+		t.Logf("filter %+v: total=%d in %s", f, p.Total, time.Since(start))
+	}
+}
+
+// seedTenThousand creates one document with 10,000 logs spread hourly back
+// from now, each tagged project or learning.
+func seedTenThousand(t *testing.T) (context.Context, domain.Document, *LogRepo) {
+	t.Helper()
 	ownerURL := startPostgres(t)
 	require.NoError(t, Migrate(ownerURL))
 	db, err := Connect(context.Background(), appRoleURL(t, ownerURL), 30*time.Second)
 	require.NoError(t, err)
-	defer db.Close()
+	t.Cleanup(db.Close)
 	users, docs, logs := NewUserRepo(db), NewDocumentRepo(db), NewLogRepo(db)
 	admin, tn := provisionTenant(t, users, "A", "a@example.com")
 	ctx := telemetry.WithTenantID(context.Background(), tn.ID)
@@ -192,16 +210,5 @@ func TestLogListTiming(t *testing.T) {
 		SELECT tenant_id, id, CASE WHEN random() < 0.5 THEN 'project' ELSE 'learning' END FROM logs;
 		ANALYZE logs; ANALYZE log_tags;`)
 	require.NoError(t, err)
-
-	for _, f := range []domain.LogFilter{
-		{},
-		{Query: "migrations", Impacts: []string{"high", "critical"}},
-		{Tags: []string{"project"}, Sort: "impact", Desc: true, Page: 50},
-	} {
-		require.NoError(t, f.Validate())
-		start := time.Now()
-		p, err := logs.List(ctx, doc.ID, f)
-		require.NoError(t, err)
-		t.Logf("filter %+v: total=%d in %s", f, p.Total, time.Since(start))
-	}
+	return ctx, doc, logs
 }

@@ -43,5 +43,9 @@ func (s *Logs) Create(ctx context.Context, in CreateLogInput) (domain.Log, error
 		return domain.Log{}, err
 	}
 	l.ImpactStatement = s.extract(ctx, l)
-	return s.logs.Create(ctx, l)
+	out, err := s.logs.Create(ctx, l)
+	if err == nil {
+		s.touch(ctx, d.ID)
+	}
+	return out, err
 }

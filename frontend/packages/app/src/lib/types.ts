@@ -114,3 +114,19 @@ export type AuditEntry = {
   role: string;
   at: string;
 };
+
+export type Bucket = { key: string; count: number };
+
+export type Dashboard = {
+  from: string;
+  to: string;
+  total: number;
+  in_period: number;
+  high_impact: number;
+  in_progress: number;
+  months: Bucket[];
+  tags: Bucket[];
+  statuses: Bucket[];
+  impacts: Bucket[];
+  coverage: Bucket[];
+};

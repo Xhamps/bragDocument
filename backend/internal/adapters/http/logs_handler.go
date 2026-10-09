@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ type LogUseCases interface {
 	Delete(ctx context.Context, docID, id, userID string) error
 	DeleteExamples(ctx context.Context, docID, userID string) error
 	Tags(ctx context.Context) ([]string, error)
+	Dashboard(ctx context.Context, docID, userID string, from, to *time.Time) (domain.Dashboard, error)
 }
 
 // LinkDTO is one reference link.
@@ -124,7 +126,18 @@ func logFilter(c *gin.Context) (domain.LogFilter, error) {
 			*dst = n
 		}
 	}
-	for key, dst := range map[string]**time.Time{"from": &f.From, "to": &f.To} {
+	f.From, f.To = dateRange(q, fields)
+	f.HideExamples = q.Get("examples") == "false"
+	if len(fields) > 0 {
+		return f, domain.NewValidationError(fields)
+	}
+	return f, nil
+}
+
+// dateRange reads from/to as YYYY-MM-DD in UTC; "to" is inclusive in the URL
+// and returned exclusive. Bad values are added to fields.
+func dateRange(q url.Values, fields map[string]string) (from, to *time.Time) {
+	for key, dst := range map[string]**time.Time{"from": &from, "to": &to} {
 		if v := q.Get(key); v != "" {
 			d, err := time.Parse(time.DateOnly, v)
 			if err != nil {
@@ -137,13 +150,40 @@ func logFilter(c *gin.Context) (domain.LogFilter, error) {
 			*dst = &d
 		}
 	}
-	if len(fields) > 0 {
-		return f, domain.NewValidationError(fields)
-	}
-	return f, nil
+	return from, to
 }
 
-// RegisterLogs adds /documents/:id/logs, /documents/:id/example-logs, and /tags.
+// BucketResponse is one bar of a dashboard chart.
+type BucketResponse struct {
+	Key   string `json:"key"`
+	Count int    `json:"count"`
+}
+
+// DashboardResponse is PRD-0005's aggregate; dates are YYYY-MM-DD, "to" inclusive.
+type DashboardResponse struct {
+	From       string           `json:"from"`
+	To         string           `json:"to"`
+	Total      int              `json:"total"`
+	InPeriod   int              `json:"in_period"`
+	HighImpact int              `json:"high_impact"`
+	InProgress int              `json:"in_progress"`
+	Months     []BucketResponse `json:"months"`
+	Tags       []BucketResponse `json:"tags"`
+	Statuses   []BucketResponse `json:"statuses"`
+	Impacts    []BucketResponse `json:"impacts"`
+	Coverage   []BucketResponse `json:"coverage"`
+}
+
+func toBuckets(bs []domain.Bucket) []BucketResponse {
+	out := make([]BucketResponse, 0, len(bs))
+	for _, b := range bs {
+		out = append(out, BucketResponse{Key: b.Key, Count: b.Count})
+	}
+	return out
+}
+
+// RegisterLogs adds /documents/:id/logs, /documents/:id/example-logs,
+// /documents/:id/dashboard, and /tags.
 func RegisterLogs(r gin.IRouter, uc LogUseCases) {
 	g := r.Group("/documents/:id")
 	g.GET("/logs", func(c *gin.Context) {
@@ -221,6 +261,25 @@ func RegisterLogs(r gin.IRouter, uc LogUseCases) {
 			return
 		}
 		c.Status(http.StatusNoContent)
+	})
+	g.GET("/dashboard", func(c *gin.Context) {
+		fields := map[string]string{}
+		from, to := dateRange(c.Request.URL.Query(), fields)
+		if len(fields) > 0 {
+			RespondError(c, domain.NewValidationError(fields))
+			return
+		}
+		d, err := uc.Dashboard(c.Request.Context(), c.Param("id"), principal(c).User.ID, from, to)
+		if err != nil {
+			RespondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, DashboardResponse{
+			From: d.From.Format(time.DateOnly), To: d.To.AddDate(0, 0, -1).Format(time.DateOnly),
+			Total: d.Total, InPeriod: d.InPeriod, HighImpact: d.HighImpact, InProgress: d.InProgress,
+			Months: toBuckets(d.Months), Tags: toBuckets(d.Tags), Statuses: toBuckets(d.Statuses),
+			Impacts: toBuckets(d.Impacts), Coverage: toBuckets(d.Coverage),
+		})
 	})
 	r.GET("/tags", func(c *gin.Context) {
 		tags, err := uc.Tags(c.Request.Context())

@@ -12,6 +12,7 @@ import {
 } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Log } from "../lib/types";
+import { DocumentTabs } from "../documents/DocumentTabs";
 import { useDocument } from "../documents/useDocuments";
 import { ApiError } from "../lib/api";
 import { SharePanel } from "../sharing/SharePanel";
@@ -146,6 +147,7 @@ export function Component() {
           ← Documents
         </Link>
         <h2 className="text-xl font-semibold">{doc.title}</h2>
+        <DocumentTabs id={doc.id} current="logs" />
         {doc.role !== "owner" && (
           <span className="text-sm text-muted-foreground">
             {`Shared by ${doc.owner_name} · you are ${doc.role}`}

@@ -90,7 +90,7 @@ func apiCmd() *cobra.Command {
 			httpadapter.RegisterMe(authed)
 			docRepo := postgres.NewDocumentRepo(db)
 			httpadapter.RegisterDocuments(authed, app.NewDocuments(docRepo))
-			logs := app.NewLogs(docRepo, postgres.NewLogRepo(db), impact)
+			logs := app.NewLogs(docRepo, postgres.NewLogRepo(db), impact, cache)
 			httpadapter.RegisterLogs(authed, logs)
 			// codes: raw rc so a Redis outage surfaces as 503; undo: Degrading (a miss is harmless).
 			tgUC := app.NewTelegram(postgres.NewTelegramLinkRepo(db), docRepo, logs, rc, cache, cfg.AppURL, telemetry.WithTenantID)

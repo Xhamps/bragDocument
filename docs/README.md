@@ -92,7 +92,7 @@ Every decision is written down. There are two kinds of decision, with one folder
 | [0002](prd/0002-logs.md) | Logs: fields, creation, and the filtered list page | accepted |
 | [0003](prd/0003-telegram-bot.md) | Adding logs through a Telegram bot | accepted |
 | [0004](prd/0004-sharing-and-rbac.md) | Sharing documents: invitations and roles | accepted |
-| [0005](prd/0005-dashboard.md) | Dashboard with log metrics | proposed |
+| [0005](prd/0005-dashboard.md) | Dashboard with log metrics | accepted |
 | [0006](prd/0006-pdf-report.md) | PDF report for sharing with the team | proposed |
 | [0007](prd/0007-impact-extraction.md) | Impact statement extracted from the description | accepted |
 

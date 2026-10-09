@@ -24,6 +24,8 @@ type fakeLogUC struct {
 	exDoc   string
 	log     domain.Log
 	err     error
+
+	dashFrom, dashTo *time.Time
 }
 
 func (f *fakeLogUC) List(_ context.Context, docID, _ string, fl domain.LogFilter) (domain.LogPage, error) {
@@ -51,6 +53,11 @@ func (f *fakeLogUC) DeleteExamples(_ context.Context, docID, _ string) error {
 	return f.err
 }
 func (f *fakeLogUC) Tags(context.Context) ([]string, error) { return []string{"project"}, f.err }
+func (f *fakeLogUC) Dashboard(_ context.Context, _, _ string, from, to *time.Time) (domain.Dashboard, error) {
+	f.dashFrom, f.dashTo = from, to
+	return domain.Dashboard{From: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+		Total: 7, InPeriod: 3, Months: []domain.Bucket{{Key: "2026-01", Count: 3}}}, f.err
+}
 
 func logsEngine(t *testing.T, uc *fakeLogUC) *gin.Engine {
 	t.Helper()
@@ -140,4 +147,28 @@ func TestTagsList(t *testing.T) {
 	rec := do(logsEngine(t, &fakeLogUC{}), http.MethodGet, "/tags", "")
 	require.Equal(t, 200, rec.Code)
 	require.JSONEq(t, `{"tags":["project"]}`, rec.Body.String())
+}
+
+func TestLogsDashboard(t *testing.T) {
+	uc := &fakeLogUC{}
+	rec := do(logsEngine(t, uc), http.MethodGet, "/documents/d1/dashboard?from=2026-01-01&to=2026-03-31", "")
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	require.Equal(t, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), *uc.dashFrom)
+	require.Equal(t, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), *uc.dashTo, "to is inclusive")
+	body := rec.Body.String()
+	require.Contains(t, body, `"from":"2026-01-01","to":"2026-03-31"`)
+	require.Contains(t, body, `"total":7,"in_period":3`)
+	require.Contains(t, body, `"months":[{"key":"2026-01","count":3}]`)
+	require.Contains(t, body, `"tags":[]`)
+
+	rec = do(logsEngine(t, uc), http.MethodGet, "/documents/d1/dashboard?from=jan", "")
+	require.Equal(t, 422, rec.Code)
+}
+
+func TestLogsListHidesExamples(t *testing.T) {
+	uc := &fakeLogUC{}
+	do(logsEngine(t, uc), http.MethodGet, "/documents/d1/logs?examples=false", "")
+	require.True(t, uc.filter.HideExamples)
+	do(logsEngine(t, uc), http.MethodGet, "/documents/d1/logs", "")
+	require.False(t, uc.filter.HideExamples)
 }

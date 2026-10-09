@@ -66,6 +66,93 @@ func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, erro
 	return i, err
 }
 
+const dashboardBuckets = `-- name: DashboardBuckets :many
+WITH p AS (
+    SELECT id, created_at, status, impact FROM logs
+    WHERE document_id = $1 AND NOT is_example
+      AND created_at >= $2 AND created_at < $3
+)
+SELECT 'month'::text AS kind, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM')::text AS key, count(*)::int AS count
+FROM p GROUP BY 2
+UNION ALL
+SELECT 'status', status, count(*)::int FROM p GROUP BY 2
+UNION ALL
+SELECT 'impact', impact, count(*)::int FROM p GROUP BY 2
+UNION ALL
+SELECT 'tag', t.tag_name, count(*)::int FROM p JOIN log_tags t ON t.log_id = p.id GROUP BY 2
+`
+
+type DashboardBucketsParams struct {
+	DocumentID uuid.UUID
+	FromAt     time.Time
+	ToAt       time.Time
+}
+
+type DashboardBucketsRow struct {
+	Kind  string
+	Key   string
+	Count int32
+}
+
+// Non-zero counts only; domain.Dashboard.Normalize fills the gaps. Months are UTC.
+func (q *Queries) DashboardBuckets(ctx context.Context, arg DashboardBucketsParams) ([]DashboardBucketsRow, error) {
+	rows, err := q.db.Query(ctx, dashboardBuckets, arg.DocumentID, arg.FromAt, arg.ToAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DashboardBucketsRow
+	for rows.Next() {
+		var i DashboardBucketsRow
+		if err := rows.Scan(&i.Kind, &i.Key, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardTotals = `-- name: DashboardTotals :one
+SELECT count(*)::int AS total,
+       count(*) FILTER (WHERE created_at >= $1 AND created_at < $2)::int AS in_period,
+       count(*) FILTER (WHERE created_at >= $1 AND created_at < $2
+                         AND impact IN ('high', 'critical'))::int AS high_impact,
+       count(*) FILTER (WHERE created_at >= $1 AND created_at < $2
+                         AND status = 'in_progress')::int AS in_progress
+FROM logs
+WHERE document_id = $3 AND NOT is_example
+`
+
+type DashboardTotalsParams struct {
+	FromAt     time.Time
+	ToAt       time.Time
+	DocumentID uuid.UUID
+}
+
+type DashboardTotalsRow struct {
+	Total      int32
+	InPeriod   int32
+	HighImpact int32
+	InProgress int32
+}
+
+// PRD-0005: examples never count. Total is all-time, the rest is [from, to).
+// impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
+func (q *Queries) DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error) {
+	row := q.db.QueryRow(ctx, dashboardTotals, arg.FromAt, arg.ToAt, arg.DocumentID)
+	var i DashboardTotalsRow
+	err := row.Scan(
+		&i.Total,
+		&i.InPeriod,
+		&i.HighImpact,
+		&i.InProgress,
+	)
+	return i, err
+}
+
 const deleteExampleLogs = `-- name: DeleteExampleLogs :exec
 DELETE FROM logs WHERE document_id = $1 AND is_example
 `
@@ -230,36 +317,38 @@ WHERE l.document_id = $1
           AND (k.host = $6 OR k.host LIKE '%.' || $6)))
   AND ($7::timestamptz IS NULL OR l.created_at >= $7)
   AND ($8::timestamptz IS NULL OR l.created_at < $8)
+  AND (NOT $9::bool OR NOT l.is_example)
 ORDER BY
-  CASE WHEN $9::text = 'created_at' AND NOT $10::bool THEN l.created_at END ASC,
-  CASE WHEN $9::text = 'created_at' AND $10::bool THEN l.created_at END DESC,
-  CASE WHEN $9::text = 'name' AND NOT $10::bool THEN lower(l.name) END ASC,
-  CASE WHEN $9::text = 'name' AND $10::bool THEN lower(l.name) END DESC,
-  CASE WHEN $9::text = 'impact' AND NOT $10::bool
+  CASE WHEN $10::text = 'created_at' AND NOT $11::bool THEN l.created_at END ASC,
+  CASE WHEN $10::text = 'created_at' AND $11::bool THEN l.created_at END DESC,
+  CASE WHEN $10::text = 'name' AND NOT $11::bool THEN lower(l.name) END ASC,
+  CASE WHEN $10::text = 'name' AND $11::bool THEN lower(l.name) END DESC,
+  CASE WHEN $10::text = 'impact' AND NOT $11::bool
     THEN array_position(ARRAY['low', 'medium', 'high', 'critical'], l.impact) END ASC,
-  CASE WHEN $9::text = 'impact' AND $10::bool
+  CASE WHEN $10::text = 'impact' AND $11::bool
     THEN array_position(ARRAY['low', 'medium', 'high', 'critical'], l.impact) END DESC,
-  CASE WHEN $9::text = 'status' AND NOT $10::bool
+  CASE WHEN $10::text = 'status' AND NOT $11::bool
     THEN array_position(ARRAY['idea', 'in_progress', 'done', 'dropped'], l.status) END ASC,
-  CASE WHEN $9::text = 'status' AND $10::bool
+  CASE WHEN $10::text = 'status' AND $11::bool
     THEN array_position(ARRAY['idea', 'in_progress', 'done', 'dropped'], l.status) END DESC,
   l.created_at DESC, l.id
-LIMIT $12::int OFFSET $11::int
+LIMIT $13::int OFFSET $12::int
 `
 
 type ListLogsParams struct {
-	DocumentID uuid.UUID
-	Q          pgtype.Text
-	Statuses   []string
-	Impacts    []string
-	Tags       []string
-	Host       pgtype.Text
-	FromAt     pgtype.Timestamptz
-	ToAt       pgtype.Timestamptz
-	Sort       string
-	Descending bool
-	Off        int32
-	Lim        int32
+	DocumentID   uuid.UUID
+	Q            pgtype.Text
+	Statuses     []string
+	Impacts      []string
+	Tags         []string
+	Host         pgtype.Text
+	FromAt       pgtype.Timestamptz
+	ToAt         pgtype.Timestamptz
+	HideExamples bool
+	Sort         string
+	Descending   bool
+	Off          int32
+	Lim          int32
 }
 
 type ListLogsRow struct {
@@ -280,6 +369,7 @@ func (q *Queries) ListLogs(ctx context.Context, arg ListLogsParams) ([]ListLogsR
 		arg.Host,
 		arg.FromAt,
 		arg.ToAt,
+		arg.HideExamples,
 		arg.Sort,
 		arg.Descending,
 		arg.Off,

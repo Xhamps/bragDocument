@@ -16,15 +16,16 @@ type logsFixture struct {
 	docs   *fakeDocs
 	logs   *fakeLogs
 	impact *fakeImpact
+	cache  *fakeCache
 }
 
 func newLogsFixture() logsFixture {
-	f := logsFixture{docs: newFakeDocs(), logs: newFakeLogs(), impact: &fakeImpact{statement: "Cut p95 by 4x"}}
+	f := logsFixture{docs: newFakeDocs(), logs: newFakeLogs(), impact: &fakeImpact{statement: "Cut p95 by 4x"}, cache: newFakeCache()}
 	f.docs.docs["d1"] = domain.Document{ID: "d1", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
 	f.docs.docs["d2"] = domain.Document{ID: "d2", TenantID: "t1", OwnerID: "u1", State: domain.DocumentArchived}
 	f.docs.docs["d3"] = domain.Document{ID: "d3", TenantID: "t1", OwnerID: "u1", State: domain.DocumentActive}
 	f.docs.grant("d1", "u2", domain.RoleViewer)
-	f.s = NewLogs(f.docs, f.logs, f.impact)
+	f.s = NewLogs(f.docs, f.logs, f.impact, f.cache)
 	f.s.now = func() time.Time { return time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC) }
 	return f
 }

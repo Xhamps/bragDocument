@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-08
 owner: Product
 stakeholders: Engineering
@@ -82,3 +82,7 @@ No new entities. Read-only aggregates over Log, Tag, and their relations.
 | Date | Decision | Why |
 |---|---|---|
 | 2026-10-08 | Fixed set of six charts | Covers the article's reflection use-case; a query builder is speculative |
+| 2026-10-09 | Example logs are excluded; the logs list gains `examples=false` so chart links match (FR-6) | Starter examples would distort the shape of the year |
+| 2026-10-09 | Everything except "Total" follows the period; default last 12 months | Reviews look at a window; Total anchors the whole document |
+| 2026-10-09 | Aggregates cached 60 s in Redis behind a per-document version key bumped on every log write | NFR-1 and ADR-0006; access is checked before the cache, so revocation stays immediate |
+| 2026-10-09 | Recharts with a table view of links for every chart | Charts that click through (FR-3) and an accessible alternative (NFR-2) |

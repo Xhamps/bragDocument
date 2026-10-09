@@ -23,6 +23,11 @@ type Querier interface {
 	CreateLog(ctx context.Context, arg CreateLogParams) (Log, error)
 	CreateTenant(ctx context.Context, name string) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// Non-zero counts only; domain.Dashboard.Normalize fills the gaps. Months are UTC.
+	DashboardBuckets(ctx context.Context, arg DashboardBucketsParams) ([]DashboardBucketsRow, error)
+	// PRD-0005: examples never count. Total is all-time, the rest is [from, to).
+	// impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
+	DashboardTotals(ctx context.Context, arg DashboardTotalsParams) (DashboardTotalsRow, error)
 	DeleteDocument(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteExampleLogs(ctx context.Context, documentID uuid.UUID) error
 	DeleteGrant(ctx context.Context, arg DeleteGrantParams) (int64, error)

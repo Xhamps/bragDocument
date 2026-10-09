@@ -97,6 +97,7 @@ paths:
         - { name: sort, in: query, schema: { type: string, enum: [created_at, -created_at, name, -name, impact, -impact, status, -status], default: -created_at } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: examples, in: query, schema: { type: string, enum: ["false"] }, description: "false hides example logs (matches the dashboard, PRD-0005 FR-6)" }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LogList" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -116,6 +117,19 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /documents/{id}/dashboard:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Log aggregates for a period, examples excluded (PRD-0005); read access
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date }, description: "UTC; default 12 months before to" }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "UTC, inclusive; default today" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Not found, or no role on the document }
+        "422": { description: Bad date, empty period, or longer than 5 years }
   /documents/{id}/logs/{logId}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -433,6 +447,27 @@ components:
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/Log" } }
         total: { type: integer }
+    Bucket:
+      type: object
+      required: [key, count]
+      properties:
+        key: { type: string, description: "Month (YYYY-MM), tag, status, or impact" }
+        count: { type: integer }
+    Dashboard:
+      type: object
+      required: [from, to, total, in_period, high_impact, in_progress, months, tags, statuses, impacts, coverage]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date, description: Inclusive }
+        total: { type: integer, description: All-time }
+        in_period: { type: integer }
+        high_impact: { type: integer, description: high + critical in period }
+        in_progress: { type: integer, description: status in_progress in period }
+        months: { type: array, items: { $ref: "#/components/schemas/Bucket" }, description: Every month of the period, zeros included }
+        tags: { type: array, items: { $ref: "#/components/schemas/Bucket" }, description: Top 10 by count }
+        statuses: { type: array, items: { $ref: "#/components/schemas/Bucket" } }
+        impacts: { type: array, items: { $ref: "#/components/schemas/Bucket" } }
+        coverage: { type: array, items: { $ref: "#/components/schemas/Bucket" }, description: "The article's suggested tags, zeros included" }
     CreateLog:
       type: object
       required: [name, impact]

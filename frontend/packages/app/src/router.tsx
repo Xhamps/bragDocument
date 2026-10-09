@@ -18,6 +18,10 @@ export const routes: RouteObject[] = [
             path: "documents/:id",
             lazy: () => import("./routes/DocumentLogs"),
           },
+          {
+            path: "documents/:id/dashboard",
+            lazy: () => import("./routes/Dashboard"),
+          },
           ...(import.meta.env.DEV
             ? [
                 {

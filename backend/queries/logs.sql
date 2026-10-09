@@ -16,6 +16,7 @@ WHERE l.document_id = @document_id
           AND (k.host = sqlc.narg('host') OR k.host LIKE '%.' || sqlc.narg('host'))))
   AND (sqlc.narg('from_at')::timestamptz IS NULL OR l.created_at >= sqlc.narg('from_at'))
   AND (sqlc.narg('to_at')::timestamptz IS NULL OR l.created_at < sqlc.narg('to_at'))
+  AND (NOT @hide_examples::bool OR NOT l.is_example)
 -- impact and status orders mirror domain.Impacts and domain.Statuses; keep in sync.
 ORDER BY
   CASE WHEN @sort::text = 'created_at' AND NOT @descending::bool THEN l.created_at END ASC,
@@ -84,3 +85,31 @@ SELECT * FROM log_links WHERE log_id = ANY (@ids::uuid[]) ORDER BY log_id, posit
 
 -- name: ListTags :many
 SELECT name FROM tags ORDER BY name;
+
+-- name: DashboardTotals :one
+-- PRD-0005: examples never count. Total is all-time, the rest is [from, to).
+-- impact and status literals mirror domain.Impacts and domain.Statuses; keep in sync.
+SELECT count(*)::int AS total,
+       count(*) FILTER (WHERE created_at >= @from_at AND created_at < @to_at)::int AS in_period,
+       count(*) FILTER (WHERE created_at >= @from_at AND created_at < @to_at
+                         AND impact IN ('high', 'critical'))::int AS high_impact,
+       count(*) FILTER (WHERE created_at >= @from_at AND created_at < @to_at
+                         AND status = 'in_progress')::int AS in_progress
+FROM logs
+WHERE document_id = @document_id AND NOT is_example;
+
+-- name: DashboardBuckets :many
+-- Non-zero counts only; domain.Dashboard.Normalize fills the gaps. Months are UTC.
+WITH p AS (
+    SELECT id, created_at, status, impact FROM logs
+    WHERE document_id = @document_id AND NOT is_example
+      AND created_at >= @from_at AND created_at < @to_at
+)
+SELECT 'month'::text AS kind, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM')::text AS key, count(*)::int AS count
+FROM p GROUP BY 2
+UNION ALL
+SELECT 'status', status, count(*)::int FROM p GROUP BY 2
+UNION ALL
+SELECT 'impact', impact, count(*)::int FROM p GROUP BY 2
+UNION ALL
+SELECT 'tag', t.tag_name, count(*)::int FROM p JOIN log_tags t ON t.log_id = p.id GROUP BY 2;

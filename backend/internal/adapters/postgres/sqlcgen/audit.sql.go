@@ -21,7 +21,8 @@ SELECT app_tenant_id(), u.id, COALESCE(u.display_name, ''), COALESCE(u.email, ''
 FROM (SELECT 1) one
 LEFT JOIN users u ON u.id = $8::uuid
 LEFT JOIN documents d ON d.id = $9::uuid
-WHERE $9::uuid IS NULL OR d.id IS NOT NULL
+WHERE ($9::uuid IS NULL OR d.id IS NOT NULL)
+  AND ($8::uuid IS NULL OR u.id IS NOT NULL)
 `
 
 type CreateAuditEntryParams struct {
@@ -37,7 +38,7 @@ type CreateAuditEntryParams struct {
 }
 
 // Copies the actor's name and email and the document's title so the entry
-// outlives both. A document id that matches nothing inserts nothing.
+// outlives both. A document or actor id that matches nothing inserts nothing.
 func (q *Queries) CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error) {
 	result, err := q.db.Exec(ctx, createAuditEntry,
 		arg.Source,

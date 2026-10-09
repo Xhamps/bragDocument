@@ -17,7 +17,7 @@ type Querier interface {
 	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
 	ClaimExportJob(ctx context.Context) (ExportJob, error)
 	// Copies the actor's name and email and the document's title so the entry
-	// outlives both. A document id that matches nothing inserts nothing.
+	// outlives both. A document or actor id that matches nothing inserts nothing.
 	CreateAuditEntry(ctx context.Context, arg CreateAuditEntryParams) (int64, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)

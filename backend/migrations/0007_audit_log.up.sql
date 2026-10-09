@@ -10,8 +10,10 @@ ALTER TABLE audit_entries
     ADD COLUMN target_id      text   NOT NULL DEFAULT '',
     ADD COLUMN changed_fields text[] NOT NULL DEFAULT '{}';
 
--- Namespaced actions. Migrations run as the database owner (a superuser in
--- compose and tests), which bypasses the forced RLS policy.
+-- Namespaced actions. The owner is exempt from RLS only without FORCE, so lift
+-- it for the backfill: a non-superuser owner (managed Postgres) would match nothing.
+ALTER TABLE audit_entries NO FORCE ROW LEVEL SECURITY;
+ALTER TABLE users NO FORCE ROW LEVEL SECURITY;
 UPDATE audit_entries SET action = CASE action
     WHEN 'grant'         THEN 'sharing.granted'
     WHEN 'invite'        THEN 'sharing.invitation_sent'
@@ -23,6 +25,8 @@ UPDATE audit_entries SET action = CASE action
     ELSE action END,
     target_type = CASE WHEN action IN ('invite', 'invite_cancel') THEN 'invitation' ELSE 'user' END;
 UPDATE audit_entries a SET actor_name = u.display_name FROM users u WHERE u.id = a.actor_id;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+ALTER TABLE audit_entries FORCE ROW LEVEL SECURITY;
 
 -- Audit log filters (NFR-3); tenant and document indexes exist since 0005.
 CREATE INDEX audit_entries_actor_idx  ON audit_entries (tenant_id, actor_id, id DESC);

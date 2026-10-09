@@ -209,6 +209,67 @@ func TestTelegramImpactCallback(t *testing.T) {
 	require.Equal(t, msgNotLinked, f.tg.Callback(ctx, 43, "impact:add:l1").Text)
 }
 
+func TestTelegramImpactAnswerAdds(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Migrated CI\nMoved to GitHub Actions")
+
+	f.tg.Callback(ctx, 42, "impact:add:l1")
+	f.lf.impact.statement = "Build time dropped from 20 to 6 min"
+	require.Equal(t, "Updated: Migrated CI\nImpact found: Build time dropped from 20 to 6 min",
+		f.say(42, "Build time dropped from 20 to 6 min"))
+	require.Equal(t, "Moved to GitHub Actions\n\nBuild time dropped from 20 to 6 min", f.lf.logs.logs["l1"].Description)
+	require.Len(t, f.lf.logs.logs, 1, "the answer is not a new log")
+
+	require.Contains(t, f.say(42, "Another thing"), "Logged: Another thing", "the answer was consumed")
+	require.Len(t, f.lf.logs.logs, 2)
+}
+
+func TestTelegramImpactAnswerReplacesAndAsksAgain(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Migrated CI\nMoved to GitHub Actions")
+
+	f.tg.Callback(ctx, 42, "impact:replace:l1")
+	r := f.tg.Reply(ctx, 42, "Still vague")
+	require.Equal(t, "Updated: Migrated CI\n\n"+msgNoImpact, r.Text)
+	require.Equal(t, impactButtons("l1"), r.Buttons, "still none: ask again")
+	require.Equal(t, "Still vague", f.lf.logs.logs["l1"].Description)
+
+	f.tg.Callback(ctx, 42, "impact:add:l1")
+	f.lf.impact.err = domain.ErrUnavailable
+	require.Equal(t, "Updated: Migrated CI", f.say(42, "Saved a day"), "not checked: no impact line")
+	require.Equal(t, "Still vague\n\nSaved a day", f.lf.logs.logs["l1"].Description)
+}
+
+func TestTelegramImpactAnswerIgnoredOrGone(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing") // l1
+
+	require.Contains(t, f.say(42, "Second"), "Logged: Second", "no tap: a plain message is a new log") // l2
+
+	f.say(42, "Third") // l3
+	f.tg.Callback(ctx, 42, "impact:add:l3")
+	f.say(42, "/undo")
+	require.Equal(t, msgLogGone, f.say(42, "Saved a day"))
+	require.Len(t, f.lf.logs.logs, 2)
+
+	f.say(42, "Fourth") // l4
+	f.tg.Callback(ctx, 42, "impact:add:l4")
+	require.NoError(t, f.tg.Unlink(ctx, "u1"))
+	f.lf.docs.docs["d7"] = domain.Document{ID: "d7", TenantID: "t2", OwnerID: "u2", State: domain.DocumentActive}
+	f.links.byUser["u2"] = domain.TelegramLink{UserID: "u2", TenantID: "t2", TelegramUserID: 42, DocumentID: "d7"}
+	require.Contains(t, f.say(42, "Mine now"), "Logged: Mine now", "relinked: u1's pending answer is ignored")
+	require.Equal(t, "", f.lf.logs.logs["l4"].Description)
+}
+
 func TestTelegramMessageErrors(t *testing.T) {
 	f := newTGFixture()
 	f.linked("")

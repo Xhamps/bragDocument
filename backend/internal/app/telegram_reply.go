@@ -53,6 +53,9 @@ func (t *Telegram) Reply(ctx context.Context, telegramID int64, text string) Bot
 	}
 	ctx = t.scope(ctx, link.TenantID)
 	if cmd == "" {
+		if r, ok := t.answer(ctx, link, telegramID, arg); ok {
+			return r
+		}
 		return t.capture(ctx, link, telegramID, arg)
 	}
 	return BotReply{Text: t.command(ctx, link, telegramID, cmd, arg)}
@@ -221,6 +224,40 @@ func (t *Telegram) capture(ctx context.Context, link domain.TelegramLink, telegr
 	}
 	b.WriteString("\n/undo to remove it.")
 	return BotReply{Text: b.String(), Buttons: buttons}
+}
+
+// answer applies a plain message to the log whose impact button was tapped.
+// ok is false when no answer is pending, so the message is a new log.
+func (t *Telegram) answer(ctx context.Context, link domain.TelegramLink, telegramID int64, text string) (BotReply, bool) {
+	e, ok := t.pendingImpact(ctx, link, telegramID)
+	if !ok || e.Mode == "" {
+		return BotReply{}, false
+	}
+	_ = t.undo.Delete(ctx, impactKey(telegramID))
+	l, err := t.logs.Get(ctx, e.DocumentID, e.LogID, link.UserID)
+	if err == nil {
+		desc := text
+		if e.Mode == impactAdd && strings.TrimSpace(l.Description) != "" {
+			desc = l.Description + "\n\n" + text
+		}
+		l, err = t.logs.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: l.DocumentID, UserID: link.UserID, Description: &desc})
+	}
+	if errors.Is(err, domain.ErrNotFound) {
+		return BotReply{Text: msgLogGone}, true
+	}
+	if err != nil {
+		return BotReply{Text: t.failed(ctx, err)}, true
+	}
+	r := BotReply{Text: "Updated: " + l.Name}
+	switch {
+	case l.ImpactStatement == nil: // not checked: nothing to say
+	case *l.ImpactStatement == "":
+		r.Text += "\n\n" + msgNoImpact
+		r.Buttons = t.askImpact(ctx, telegramID, e.undoEntry)
+	default:
+		r.Text += "\nImpact found: " + *l.ImpactStatement
+	}
+	return r, true
 }
 
 func (t *Telegram) last(ctx context.Context, link domain.TelegramLink) string {

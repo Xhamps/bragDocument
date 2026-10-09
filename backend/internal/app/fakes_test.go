@@ -1,9 +1,12 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/xhamps/bragdocument/backend/internal/domain"
@@ -100,6 +103,7 @@ func (f *fakeDocs) ListByOwner(_ context.Context, ownerID string) ([]domain.Docu
 			out = append(out, d)
 		}
 	}
+	slices.SortFunc(out, func(a, b domain.Document) int { return strings.Compare(a.ID, b.ID) })
 	return out, nil
 }
 func (f *fakeDocs) Get(_ context.Context, id string) (domain.Document, error) {
@@ -198,7 +202,14 @@ func (f *fakeLogs) List(_ context.Context, documentID string, fl domain.LogFilte
 			p.Items = append(p.Items, l)
 		}
 	}
+	// Newest first; same timestamp → later ID first, as created_at desc in Postgres.
+	slices.SortFunc(p.Items, func(a, b domain.Log) int {
+		return cmp.Or(b.CreatedAt.Compare(a.CreatedAt), cmp.Compare(len(b.ID), len(a.ID)), strings.Compare(b.ID, a.ID))
+	})
 	p.Total = len(p.Items)
+	if fl.PerPage > 0 && len(p.Items) > fl.PerPage {
+		p.Items = p.Items[:fl.PerPage]
+	}
 	return p, nil
 }
 func (f *fakeLogs) Get(_ context.Context, documentID, id string) (domain.Log, error) {

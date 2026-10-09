@@ -124,6 +124,21 @@ func TestAuditRepo(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got.Entries, 3)
 	require.Zero(t, got.NextBefore)
+	got, err = audits.List(ctxA, domain.AuditFilter{ActorID: bob.ID, Limit: 50})
+	require.NoError(t, err)
+	require.Len(t, got.Entries, 2, "doc3 created, its log created")
+	for _, e := range got.Entries {
+		require.Equal(t, bob.ID, e.ActorID)
+	}
+	got, err = audits.List(ctxA, domain.AuditFilter{DocumentID: doc2.ID, Limit: 50})
+	require.NoError(t, err)
+	require.Equal(t, []string{domain.AuditDocumentDeleted, domain.AuditDocumentCreated}, actions(got.Entries))
+
+	// a page exactly as long as what is left is the last page
+	got, err = audits.List(ctxA, domain.AuditFilter{Limit: 8})
+	require.NoError(t, err)
+	require.Len(t, got.Entries, 8)
+	require.Zero(t, got.NextBefore)
 	from := time.Now().Add(-time.Hour)
 	got, err = audits.List(ctxA, domain.AuditFilter{From: &from, Limit: 50})
 	require.NoError(t, err)
@@ -158,8 +173,12 @@ func TestAuditRepo(t *testing.T) {
 	require.Len(t, documents, 1)
 	actors, documents, err = audits.Filters(ctxA, "")
 	require.NoError(t, err)
-	require.ElementsMatch(t, []string{ada.ID, bob.ID}, actorIDs(actors))
-	require.Len(t, documents, 3, "the deleted document stays pickable")
+	require.Equal(t, []string{ada.ID, bob.ID}, actorIDs(actors), "sorted by name, then email")
+	titles := make([]string, 0, len(documents))
+	for _, d := range documents {
+		titles = append(titles, d.Title)
+	}
+	require.Equal(t, []string{"2026", "2027", "Bob's"}, titles, "sorted by title; the deleted document stays pickable")
 
 	// append-only (FR-4): the app role cannot rewrite history
 	for _, stmt := range []string{"UPDATE audit_entries SET action = 'x'", "DELETE FROM audit_entries"} {

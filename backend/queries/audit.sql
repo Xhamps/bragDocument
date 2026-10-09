@@ -35,14 +35,18 @@ LIMIT sqlc.arg(lim);
 
 -- name: ListAuditActors :many
 -- ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.
-SELECT DISTINCT ON (actor_id) actor_id, actor_name, actor_email FROM audit_entries
-WHERE actor_id IS NOT NULL
-  AND (sqlc.narg(owner_id)::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = sqlc.narg(owner_id)::uuid))
-ORDER BY actor_id, id DESC;
+SELECT * FROM (
+    SELECT DISTINCT ON (actor_id) actor_id, actor_name, actor_email FROM audit_entries
+    WHERE actor_id IS NOT NULL
+      AND (sqlc.narg(owner_id)::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = sqlc.narg(owner_id)::uuid))
+    ORDER BY actor_id, id DESC
+) s ORDER BY actor_name, actor_email;
 
 -- name: ListAuditDocuments :many
 -- Latest known title per document, including deleted ones (FR-12).
-SELECT DISTINCT ON (document_id) document_id, document_title FROM audit_entries
-WHERE document_id IS NOT NULL
-  AND (sqlc.narg(owner_id)::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = sqlc.narg(owner_id)::uuid))
-ORDER BY document_id, id DESC;
+SELECT * FROM (
+    SELECT DISTINCT ON (document_id) document_id, document_title FROM audit_entries
+    WHERE document_id IS NOT NULL
+      AND (sqlc.narg(owner_id)::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = sqlc.narg(owner_id)::uuid))
+    ORDER BY document_id, id DESC
+) s ORDER BY document_title;

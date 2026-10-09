@@ -129,10 +129,12 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEn
 }
 
 const listAuditActors = `-- name: ListAuditActors :many
-SELECT DISTINCT ON (actor_id) actor_id, actor_name, actor_email FROM audit_entries
-WHERE actor_id IS NOT NULL
-  AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
-ORDER BY actor_id, id DESC
+SELECT actor_id, actor_name, actor_email FROM (
+    SELECT DISTINCT ON (actor_id) actor_id, actor_name, actor_email FROM audit_entries
+    WHERE actor_id IS NOT NULL
+      AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
+    ORDER BY actor_id, id DESC
+) s ORDER BY actor_name, actor_email
 `
 
 type ListAuditActorsRow struct {
@@ -244,10 +246,12 @@ func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]
 }
 
 const listAuditDocuments = `-- name: ListAuditDocuments :many
-SELECT DISTINCT ON (document_id) document_id, document_title FROM audit_entries
-WHERE document_id IS NOT NULL
-  AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
-ORDER BY document_id, id DESC
+SELECT document_id, document_title FROM (
+    SELECT DISTINCT ON (document_id) document_id, document_title FROM audit_entries
+    WHERE document_id IS NOT NULL
+      AND ($1::uuid IS NULL OR document_id IN (SELECT id FROM documents WHERE owner_id = $1::uuid))
+    ORDER BY document_id, id DESC
+) s ORDER BY document_title
 `
 
 type ListAuditDocumentsRow struct {

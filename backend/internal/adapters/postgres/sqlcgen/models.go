@@ -19,14 +19,19 @@ type AppMetum struct {
 type AuditEntry struct {
 	ID            int64
 	TenantID      uuid.UUID
-	ActorID       uuid.UUID
+	ActorID       pgtype.UUID
 	ActorEmail    string
 	Action        string
-	DocumentID    uuid.UUID
-	DocumentTitle string
+	DocumentID    pgtype.UUID
+	DocumentTitle pgtype.Text
 	Target        string
 	Role          string
 	At            time.Time
+	ActorName     string
+	Source        string
+	TargetType    string
+	TargetID      string
+	ChangedFields []string
 }
 
 type Document struct {

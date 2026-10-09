@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAuditEntry = `-- name: CreateAuditEntry :execrows
@@ -149,10 +150,10 @@ func (q *Queries) DeletePendingDocumentInvitation(ctx context.Context, arg Delet
 }
 
 const listAuditByDocument = `-- name: ListAuditByDocument :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200
+SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200
 `
 
-func (q *Queries) ListAuditByDocument(ctx context.Context, documentID uuid.UUID) ([]AuditEntry, error) {
+func (q *Queries) ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error) {
 	rows, err := q.db.Query(ctx, listAuditByDocument, documentID)
 	if err != nil {
 		return nil, err
@@ -172,6 +173,11 @@ func (q *Queries) ListAuditByDocument(ctx context.Context, documentID uuid.UUID)
 			&i.Target,
 			&i.Role,
 			&i.At,
+			&i.ActorName,
+			&i.Source,
+			&i.TargetType,
+			&i.TargetID,
+			&i.ChangedFields,
 		); err != nil {
 			return nil, err
 		}
@@ -184,7 +190,7 @@ func (q *Queries) ListAuditByDocument(ctx context.Context, documentID uuid.UUID)
 }
 
 const listAuditByTenant = `-- name: ListAuditByTenant :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500
+SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500
 `
 
 func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error) {
@@ -207,6 +213,11 @@ func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]
 			&i.Target,
 			&i.Role,
 			&i.At,
+			&i.ActorName,
+			&i.Source,
+			&i.TargetType,
+			&i.TargetID,
+			&i.ChangedFields,
 		); err != nil {
 			return nil, err
 		}

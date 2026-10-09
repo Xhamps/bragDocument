@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -62,7 +63,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	InsertLogLink(ctx context.Context, arg InsertLogLinkParams) error
 	InsertLogTags(ctx context.Context, arg InsertLogTagsParams) error
-	ListAuditByDocument(ctx context.Context, documentID uuid.UUID) ([]AuditEntry, error)
+	ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error)
 	ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error)
 	// last_log_at falls back to d.created_at so the column is never NULL; it is
 	// meaningful only when log_count > 0. Examples are not counted.

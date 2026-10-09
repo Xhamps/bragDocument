@@ -20,6 +20,7 @@ func (s *Logs) Dashboard(ctx context.Context, docID, userID string, from, to *ti
 	if err != nil {
 		return domain.Dashboard{}, err
 	}
+	// A missing version (expired, evicted, Redis blip) reads as "0"; a v0 entry is at most one TTL old.
 	ver := "0"
 	if v, ok, _ := s.cache.Get(ctx, docVersionKey(docID)); ok {
 		ver = string(v)

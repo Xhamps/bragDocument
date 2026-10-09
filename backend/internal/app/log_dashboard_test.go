@@ -19,8 +19,9 @@ func TestDashboardCachesUntilAWrite(t *testing.T) {
 	d, err := f.s.Dashboard(ctx, "d1", "u1", nil, nil)
 	require.NoError(t, err)
 	require.Len(t, d.Months, 13, "normalized: the default 12-month window ending mid-month overlaps 13 months")
-	_, err = f.s.Dashboard(ctx, "d1", "u1", nil, nil)
+	cached, err := f.s.Dashboard(ctx, "d1", "u1", nil, nil)
 	require.NoError(t, err)
+	require.Equal(t, d, cached, "a hit equals the fresh result")
 	require.Equal(t, 1, f.logs.dashCalls, "second read is a hit")
 
 	_, err = f.s.Create(ctx, createIn("d1"))
@@ -89,8 +90,10 @@ func TestDashboardCorruptEntryIsAMiss(t *testing.T) {
 func TestDashboardRules(t *testing.T) {
 	f := newLogsFixture()
 	ctx := context.Background()
-	_, err := f.s.Dashboard(ctx, "d1", "u9", nil, nil)
-	require.ErrorIs(t, err, domain.ErrNotFound, "no grant")
+	_, err := f.s.Dashboard(ctx, "d1", "u1", nil, nil)
+	require.NoError(t, err, "warm the cache")
+	_, err = f.s.Dashboard(ctx, "d1", "u9", nil, nil)
+	require.ErrorIs(t, err, domain.ErrNotFound, "no grant, even with a warm cache")
 	_, err = f.s.Dashboard(ctx, "d1", "u2", nil, nil)
 	require.NoError(t, err, "viewers read the dashboard (FR-5)")
 
@@ -98,5 +101,5 @@ func TestDashboardRules(t *testing.T) {
 	_, err = f.s.Dashboard(ctx, "d1", "u1", &from, &to)
 	var ve *domain.ValidationError
 	require.ErrorAs(t, err, &ve)
-	require.Equal(t, 1, f.logs.dashCalls, "only the viewer read: access and validation run before any read")
+	require.Equal(t, 1, f.logs.dashCalls, "one read, then hits: access and validation run before any read")
 }

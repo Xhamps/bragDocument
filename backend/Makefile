@@ -1,9 +1,12 @@
 GOLANGCI ?= $(shell test -x ./bin/golangci-lint && echo ./bin/golangci-lint || echo golangci-lint)
 
-.PHONY: run test test-integration lint migrate sqlc docker tidy
+.PHONY: run run-all test test-integration lint migrate sqlc docker tidy
 
 run:
 	go run ./cmd/bragdoc api
+
+run-all:
+	go run ./cmd/bragdoc all
 
 test:
 	go test ./...

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import type { Document, DocumentList } from "../lib/types";
 
 const key = ["documents"];
@@ -8,6 +8,15 @@ export function useDocuments() {
   return useQuery({
     queryKey: key,
     queryFn: () => api<DocumentList>("/documents"),
+  });
+}
+
+export function useDocument(id: string) {
+  return useQuery({
+    queryKey: [...key, id],
+    queryFn: () => api<Document>(`/documents/${id}`),
+    // 4xx won't fix itself: a missing or revoked document should say so at once.
+    retry: (n, e) => !(e instanceof ApiError && e.status < 500) && n < 3,
   });
 }
 

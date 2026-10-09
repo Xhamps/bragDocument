@@ -13,6 +13,8 @@ const doc = (over: Partial<Document> = {}): Document => ({
   updated_at: "2026-01-02T00:00:00Z",
   log_count: 1,
   last_log_at: "2026-03-01T12:00:00Z",
+  role: "owner",
+  is_new: false,
   ...over,
 });
 
@@ -37,6 +39,7 @@ const log = (over: Partial<Log> = {}): Log => ({
 const routes = (logs: Log[] = [log()], d = doc()) => ({
   "GET /me": me,
   "GET /documents": { owned: [d], shared: [] },
+  "GET /documents/d1": d,
   "GET /documents/d1/logs": { items: logs, total: logs.length },
   "GET /tags": { tags: ["project"] },
 });
@@ -251,4 +254,33 @@ test("?edit= on an archived document drops the param without opening", async () 
   expect(await screen.findByText("Moved billing jobs")).toBeInTheDocument();
   await waitFor(() => expect(router.state.location.search).toBe(""));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+test("viewer gets a read-only page that explains why", async () => {
+  mockFetch(
+    routes([log()], doc({ role: "viewer", owner_id: "u2", owner_name: "Bob" })),
+  );
+  renderAt("/documents/d1");
+  expect(await screen.findByText(/viewer · read-only/i)).toBeInTheDocument();
+  expect(
+    screen.getByText("Shared by Bob · you are viewer"),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /new log/i }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /^share$/i }),
+  ).not.toBeInTheDocument();
+});
+
+test("missing document says so", async () => {
+  mockFetch({
+    ...routes(),
+    "GET /documents/d1": {
+      status: 404,
+      body: { message: "resource not found" },
+    },
+  });
+  renderAt("/documents/d1");
+  expect(await screen.findByText("Document not found.")).toBeInTheDocument();
 });

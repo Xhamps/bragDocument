@@ -60,6 +60,15 @@ test("shows statement, expands to Markdown and safe links", async () => {
   expect(pr).toHaveAttribute("target", "_blank");
 });
 
+test("Markdown images are not rendered", async () => {
+  mockFetch(routes([log({ description: "![x](https://evil.example/p.png)" })]));
+  const { container } = renderAt("/documents/d1");
+  await userEvent.click(
+    await screen.findByRole("button", { name: /moved billing jobs/i }),
+  );
+  expect(container.querySelector("img")).toBeNull();
+});
+
 test("warns when a log has no impact", async () => {
   mockFetch(routes([log({ impact_statement: "" })]));
   renderAt("/documents/d1");

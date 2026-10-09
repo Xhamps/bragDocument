@@ -112,7 +112,11 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
       {open && (
         <div className="flex flex-col gap-2 text-sm [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
           {log.description && (
-            <Markdown components={{ a: ExternalLink }}>
+            <Markdown
+              components={{ a: ExternalLink }}
+              disallowedElements={["img"]}
+              unwrapDisallowed
+            >
               {log.description}
             </Markdown>
           )}

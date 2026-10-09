@@ -211,7 +211,7 @@ components:
         tenant: { $ref: "#/components/schemas/Tenant" }
     Document:
       type: object
-      required: [id, owner_id, title, description, state, created_at, updated_at, log_count, last_log_at]
+      required: [id, owner_id, title, description, state, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
@@ -220,8 +220,8 @@ components:
         state: { type: string, enum: [active, archived] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
-        log_count: { type: integer, description: Logs excluding examples }
-        last_log_at: { type: string, format: date-time, nullable: true, description: Newest created_at, null without logs }
+        log_count: { type: integer, description: "Logs excluding examples. Set only by GET /documents (list); absent or zero elsewhere." }
+        last_log_at: { type: string, format: date-time, nullable: true, description: "Newest created_at, null without logs. Set only by GET /documents (list); absent or zero elsewhere." }
     DocumentList:
       type: object
       required: [owned, shared]

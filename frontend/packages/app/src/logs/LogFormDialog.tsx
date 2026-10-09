@@ -214,7 +214,11 @@ function Form({
         </div>
         {preview ? (
           <div className="min-h-32 rounded-md border p-3 text-sm [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
-            <Markdown components={{ a: ExternalLink }}>
+            <Markdown
+              components={{ a: ExternalLink }}
+              disallowedElements={["img"]}
+              unwrapDisallowed
+            >
               {f.description || "_Nothing to preview._"}
             </Markdown>
           </div>

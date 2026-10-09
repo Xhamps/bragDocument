@@ -24,9 +24,12 @@ export const SUGGESTED_TAGS = [
 export const SORTS = [
   { value: "-created_at", label: "Newest first" },
   { value: "created_at", label: "Oldest first" },
-  { value: "name", label: "Name" },
-  { value: "-impact", label: "Impact" },
-  { value: "status", label: "Status" },
+  { value: "name", label: "Name A–Z" },
+  { value: "-name", label: "Name Z–A" },
+  { value: "-impact", label: "Impact: highest first" },
+  { value: "impact", label: "Impact: lowest first" },
+  { value: "status", label: "Status: idea → dropped" },
+  { value: "-status", label: "Status: dropped → idea" },
 ];
 
 /** Native <select>/<textarea> styled like the ui Input. */

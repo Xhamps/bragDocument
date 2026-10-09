@@ -42,7 +42,7 @@ RLS `tenant_id = app_tenant_id()` on all four tables, as on `documents`. Grants 
 ## 2. Impact extraction (PRD-0007, ADR-0013)
 
 - Port `ports.ImpactExtractor { Extract(ctx, name, description) (string, error) }`; `""` means none found.
-- Adapter `adapters/openai/extractor.go`: structured JSON-schema output `{found bool, statement string}`. The prompt asks to quote or tightly paraphrase the outcome stated in the text and never invent one. Statement capped at 280 chars.
+- Adapter `adapters/llm/openai.go`: structured JSON-schema output `{found bool, statement string}`. The prompt asks to quote or tightly paraphrase the outcome stated in the text and never invent one. Statement capped at 280 chars.
 - Config: `OPENAI_API_KEY` (optional), `OPENAI_MODEL` (default: a current small model, verified at build time), `LLM_TIMEOUT` (default 5s).
 - Degradation: no key → `cmd` wires a disabled extractor returning `domain.ErrUnavailable`. `LogCreate` and `LogUpdate` call the extractor only when name or description changed. On error: log, increment `impact_extraction_failures_total{reason}`, store NULL, save anyway. An edit that changes name or description re-extracts, which retries NULLs.
 - Example logs skip extraction; their statements are hard-coded.

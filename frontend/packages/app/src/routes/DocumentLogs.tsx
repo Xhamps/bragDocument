@@ -100,11 +100,16 @@ export function Component() {
     }
   };
 
-  const page = Number(params.get("page") ?? 1);
-  const perPage = Number(params.get("per_page") ?? PER_PAGE);
+  const page = Math.max(1, Number(params.get("page")) || 1);
+  const perPage = Math.min(
+    100,
+    Math.max(1, Number(params.get("per_page")) || PER_PAGE),
+  );
   const total = logs.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / perPage));
-  const filtered = [...params.keys()].some((k) => k !== "sort" && k !== "page");
+  const filtered = [...params.keys()].some(
+    (k) => k !== "sort" && k !== "page" && k !== "per_page",
+  );
   const items = logs.data?.items ?? [];
 
   return (

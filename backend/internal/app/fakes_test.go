@@ -256,8 +256,9 @@ func (f *fakeLogs) List(_ context.Context, documentID string, fl domain.LogFilte
 		return cmp.Or(b.CreatedAt.Compare(a.CreatedAt), cmp.Compare(len(b.ID), len(a.ID)), strings.Compare(b.ID, a.ID))
 	})
 	p.Total = len(p.Items)
-	if fl.PerPage > 0 && len(p.Items) > fl.PerPage {
-		p.Items = p.Items[:fl.PerPage]
+	if fl.PerPage > 0 {
+		start := min((max(fl.Page, 1)-1)*fl.PerPage, len(p.Items))
+		p.Items = p.Items[start:min(start+fl.PerPage, len(p.Items))]
 	}
 	return p, nil
 }
@@ -502,3 +503,105 @@ func (f *fakeMailer) Send(_ context.Context, to, subject, html string) error {
 	f.html = html
 	return f.err
 }
+
+type fakeExports struct {
+	jobs     map[string]domain.ExportJob
+	order    []string
+	settings map[string]domain.ReportSettings
+	seq      int
+}
+
+func newFakeExports() *fakeExports {
+	return &fakeExports{jobs: map[string]domain.ExportJob{}, settings: map[string]domain.ReportSettings{}}
+}
+
+func (f *fakeExports) Create(_ context.Context, j domain.ExportJob) (domain.ExportJob, error) {
+	f.seq++
+	j.ID, j.Status, j.CreatedAt = "j"+strconv.Itoa(f.seq), domain.ExportQueued, time.Now()
+	j.ExpiresAt = j.CreatedAt.Add(24 * time.Hour)
+	f.jobs[j.ID] = j
+	f.order = append(f.order, j.ID)
+	return j, nil
+}
+func (f *fakeExports) Get(_ context.Context, docID, id string) (domain.ExportJob, error) {
+	j, ok := f.jobs[id]
+	if !ok || j.DocumentID != docID {
+		return domain.ExportJob{}, domain.ErrNotFound
+	}
+	return j, nil
+}
+func (f *fakeExports) List(_ context.Context, docID, userID string) ([]domain.ExportJob, error) {
+	out := []domain.ExportJob{}
+	for _, id := range slices.Backward(f.order) {
+		if j := f.jobs[id]; j.DocumentID == docID && j.RequestedBy == userID {
+			out = append(out, j)
+		}
+	}
+	return out, nil
+}
+func (f *fakeExports) Claim(context.Context) (domain.ExportJob, error) {
+	for _, id := range f.order {
+		if j := f.jobs[id]; j.Status == domain.ExportQueued {
+			j.Status = domain.ExportRunning
+			f.jobs[id] = j
+			return j, nil
+		}
+	}
+	return domain.ExportJob{}, domain.ErrNotFound
+}
+func (f *fakeExports) Finish(_ context.Context, id, key string) error {
+	j := f.jobs[id]
+	j.Status, j.FileKey, j.ExpiresAt = domain.ExportDone, key, time.Now().Add(24*time.Hour)
+	f.jobs[id] = j
+	return nil
+}
+func (f *fakeExports) Fail(_ context.Context, id, reason string) error {
+	j := f.jobs[id]
+	j.Status, j.Error = domain.ExportFailed, reason
+	f.jobs[id] = j
+	return nil
+}
+func (f *fakeExports) Expired(context.Context) ([]domain.ExportJob, error) {
+	out := []domain.ExportJob{}
+	for _, id := range f.order {
+		if j, ok := f.jobs[id]; ok && !time.Now().Before(j.ExpiresAt) {
+			out = append(out, j)
+		}
+	}
+	return out, nil
+}
+func (f *fakeExports) Delete(_ context.Context, id string) error { delete(f.jobs, id); return nil }
+func (f *fakeExports) Settings(_ context.Context, docID string) (domain.ReportSettings, error) {
+	s, ok := f.settings[docID]
+	if !ok {
+		return domain.ReportSettings{}, domain.ErrNotFound
+	}
+	return s, nil
+}
+func (f *fakeExports) SaveSettings(_ context.Context, _, docID string, s domain.ReportSettings) error {
+	f.settings[docID] = s
+	return nil
+}
+
+type fakeRenderer struct {
+	got domain.Report
+	err error
+}
+
+func (f *fakeRenderer) Render(_ context.Context, r domain.Report) ([]byte, error) {
+	f.got = r
+	return []byte("%PDF"), f.err
+}
+
+type fakeFiles struct{ files map[string][]byte }
+
+func newFakeFiles() *fakeFiles                                       { return &fakeFiles{files: map[string][]byte{}} }
+func (f *fakeFiles) Put(_ context.Context, k string, b []byte) error { f.files[k] = b; return nil }
+func (f *fakeFiles) Get(_ context.Context, k string) ([]byte, error) {
+	b, ok := f.files[k]
+	if !ok {
+		return nil, domain.ErrNotFound
+	}
+	return b, nil
+}
+func (f *fakeFiles) Delete(_ context.Context, k string) error { delete(f.files, k); return nil }

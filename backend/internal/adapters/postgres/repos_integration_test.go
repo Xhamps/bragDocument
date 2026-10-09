@@ -44,21 +44,24 @@ func tgEntry(actorID, action string) domain.AuditEntry {
 	return domain.AuditEntry{ActorID: actorID, Source: domain.SourceTelegram, Action: action}
 }
 
-// drain relays every pending outbox message straight into audit_entries, as the
-// worker does through Redis (ADR-0015), so Postgres-only tests need no Redis.
+// drain relays every pending outbox message straight into audit_entries and
+// confirms delivery, as the worker does through Redis (ADR-0015), so
+// Postgres-only tests need no Redis. It confirms after Relay commits: the
+// relay's transaction holds the row locks MarkDelivered needs.
 func drain(t *testing.T, db *DB) {
 	t.Helper()
 	audits, outbox := NewAuditRepo(db), NewOutboxRepo(db)
 	for {
-		n, err := outbox.Relay(context.Background(), 100, func(ctx context.Context, ms []domain.OutboxMessage) error {
-			for _, m := range ms {
-				if err := audits.Store(ctx, m); err != nil {
-					return err
-				}
-			}
+		var got []domain.OutboxMessage
+		n, err := outbox.Relay(context.Background(), 100, func(_ context.Context, ms []domain.OutboxMessage) error {
+			got = append(got, ms...)
 			return nil
 		})
 		require.NoError(t, err)
+		for _, m := range got {
+			require.NoError(t, audits.Store(context.Background(), m))
+			require.NoError(t, outbox.MarkDelivered(context.Background(), m.ID))
+		}
 		if n == 0 {
 			return
 		}

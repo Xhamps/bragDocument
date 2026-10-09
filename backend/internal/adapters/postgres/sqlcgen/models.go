@@ -130,6 +130,8 @@ type Outbox struct {
 	Payload     []byte
 	CreatedAt   time.Time
 	PublishedAt pgtype.Timestamptz
+	DeliveredAt pgtype.Timestamptz
+	Attempts    int32
 }
 
 type Tag struct {

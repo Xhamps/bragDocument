@@ -7,15 +7,17 @@ CREATE TABLE outbox (
     topic        text NOT NULL,
     payload      jsonb NOT NULL,
     created_at   timestamptz NOT NULL DEFAULT now(),
-    published_at timestamptz
+    published_at timestamptz,             -- last XADD; redelivered if not delivered 10 min later
+    delivered_at timestamptz,             -- the consumer stored it
+    attempts     int NOT NULL DEFAULT 0   -- publishes so far; the relay stops at 5
 );
-CREATE INDEX outbox_unpublished_idx ON outbox (id) WHERE published_at IS NULL;
+CREATE INDEX outbox_pending_idx ON outbox (id) WHERE delivered_at IS NULL;
 CREATE INDEX outbox_tenant_id_idx ON outbox (tenant_id);
 
 ALTER TABLE outbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outbox FORCE ROW LEVEL SECURITY;
 -- Tenants may only append (and read their own), like audit_entries; only the
--- relay, under provisioning, marks rows published and purges them.
+-- worker, under provisioning, marks rows published/delivered and purges them.
 CREATE POLICY tenant_read ON outbox FOR SELECT USING (tenant_id = app_tenant_id());
 CREATE POLICY tenant_append ON outbox FOR INSERT WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY provisioning_all ON outbox USING (app_provisioning()) WITH CHECK (app_provisioning());

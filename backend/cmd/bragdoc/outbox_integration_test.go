@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -22,7 +23,8 @@ import (
 )
 
 // TestOutboxEndToEnd: a document write reaches audit_entries through the
-// outbox, the relay, the Redis Stream and the consumer (ADR-0015).
+// outbox, the relay, the Redis Stream and the consumer, which confirms
+// delivery; a message lost with Redis is published again (ADR-0015).
 func TestOutboxEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	pg, err := tcpostgres.Run(ctx, "postgres:16-alpine",
@@ -67,21 +69,60 @@ func TestOutboxEndToEnd(t *testing.T) {
 		return err
 	}))
 	tctx := telemetry.WithTenantID(ctx, tn.ID)
-	doc, err := postgres.NewDocumentRepo(db).Create(tctx, domain.Document{TenantID: tn.ID, OwnerID: user.ID, Title: "2026"}, nil,
-		domain.AuditEntry{ActorID: user.ID, Source: domain.SourceWeb, Action: domain.AuditDocumentCreated})
+	docs := postgres.NewDocumentRepo(db)
+	create := func(title string) domain.Document {
+		t.Helper()
+		doc, err := docs.Create(tctx, domain.Document{TenantID: tn.ID, OwnerID: user.ID, Title: title}, nil,
+			domain.AuditEntry{ActorID: user.ID, Source: domain.SourceWeb, Action: domain.AuditDocumentCreated})
+		require.NoError(t, err)
+		return doc
+	}
+	stream := redis.NewStream(rc, "bragdoc", "test")
+	sql := func(stmt string, dest ...any) {
+		t.Helper()
+		require.NoError(t, db.WithProvisioning(ctx, func(ctx context.Context, tx pgx.Tx) error {
+			if len(dest) > 0 {
+				return tx.QueryRow(ctx, stmt).Scan(dest...)
+			}
+			_, err := tx.Exec(ctx, stmt)
+			return err
+		}))
+	}
+
+	// Published, then lost with Redis (a restart without persistence), and
+	// redeliverAfter has passed: the relay publishes it again.
+	lost := create("lost")
+	n, err := postgres.NewOutboxRepo(db).Relay(ctx, 100, stream.Publish)
 	require.NoError(t, err)
+	require.Equal(t, 1, n)
+	code, _, err := rd.Exec(ctx, []string{"redis-cli", "FLUSHALL"})
+	require.NoError(t, err)
+	require.Zero(t, code)
+	sql("UPDATE outbox SET published_at = now() - interval '1 hour'")
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	done := make(chan struct{})
-	go func() { runOutbox(runCtx, db, redis.NewStream(rc, "bragdoc", "test")); close(done) }()
+	go func() { runOutbox(runCtx, db, stream); close(done) }()
+	doc := create("2026")
 
 	audits := postgres.NewAuditRepo(db)
 	require.Eventually(t, func() bool {
 		page, err := audits.List(tctx, domain.AuditFilter{Limit: 10})
-		return err == nil && len(page.Entries) == 1 &&
-			page.Entries[0].Action == domain.AuditDocumentCreated && page.Entries[0].DocumentID == doc.ID
-	}, 5*time.Second, 100*time.Millisecond)
+		if err != nil || len(page.Entries) != 2 {
+			return false
+		}
+		got := map[string]bool{}
+		for _, e := range page.Entries {
+			got[e.DocumentID] = e.Action == domain.AuditDocumentCreated
+		}
+		return got[lost.ID] && got[doc.ID]
+	}, 10*time.Second, 100*time.Millisecond)
+	var undelivered int
+	require.Eventually(t, func() bool {
+		sql("SELECT count(*) FROM outbox WHERE delivered_at IS NULL", &undelivered)
+		return undelivered == 0
+	}, 5*time.Second, 100*time.Millisecond, "the consumer confirms delivery")
 
 	cancel()
 	select {

@@ -20,7 +20,9 @@ type Querier interface {
 	// Under app.provisioning. A running job not finished in 5 minutes had its worker die; take it again.
 	ClaimExportJob(ctx context.Context) (ExportJob, error)
 	// Run under the provisioning flag; SKIP LOCKED lets several relays run.
-	ClaimOutbox(ctx context.Context, lim int32) ([]ClaimOutboxRow, error)
+	// Undelivered rows are claimed again redeliver_secs after their last publish,
+	// until they have been published max_attempts times.
+	ClaimOutbox(ctx context.Context, arg ClaimOutboxParams) ([]ClaimOutboxRow, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error)
 	CreateDocumentInvitation(ctx context.Context, arg CreateDocumentInvitationParams) (DocumentInvitation, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
@@ -97,8 +99,9 @@ type Querier interface {
 	// Active documents the user owns or edits; the bot's /docs order.
 	ListWritableDocuments(ctx context.Context, userID uuid.UUID) ([]Document, error)
 	MarkGrantSeen(ctx context.Context, arg MarkGrantSeenParams) error
+	MarkOutboxDelivered(ctx context.Context, id int64) error
 	MarkOutboxPublished(ctx context.Context, ids []int64) error
-	// ponytail: seq-scans published rows; index published_at if the table grows.
+	// ponytail: seq-scans delivered rows; index delivered_at if the table grows.
 	PurgeOutbox(ctx context.Context) error
 	SetDocumentOwner(ctx context.Context, arg SetDocumentOwnerParams) (int64, error)
 	SetTelegramLinkDocument(ctx context.Context, arg SetTelegramLinkDocumentParams) (int64, error)

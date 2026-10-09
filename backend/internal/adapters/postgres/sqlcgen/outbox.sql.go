@@ -13,8 +13,16 @@ import (
 
 const claimOutbox = `-- name: ClaimOutbox :many
 SELECT id, tenant_id, topic, payload FROM outbox
-WHERE published_at IS NULL ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED
+WHERE delivered_at IS NULL AND attempts < $1::int
+  AND (published_at IS NULL OR published_at < now() - $2::float8 * interval '1 second')
+ORDER BY id LIMIT $3 FOR UPDATE SKIP LOCKED
 `
+
+type ClaimOutboxParams struct {
+	MaxAttempts   int32
+	RedeliverSecs float64
+	Lim           int32
+}
 
 type ClaimOutboxRow struct {
 	ID       int64
@@ -24,8 +32,10 @@ type ClaimOutboxRow struct {
 }
 
 // Run under the provisioning flag; SKIP LOCKED lets several relays run.
-func (q *Queries) ClaimOutbox(ctx context.Context, lim int32) ([]ClaimOutboxRow, error) {
-	rows, err := q.db.Query(ctx, claimOutbox, lim)
+// Undelivered rows are claimed again redeliver_secs after their last publish,
+// until they have been published max_attempts times.
+func (q *Queries) ClaimOutbox(ctx context.Context, arg ClaimOutboxParams) ([]ClaimOutboxRow, error) {
+	rows, err := q.db.Query(ctx, claimOutbox, arg.MaxAttempts, arg.RedeliverSecs, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +73,17 @@ func (q *Queries) EnqueueOutbox(ctx context.Context, arg EnqueueOutboxParams) er
 	return err
 }
 
+const markOutboxDelivered = `-- name: MarkOutboxDelivered :exec
+UPDATE outbox SET delivered_at = now() WHERE id = $1 AND delivered_at IS NULL
+`
+
+func (q *Queries) MarkOutboxDelivered(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOutboxDelivered, id)
+	return err
+}
+
 const markOutboxPublished = `-- name: MarkOutboxPublished :exec
-UPDATE outbox SET published_at = now() WHERE id = ANY($1::bigint[])
+UPDATE outbox SET published_at = now(), attempts = attempts + 1 WHERE id = ANY($1::bigint[])
 `
 
 func (q *Queries) MarkOutboxPublished(ctx context.Context, ids []int64) error {
@@ -73,10 +92,10 @@ func (q *Queries) MarkOutboxPublished(ctx context.Context, ids []int64) error {
 }
 
 const purgeOutbox = `-- name: PurgeOutbox :exec
-DELETE FROM outbox WHERE published_at < now() - interval '7 days'
+DELETE FROM outbox WHERE delivered_at < now() - interval '7 days'
 `
 
-// ponytail: seq-scans published rows; index published_at if the table grows.
+// ponytail: seq-scans delivered rows; index delivered_at if the table grows.
 func (q *Queries) PurgeOutbox(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, purgeOutbox)
 	return err

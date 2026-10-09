@@ -81,8 +81,8 @@ func (d *DB) WithTenant(ctx context.Context, tenantID string, fn func(ctx contex
 // export_jobs and outbox open fully under the flag: the workers claim across
 // tenants. Only UserRepo.Provision (the sign-in path),
 // TelegramLinkRepo.FindByTelegramID (the bot), ExportRepo.Claim, Expired, and
-// Delete (the export worker), and OutboxRepo.Relay and Purge (the outbox
-// relay) call this.
+// Delete (the export worker), and OutboxRepo.Relay, MarkDelivered, and
+// Purge (the outbox worker) call this.
 func (d *DB) WithProvisioning(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	return d.inTx(ctx, "app.provisioning", "1", fn)
 }

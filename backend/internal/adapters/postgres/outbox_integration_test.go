@@ -233,3 +233,84 @@ func TestWriteSnapshotsBeforeAndEnqueuesAfter(t *testing.T) {
 	require.Equal(t, domain.AuditDocumentDeleted, e.Action)
 	require.Equal(t, "2026 brag", e.DocumentTitle)
 }
+
+// TestOutboxDeliveryConfirmation: a published row is published again after
+// redeliverAfter until the consumer confirms it, at most maxAttempts times;
+// Purge only removes rows delivered over 7 days ago (ADR-0015). Time passing
+// is simulated by backdating published_at and delivered_at.
+func TestOutboxDeliveryConfirmation(t *testing.T) {
+	ownerURL := startPostgres(t)
+	require.NoError(t, Migrate(ownerURL))
+	db, err := Connect(context.Background(), appRoleURL(t, ownerURL), 5*time.Second)
+	require.NoError(t, err)
+	defer db.Close()
+
+	ctx := context.Background()
+	users, docs, audits, outbox := NewUserRepo(db), NewDocumentRepo(db), NewAuditRepo(db), NewOutboxRepo(db)
+	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
+	ctxA := telemetry.WithTenantID(ctx, ta.ID)
+	exec := func(sql string, args ...any) {
+		t.Helper()
+		require.NoError(t, db.WithProvisioning(ctx, func(ctx context.Context, tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, sql, args...)
+			return err
+		}))
+	}
+	// age moves every undelivered row's last publish just past redeliverAfter.
+	age := func() {
+		exec("UPDATE outbox SET published_at = published_at - $1::float8 * interval '1 second' WHERE delivered_at IS NULL",
+			redeliverAfter.Seconds()+1)
+	}
+	var got []domain.OutboxMessage
+	lose := func(_ context.Context, ms []domain.OutboxMessage) error { got = append(got, ms...); return nil } // Redis loses them
+	relay := func() int {
+		t.Helper()
+		got = nil
+		n, err := outbox.Relay(ctx, 100, lose)
+		require.NoError(t, err)
+		return n
+	}
+
+	_, err = docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "2026"}, nil, docCreated(ada.ID))
+	require.NoError(t, err)
+	require.Equal(t, 1, relay())
+	require.Zero(t, relay(), "not republished before redeliverAfter")
+
+	// Lost in Redis: republished after redeliverAfter, then stored and confirmed.
+	age()
+	require.Equal(t, 1, relay())
+	require.NoError(t, audits.Store(ctx, got[0]))
+	require.NoError(t, outbox.MarkDelivered(ctx, got[0].ID))
+	require.NoError(t, outbox.MarkDelivered(ctx, got[0].ID), "idempotent")
+	page, err := audits.List(ctxA, domain.AuditFilter{Limit: 10})
+	require.NoError(t, err)
+	require.Len(t, page.Entries, 1)
+	age()
+	require.Zero(t, relay(), "delivered rows are never republished")
+
+	// Never confirmed: published maxAttempts times, then left for an operator.
+	_, err = docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "stuck"}, nil, docCreated(ada.ID))
+	require.NoError(t, err)
+	for i := range maxAttempts {
+		require.Equal(t, 1, relay(), "attempt %d", i+1)
+		age()
+	}
+	require.Zero(t, relay(), "attempt cap reached")
+	var attempts int
+	require.NoError(t, db.WithProvisioning(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, "SELECT attempts FROM outbox WHERE delivered_at IS NULL").Scan(&attempts)
+	}))
+	require.Equal(t, maxAttempts, attempts)
+	exec("UPDATE outbox SET attempts = 0 WHERE delivered_at IS NULL") // the operator's retry (ADR-0015, Operations)
+	require.Equal(t, 1, relay())
+
+	// Purge removes delivered rows older than 7 days only; undelivered rows stay however old.
+	_, err = docs.Create(ctxA, domain.Document{TenantID: ta.ID, OwnerID: ada.ID, Title: "recent"}, nil, docCreated(ada.ID))
+	require.NoError(t, err)
+	drain(t, db)
+	exec("UPDATE outbox SET published_at = now() - interval '30 days' WHERE delivered_at IS NULL")
+	exec("UPDATE outbox SET delivered_at = now() - interval '8 days' WHERE id = (SELECT min(id) FROM outbox)")
+	require.Equal(t, 3, count(t, db, ta.ID, "outbox"))
+	require.NoError(t, outbox.Purge(ctx))
+	require.Equal(t, 2, count(t, db, ta.ID, "outbox"), "only the old delivered row is gone")
+}

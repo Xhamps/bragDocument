@@ -217,3 +217,27 @@ test("archived documents are read-only", async () => {
     screen.queryByRole("button", { name: "Actions" }),
   ).not.toBeInTheDocument();
 });
+
+test("?edit=<id> opens that log, and edit is not a list filter", async () => {
+  const calls = mockFetch({
+    ...routes([]),
+    "GET /documents/d1/logs/l9": log({ id: "l9", name: "From bot" }),
+  });
+  const { router } = renderAt("/documents/d1?edit=l9&sort=name");
+  expect(await screen.findByDisplayValue("From bot")).toBeInTheDocument();
+  expect(screen.getByText(/no logs yet/i)).toBeInTheDocument();
+  expect(lastListQuery(calls)).toBe("?sort=name");
+  await waitFor(() => expect(router.state.location.search).toBe("?sort=name"));
+  expect(router.state.historyAction).toBe("REPLACE");
+});
+
+test("?edit= with a missing log just shows the list", async () => {
+  mockFetch({
+    ...routes(),
+    "GET /documents/d1/logs/gone": { status: 404, body: { message: "nope" } },
+  });
+  const { router } = renderAt("/documents/d1?edit=gone");
+  expect(await screen.findByText("Moved billing jobs")).toBeInTheDocument();
+  await waitFor(() => expect(router.state.location.search).toBe(""));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});

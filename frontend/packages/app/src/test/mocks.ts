@@ -103,5 +103,5 @@ export function renderAt(path: string) {
       createElement(RouterProvider, { router }),
     ),
   );
-  return render(tree);
+  return { ...render(tree), router };
 }

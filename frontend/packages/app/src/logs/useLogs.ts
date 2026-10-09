@@ -17,6 +17,14 @@ export function useLogs(docId: string, search: string) {
   });
 }
 
+export function useLog(docId: string, logId: string | null) {
+  return useQuery({
+    queryKey: ["logs", docId, "one", logId],
+    queryFn: () => api<Log>(`/documents/${docId}/logs/${logId}`),
+    enabled: !!logId,
+  });
+}
+
 export function useTags() {
   return useQuery({
     queryKey: ["tags"],

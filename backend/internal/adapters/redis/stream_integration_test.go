@@ -68,24 +68,23 @@ func TestStreamPublishConsume(t *testing.T) {
 	s.claimIdle, s.maxDeliveries, s.block = 100*time.Millisecond, 3, 100*time.Millisecond
 	key := "stream:" + domain.TopicAudit
 
-	rec := &recorder{seen: map[int64]int{}, fail: map[int64]bool{3: true}}
-	cctx, cancel := context.WithCancel(ctx)
-	done := make(chan error, 1)
-	go func() { done <- s.Consume(cctx, domain.TopicAudit, rec.handle) }()
-
 	msg := func(id int64) domain.OutboxMessage {
 		return domain.OutboxMessage{ID: id, TenantID: "00000000-0000-0000-0000-00000000000a",
 			Topic: domain.TopicAudit, Payload: []byte(fmt.Sprintf(`{"n":%d}`, id))}
 	}
 
-	// 1. Two messages are each handled once and acked. Give Consume time to
-	// create the group first: it starts at "$", so earlier entries are skipped.
-	require.Eventually(t, func() bool {
-		g, err := cache.client.XInfoGroups(ctx, key).Result()
-		return err == nil && len(g) == 1
-	}, 5*time.Second, 20*time.Millisecond)
-	require.NoError(t, s.Publish(ctx, []domain.OutboxMessage{msg(1), msg(2)}))
-	require.Eventually(t, func() bool { return rec.count(1) == 1 && rec.count(2) == 1 }, 5*time.Second, 20*time.Millisecond)
+	// 0. Published to a brand-new stream before any group exists: still delivered.
+	require.NoError(t, s.Publish(ctx, []domain.OutboxMessage{msg(1)}))
+
+	rec := &recorder{seen: map[int64]int{}, fail: map[int64]bool{3: true}}
+	cctx, cancel := context.WithCancel(ctx)
+	done := make(chan error, 1)
+	go func() { done <- s.Consume(cctx, domain.TopicAudit, rec.handle) }()
+	require.Eventually(t, func() bool { return rec.count(1) == 1 }, 5*time.Second, 20*time.Millisecond)
+
+	// 1. A message published while consuming is handled once; all are acked.
+	require.NoError(t, s.Publish(ctx, []domain.OutboxMessage{msg(2)}))
+	require.Eventually(t, func() bool { return rec.count(2) == 1 }, 5*time.Second, 20*time.Millisecond)
 	require.Eventually(t, func() bool {
 		p, err := cache.client.XPending(ctx, key, "bragdoc").Result()
 		return err == nil && p.Count == 0

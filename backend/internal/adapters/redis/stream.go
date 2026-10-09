@@ -77,7 +77,9 @@ func (s *Stream) Consume(ctx context.Context, topic string, handle func(context.
 func (s *Stream) poll(ctx context.Context, k, topic string, ready *bool, handle func(context.Context, domain.OutboxMessage) error) error {
 	c := s.cache.client
 	if !*ready {
-		err := c.XGroupCreateMkStream(ctx, k, s.group, "$").Err()
+		// From "0", not "$": the relay marks rows published right after XADD,
+		// so entries written before the group exists must still be delivered.
+		err := c.XGroupCreateMkStream(ctx, k, s.group, "0").Err()
 		if err != nil && !strings.HasPrefix(err.Error(), "BUSYGROUP") {
 			return fmt.Errorf("create group: %w", err)
 		}

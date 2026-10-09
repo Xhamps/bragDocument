@@ -233,14 +233,24 @@ func (t *Telegram) answer(ctx context.Context, link domain.TelegramLink, telegra
 	if !ok || e.Mode == "" {
 		return BotReply{}, false
 	}
-	_ = t.undo.Delete(ctx, impactKey(telegramID))
+	if text == "" {
+		if e.Mode == impactAdd {
+			return BotReply{Text: msgSendAddition}, true
+		}
+		return BotReply{Text: msgSendReplacement}, true
+	}
 	l, err := t.logs.Get(ctx, e.DocumentID, e.LogID, link.UserID)
 	if err == nil {
 		desc := text
 		if e.Mode == impactAdd && strings.TrimSpace(l.Description) != "" {
+			// ponytail: read-then-update without a version check, so a web edit landing in between is overwritten; add optimistic locking if that ever matters.
 			desc = l.Description + "\n\n" + text
 		}
 		l, err = t.logs.Update(ctx, UpdateLogInput{ID: l.ID, DocumentID: l.DocumentID, UserID: link.UserID, Description: &desc})
+	}
+	// Keep the answer pending on a validation or unexpected error, so the resend retries it.
+	if err == nil || errors.Is(err, domain.ErrNotFound) || errors.Is(err, domain.ErrForbidden) || errors.Is(err, domain.ErrConflict) {
+		_ = t.undo.Delete(ctx, impactKey(telegramID))
 	}
 	if errors.Is(err, domain.ErrNotFound) {
 		return BotReply{Text: msgLogGone}, true

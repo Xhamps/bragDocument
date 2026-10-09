@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -244,6 +245,21 @@ func TestTelegramImpactAnswerReplacesAndAsksAgain(t *testing.T) {
 	f.lf.impact.err = domain.ErrUnavailable
 	require.Equal(t, "Updated: Migrated CI", f.say(42, "Saved a day"), "not checked: no impact line")
 	require.Equal(t, "Still vague\n\nSaved a day", f.lf.logs.logs["l1"].Description)
+}
+
+func TestTelegramImpactAnswerRetriesAfterFailure(t *testing.T) {
+	ctx := context.Background()
+	f := newTGFixture()
+	f.linked("d1")
+	f.lf.impact.statement = ""
+	f.say(42, "Did a thing")
+
+	f.tg.Callback(ctx, 42, "impact:replace:l1")
+	require.Equal(t, msgSendReplacement, f.say(42, "   "), "blank answer: ask again")
+	require.Contains(t, f.say(42, strings.Repeat("x", 20001)), "Not saved.")
+	require.Contains(t, f.say(42, "Saved a day"), "Updated: Did a thing", "the answer is still pending")
+	require.Equal(t, "Saved a day", f.lf.logs.logs["l1"].Description)
+	require.Len(t, f.lf.logs.logs, 1)
 }
 
 func TestTelegramImpactAnswerIgnoredOrGone(t *testing.T) {

@@ -2,8 +2,11 @@ const fmt = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 function relative(at: string) {
   const s = (Date.now() - new Date(at).getTime()) / 1000;
-  if (s < 3600) return fmt.format(-Math.round(s / 60), "minute");
-  if (s < 86400) return fmt.format(-Math.round(s / 3600), "hour");
+  // Pick the unit on the rounded value: 3570 s is "1 hour ago", not "60 minutes ago".
+  const m = Math.round(s / 60);
+  if (m < 60) return fmt.format(-m, "minute");
+  const h = Math.round(s / 3600);
+  if (h < 24) return fmt.format(-h, "hour");
   return fmt.format(-Math.round(s / 86400), "day");
 }
 

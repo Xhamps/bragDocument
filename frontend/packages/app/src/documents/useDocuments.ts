@@ -24,7 +24,10 @@ function useInvalidating<TVars>(fn: (v: TVars) => Promise<unknown>) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: key });
+      void qc.invalidateQueries({ queryKey: ["audit"] });
+    },
   });
 }
 

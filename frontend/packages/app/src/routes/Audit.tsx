@@ -77,6 +77,7 @@ export function Component() {
           aria-label="From"
           className="w-40"
           value={filters.from}
+          max={filters.to || undefined}
           onChange={(e) => set("from", e.target.value)}
         />
         <Input
@@ -84,6 +85,7 @@ export function Component() {
           aria-label="To"
           className="w-40"
           value={filters.to}
+          min={filters.from || undefined}
           onChange={(e) => set("to", e.target.value)}
         />
       </div>

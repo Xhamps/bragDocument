@@ -21,6 +21,9 @@ export function useTelegramUnlink() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api<void>("/me/telegram", { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["telegram"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["telegram"] });
+      void qc.invalidateQueries({ queryKey: ["audit"] });
+    },
   });
 }

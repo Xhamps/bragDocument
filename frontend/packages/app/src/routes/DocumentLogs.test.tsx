@@ -333,3 +333,21 @@ test("editor does not see Activity", async () => {
   ).not.toBeInTheDocument();
   expect(calls.some((c) => c.path === "/documents/d1/audit")).toBe(false);
 });
+
+test("Activity refetches after a log edit", async () => {
+  let entries: AuditEntry[] = [];
+  mockFetch({
+    ...routes(),
+    "GET /documents/d1/audit": () => ({ entries, next_before: null }),
+    "PATCH /documents/d1/logs/l1": () => {
+      entries = [edited];
+      return log();
+    },
+  });
+  renderAt("/documents/d1");
+  expect(await screen.findByText("No activity yet.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+  await userEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
+});

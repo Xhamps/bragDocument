@@ -53,6 +53,7 @@ export function useCreateExport(docId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["report-settings", docId] });
       void qc.invalidateQueries({ queryKey: ["exports", docId], exact: true });
+      void qc.invalidateQueries({ queryKey: ["audit"] });
     },
   });
 }

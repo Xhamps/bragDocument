@@ -9,6 +9,7 @@ test("not linked: generate a code, copy it, open in Telegram", async () => {
     .mockResolvedValue();
   mockFetch({
     "GET /me": me,
+    "GET /documents": { owned: [], shared: [] },
     "GET /me/telegram": { linked: false },
     "POST /me/telegram/code": {
       code: "ABCD2345",
@@ -36,6 +37,7 @@ test("linked: unlink after confirming", async () => {
   let linked = true;
   const calls = mockFetch({
     "GET /me": me,
+    "GET /documents": { owned: [], shared: [] },
     "GET /me/telegram": () =>
       linked ? { linked, linked_at: "2026-10-01T00:00:00Z" } : { linked },
     "DELETE /me/telegram": () => {
@@ -57,6 +59,7 @@ test("linked: unlink after confirming", async () => {
 test("code generation unavailable shows an error", async () => {
   mockFetch({
     "GET /me": me,
+    "GET /documents": { owned: [], shared: [] },
     "GET /me/telegram": { linked: false },
     "POST /me/telegram/code": {
       status: 503,

@@ -54,6 +54,7 @@ const url =
   "/documents/d1/dashboard?period=custom&from=2026-01-01&to=2026-03-31";
 const routes = {
   "GET /me": me,
+  "GET /documents": { owned: [], shared: [] },
   "GET /documents/d1": doc,
   "GET /documents/d1/dashboard": dash,
 };

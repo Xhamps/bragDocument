@@ -4,7 +4,9 @@ const t = (a: AuditEntry) => `“${a.target.name}”`;
 const fields = (a: AuditEntry) =>
   a.changed_fields.length ? ` (${a.changed_fields.join(", ")})` : "";
 
-const verbs: Record<AuditAction, (a: AuditEntry) => string> = {
+type Verb = (a: AuditEntry) => string;
+
+const verbs: Record<AuditAction, Verb> = {
   "document.created": () => "created the document",
   "document.renamed": (a) => `renamed the document${fields(a)}`,
   "document.edited": (a) => `edited the document${fields(a)}`,
@@ -32,7 +34,9 @@ const verbs: Record<AuditAction, (a: AuditEntry) => string> = {
 };
 
 /** "edited log “Migrated billing” (name, impact)": names and field names only (FR-13). */
-export const describeAction = (a: AuditEntry) => verbs[a.action](a);
+export const describeAction = (a: AuditEntry): string =>
+  // An action from a newer backend renders as its raw name instead of crashing.
+  (verbs[a.action] as Verb | undefined)?.(a) ?? a.action;
 
 export const actorName = (a: AuditEntry) =>
   a.actor.name || a.actor.email || "System";

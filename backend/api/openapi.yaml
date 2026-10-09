@@ -524,7 +524,7 @@ components:
             id: { type: string }
             name: { type: string }
         role: { type: string, description: The role granted, changed to, or removed; "" otherwise }
-        changed_fields: { type: array, nullable: true, items: { type: string }, description: Field names only, never values }
+        changed_fields: { type: array, items: { type: string }, description: Field names only, never values }
     AuditPage:
       type: object
       required: [entries, next_before]

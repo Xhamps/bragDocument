@@ -1,5 +1,5 @@
 import { describeAction, actorName } from "./describe";
-import type { AuditEntry } from "../lib/types";
+import type { AuditAction, AuditEntry } from "../lib/types";
 
 const base: AuditEntry = {
   id: 1,
@@ -61,4 +61,10 @@ test("actor falls back to email, then System", () => {
   expect(actorName({ ...base, actor: { id: null, name: "", email: "" } })).toBe(
     "System",
   );
+});
+
+test("an action from a newer backend falls back to its name", () => {
+  expect(
+    describeAction({ ...base, action: "log.archived" as AuditAction }),
+  ).toBe("log.archived");
 });

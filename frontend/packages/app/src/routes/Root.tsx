@@ -1,10 +1,13 @@
 import { Link, Outlet, useNavigate } from "react-router";
 import { Button } from "@bragdoc/ui";
 import { useMe } from "../auth/useMe";
+import { useDocuments } from "../documents/useDocuments";
 import { supabase } from "../lib/supabase";
 
 export function Component() {
   const { data: me } = useMe();
+  const { data: docs } = useDocuments();
+  const canAudit = me?.role === "admin" || (docs?.owned.length ?? 0) > 0;
   const navigate = useNavigate();
 
   async function signOut() {
@@ -22,6 +25,11 @@ export function Component() {
           {me?.role === "admin" && (
             <Link to="/tenant" className="text-sm text-muted-foreground">
               {me.tenant.name}
+            </Link>
+          )}
+          {canAudit && (
+            <Link to="/audit" className="text-sm text-muted-foreground">
+              Audit log
             </Link>
           )}
           {import.meta.env.DEV && (

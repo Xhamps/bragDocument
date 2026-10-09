@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{.Title}}</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 22mm; }
+  body { font: 11pt/1.45 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #111; }
+  h1 { font-size: 26pt; margin: 0 0 8mm; }
+  h2 { font-size: 16pt; margin: 10mm 0 4mm; border-bottom: 1px solid #ccc; padding-bottom: 1mm; }
+  h3 { font-size: 12pt; margin: 0 0 1mm; }
+  .cover { height: 230mm; display: flex; flex-direction: column; justify-content: center; break-after: page; }
+  .cover p { margin: 1mm 0; color: #444; }
+  .page2 { break-after: page; }
+  .goals { white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; font-size: 10pt; }
+  th, td { border: 1px solid #ccc; padding: 1.5mm 2mm; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  article { break-inside: avoid; margin: 0 0 6mm; }
+  .meta, .tags { color: #555; font-size: 9.5pt; margin: 0 0 1.5mm; }
+  .desc { white-space: pre-wrap; margin: 0 0 1.5mm; }
+  ul.links { margin: 0; padding-left: 5mm; font-size: 9.5pt; }
+  a { color: #0645ad; word-break: break-all; }
+</style>
+</head>
+<body>
+<section class="cover">
+  <h1>{{.Title}}</h1>
+  <p>{{.Author}} · {{.Tenant}}</p>
+  <p>{{period .From .To}}</p>
+  <p>Generated {{date .GeneratedAt}}</p>
+</section>
+
+<section class="page2">
+  {{with .GoalsThisYear}}<h2>Goals for this year</h2><p class="goals">{{.}}</p>{{end}}
+  {{with .GoalsNextYear}}<h2>Goals for next year</h2><p class="goals">{{.}}</p>{{end}}
+  <h2>Summary</h2>
+  <table>
+    <thead><tr><th scope="col">Impact</th>{{range statuses}}<th scope="col">{{statusLabel .}}</th>{{end}}<th scope="col">Total</th></tr></thead>
+    <tbody>
+    {{range .Summary}}<tr><th scope="row">{{.Impact}}</th>{{range .Counts}}<td>{{.}}</td>{{end}}<td>{{.Total}}</td></tr>
+    {{end}}</tbody>
+    <tfoot><tr><th scope="row">Total</th>{{range .StatusTotals}}<td>{{.}}</td>{{end}}<td>{{.Total}}</td></tr></tfoot>
+  </table>
+</section>
+
+{{range .Sections}}
+<section>
+  <h2>{{.Name}}</h2>
+  {{range .Logs}}
+  <article>
+    <h3>{{.Name}}</h3>
+    <p class="meta">{{date .CreatedAt}} · Impact: {{.Impact}} · {{statusLabel .Status}}</p>
+    {{with .Description}}<p class="desc">{{.}}</p>{{end}}
+    {{with .Tags}}<p class="tags">Tags: {{join . ", "}}</p>{{end}}
+    {{with .Links}}<ul class="links">{{range .}}<li><a href="{{.URL}}">{{or .Label .URL}}</a></li>{{end}}</ul>{{end}}
+  </article>
+  {{end}}
+</section>
+{{end}}
+</body>
+</html>

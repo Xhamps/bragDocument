@@ -17,17 +17,18 @@ const (
 
 // LogFilter is one list query (PRD-0002 FR-5). Zero values mean "no filter".
 type LogFilter struct {
-	Query    string   // substring of name or description
-	Tags     []string // any-of
-	Statuses []string
-	Impacts  []string
-	Domain   string     // link host or a subdomain of it
-	From     *time.Time // created_at >= From
-	To       *time.Time // created_at < To
-	Sort     string
-	Desc     bool
-	Page     int // 1-based
-	PerPage  int
+	Query        string   // substring of name or description
+	Tags         []string // any-of
+	Statuses     []string
+	Impacts      []string
+	Domain       string     // link host or a subdomain of it
+	From         *time.Time // created_at >= From
+	To           *time.Time // created_at < To
+	HideExamples bool       // examples=false: matches the dashboard's numbers (PRD-0005 FR-6)
+	Sort         string
+	Desc         bool
+	Page         int // 1-based
+	PerPage      int
 }
 
 // LogPage is one page of matches and the count of all matches.

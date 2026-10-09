@@ -34,6 +34,8 @@ export function BarList({
   const navigate = useNavigate();
   const data = buckets.map((b) => ({ ...b, name: label(b.key) }));
   const rows = layout === "rows";
+  const empty = buckets.every((b) => b.count === 0);
+  const tick = { fill: "var(--muted-foreground)", fontSize: 12 };
   return (
     <section
       aria-label={title}
@@ -41,11 +43,13 @@ export function BarList({
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
-        <Button variant="link" size="sm" onClick={() => setTable(!table)}>
-          {table ? "Show as chart" : "Show as table"}
-        </Button>
+        {!empty && (
+          <Button variant="link" size="sm" onClick={() => setTable(!table)}>
+            {table ? "Show as chart" : "Show as table"}
+          </Button>
+        )}
       </div>
-      {buckets.length === 0 ? (
+      {empty ? (
         <p className="text-sm text-muted-foreground">No logs in this period.</p>
       ) : table ? (
         <table className="text-sm">
@@ -81,6 +85,7 @@ export function BarList({
                 dataKey={rows ? undefined : "name"}
                 hide={rows}
                 allowDecimals={false}
+                tick={tick}
                 tickLine={false}
                 axisLine={false}
               />
@@ -89,10 +94,19 @@ export function BarList({
                 dataKey={rows ? "name" : undefined}
                 width={rows ? 128 : 32}
                 allowDecimals={false}
+                tick={tick}
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip cursor={{ fill: "var(--muted)" }} />
+              <Tooltip
+                cursor={{ fill: "var(--muted)" }}
+                contentStyle={{
+                  background: "var(--popover)",
+                  color: "var(--popover-foreground)",
+                  border: "1px solid var(--border)",
+                }}
+                itemStyle={{ color: "var(--popover-foreground)" }}
+              />
               <Bar
                 dataKey="count"
                 name="Logs"

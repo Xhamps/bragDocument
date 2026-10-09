@@ -26,15 +26,20 @@ const monthLabel = (key: string) =>
 export function Component() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const period = (params.get("period") ?? "12m") as Preset | "custom";
-  const fallback = presetRange("12m");
-  const range: Range =
-    period === "custom"
-      ? {
-          from: params.get("from") ?? fallback.from,
-          to: params.get("to") ?? fallback.to,
-        }
-      : presetRange(period);
+  const raw = params.get("period");
+  const period = PRESETS.some((p) => p.value === raw)
+    ? (raw as Preset | "custom")
+    : "12m";
+  let range: Range;
+  if (period === "custom") {
+    // A half-open custom range: no `to` means today, no `from` means 12 months before `to`.
+    const to = params.get("to") ?? presetRange("12m").to;
+    const end = new Date(`${to}T00:00:00Z`);
+    const from =
+      params.get("from") ??
+      presetRange("12m", isNaN(+end) ? undefined : end).from;
+    range = { from, to };
+  } else range = presetRange(period);
   const doc = useDocument(id);
   const dash = useDashboard(id, range);
 
@@ -106,6 +111,7 @@ export function Component() {
                 type="date"
                 className={FIELD}
                 value={range.from}
+                max={range.to}
                 onChange={(e) =>
                   e.target.value &&
                   setParams({ period, from: e.target.value, to: range.to })
@@ -116,6 +122,7 @@ export function Component() {
                 type="date"
                 className={FIELD}
                 value={range.to}
+                min={range.from}
                 onChange={(e) =>
                   e.target.value &&
                   setParams({ period, from: range.from, to: e.target.value })
@@ -175,7 +182,7 @@ export function Component() {
                 layout="rows"
                 color="var(--chart-3)"
                 buckets={d.statuses}
-                label={(k) => STATUS_LABEL[k as LogStatus]}
+                label={(k) => STATUS_LABEL[k as LogStatus] ?? k}
                 hrefFor={(b) => href([["status", b.key]])}
               />
               <BarList

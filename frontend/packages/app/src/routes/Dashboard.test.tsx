@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { me, mockFetch, renderAt } from "../test/mocks";
 import type { Dashboard, Document } from "../lib/types";
+import { presetRange } from "../dashboard/periods";
 
 const doc: Document = {
   id: "d1",
@@ -139,4 +140,41 @@ test("viewers get the dashboard; tabs switch views", async () => {
     "href",
     "/documents/d1",
   );
+});
+
+test("an unknown period falls back to the last 12 months", async () => {
+  const calls = mockFetch(routes);
+  renderAt("/documents/d1/dashboard?period=foo");
+  await screen.findByRole("link", { name: /total logs/i });
+  const { from, to } = presetRange("12m");
+  expect(calls.find((c) => c.path === "/documents/d1/dashboard")?.search).toBe(
+    `?from=${from}&to=${to}`,
+  );
+});
+
+test("a custom range missing `from` starts 12 months before `to`", async () => {
+  const calls = mockFetch(routes);
+  renderAt("/documents/d1/dashboard?period=custom&to=2026-03-31");
+  await screen.findByRole("link", { name: /total logs/i });
+  expect(calls.find((c) => c.path === "/documents/d1/dashboard")?.search).toBe(
+    "?from=2025-04-01&to=2026-03-31",
+  );
+  expect(screen.getByLabelText(/^from$/i)).toHaveAttribute("max", "2026-03-31");
+  expect(screen.getByLabelText(/^to$/i)).toHaveAttribute("min", "2025-04-01");
+});
+
+test("a chart with only zero counts says so", async () => {
+  mockFetch({
+    ...routes,
+    "GET /documents/d1/dashboard": {
+      ...dash,
+      tags: [{ key: "project", count: 0 }],
+    },
+  });
+  renderAt(url);
+  const tags = await screen.findByRole("region", { name: "Top tags" });
+  expect(within(tags).getByText("No logs in this period.")).toBeInTheDocument();
+  expect(
+    within(tags).queryByRole("button", { name: /show as table/i }),
+  ).not.toBeInTheDocument();
 });

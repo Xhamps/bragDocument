@@ -12,13 +12,6 @@ LEFT JOIN documents d ON d.id = sqlc.narg(document_id)::uuid
 WHERE (sqlc.narg(document_id)::uuid IS NULL OR d.id IS NOT NULL)
   AND (sqlc.narg(actor_id)::uuid IS NULL OR u.id IS NOT NULL);
 
--- name: ListAuditByDocument :many
--- ponytail: PRD-0004 reads for SharingRepo.Audit; the AuditRepo queries replace them.
-SELECT * FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200;
-
--- name: ListAuditByTenant :many
-SELECT * FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500;
-
 -- name: ListAudit :many
 -- Newest first; RLS scopes the tenant. owner_id limits to documents the user owns now (FR-6).
 -- ponytail: one query with optional filters; split per filter shape if EXPLAIN shows a generic plan ignoring the indexes (NFR-3).

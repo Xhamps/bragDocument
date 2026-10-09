@@ -69,9 +69,6 @@ type Querier interface {
 	ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditEntry, error)
 	// ponytail: DISTINCT over visible entries; cache or a summary table if pickers get slow on huge tenants.
 	ListAuditActors(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditActorsRow, error)
-	// ponytail: PRD-0004 reads for SharingRepo.Audit; the AuditRepo queries replace them.
-	ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error)
-	ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error)
 	// Latest known title per document, including deleted ones (FR-12).
 	ListAuditDocuments(ctx context.Context, ownerID pgtype.UUID) ([]ListAuditDocumentsRow, error)
 	// last_log_at falls back to d.created_at so the column is never NULL; it is

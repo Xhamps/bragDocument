@@ -35,6 +35,10 @@ func TestSharing(t *testing.T) {
 	defer db.Close()
 
 	users, docs, sharing, tenants, logs := NewUserRepo(db), NewDocumentRepo(db), NewSharingRepo(db), NewTenantRepo(db), NewLogRepo(db)
+	auditOf := func(ctx context.Context, docID string) ([]domain.AuditEntry, error) {
+		p, err := NewAuditRepo(db).List(ctx, domain.AuditFilter{DocumentID: docID, Limit: 100})
+		return p.Entries, err
+	}
 	ada, ta := provisionTenant(t, users, "A", "ada@example.com")
 	zed, tb := provisionTenant(t, users, "B", "zed@example.com")
 	bob := addMember(t, users, ta, "bob@example.com")
@@ -69,7 +73,7 @@ func TestSharing(t *testing.T) {
 	// Another tenant's user can be neither granted nor resolved.
 	require.ErrorIs(t, sharing.Grant(ctxA, domain.Grant{DocumentID: doc.ID, UserID: zed.ID, Role: domain.RoleViewer, GrantedBy: ada.ID},
 		audit(domain.AuditGrant, zed.Email, domain.RoleViewer)), domain.ErrConflict)
-	entries, err := sharing.Audit(ctxA, doc.ID)
+	entries, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Len(t, entries, 2, "created and granted; the failed grant wrote no audit row")
 	require.Equal(t, domain.AuditGrant, entries[0].Action)
@@ -105,7 +109,7 @@ func TestSharing(t *testing.T) {
 	// Tenant B sees none of it.
 	_, err = docs.GetForUser(ctxB, doc.ID, bob.ID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	entriesB, err := sharing.Audit(ctxB, "")
+	entriesB, err := auditOf(ctxB, "")
 	require.NoError(t, err)
 	require.Empty(t, entriesB)
 
@@ -156,13 +160,13 @@ func TestSharing(t *testing.T) {
 	require.Empty(t, sh.Invitations)
 
 	// A transfer to another tenant's user rolls back whole.
-	before, err := sharing.Audit(ctxA, doc.ID)
+	before, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.ErrorIs(t, sharing.Transfer(ctxA, doc.ID, ada.ID, zed.ID, audit(domain.AuditTransfer, zed.Email, domain.RoleOwner)), domain.ErrConflict)
 	got, err = docs.GetForUser(ctxA, doc.ID, ada.ID)
 	require.NoError(t, err)
 	require.Equal(t, domain.RoleOwner, got.Role)
-	after, err := sharing.Audit(ctxA, doc.ID)
+	after, err := auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Len(t, after, len(before))
 
@@ -185,7 +189,7 @@ func TestSharing(t *testing.T) {
 	require.ErrorIs(t, sharing.Revoke(ctxA, doc.ID, newID, audit(domain.AuditRevoke, "x", "")), domain.ErrNotFound)
 
 	// Audit: newest first, copies the title, survives deletion, cannot be rewritten.
-	entries, err = sharing.Audit(ctxA, doc.ID)
+	entries, err = auditOf(ctxA, doc.ID)
 	require.NoError(t, err)
 	require.Contains(t, actions(entries), domain.AuditInviteCancel)
 	require.Equal(t, domain.AuditRevoke, entries[0].Action)
@@ -193,7 +197,7 @@ func TestSharing(t *testing.T) {
 	require.Equal(t, "2026", entries[0].DocumentTitle)
 	require.Contains(t, actions(entries), domain.AuditInviteAccept)
 	require.NoError(t, docs.Delete(ctxA, doc.ID, docDeleted(ada.ID, doc.ID)))
-	all, err := sharing.Audit(ctxA, "")
+	all, err := auditOf(ctxA, "")
 	require.NoError(t, err)
 	require.Len(t, all, len(entries)+1)
 	require.Equal(t, domain.AuditDocumentDeleted, all[0].Action)

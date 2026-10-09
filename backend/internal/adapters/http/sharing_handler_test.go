@@ -43,12 +43,6 @@ func (f *fakeSharingUC) CancelInvitation(_ context.Context, a domain.User, doc, 
 func (f *fakeSharingUC) Transfer(_ context.Context, a domain.User, doc, to string) error {
 	return f.rec("transfer " + doc + " " + to)
 }
-func (f *fakeSharingUC) DocumentAudit(_ context.Context, a domain.User, doc string) ([]domain.AuditEntry, error) {
-	return []domain.AuditEntry{{ID: 7, Action: domain.AuditGrant, DocumentTitle: "2026", Target: "bob@acme.com"}}, f.rec("audit " + doc)
-}
-func (f *fakeSharingUC) TenantAudit(_ context.Context, a domain.User) ([]domain.AuditEntry, error) {
-	return []domain.AuditEntry{}, f.rec("tenant audit " + a.ID)
-}
 
 func sharingEngine(t *testing.T, uc *fakeSharingUC) *gin.Engine {
 	t.Helper()
@@ -76,13 +70,8 @@ func TestSharingRoutes(t *testing.T) {
 	require.Equal(t, 204, do(e, http.MethodDelete, "/documents/d1/invitations/i1", "").Code)
 	require.Equal(t, 204, do(e, http.MethodPost, "/documents/d1/transfer", `{"user_id":"u2"}`).Code)
 
-	rec = do(e, http.MethodGet, "/documents/d1/audit", "")
-	require.Equal(t, 200, rec.Code)
-	require.Contains(t, rec.Body.String(), `"document_title":"2026"`)
-	require.Equal(t, 200, do(e, http.MethodGet, "/tenant/audit", "").Code)
-
 	require.Equal(t, []string{"get u1 d1", "share", "role d1 u2 editor", "revoke d1 u2", "cancel d1 i1",
-		"transfer d1 u2", "audit d1", "tenant audit u1"}, uc.calls)
+		"transfer d1 u2"}, uc.calls)
 }
 
 func TestSharingErrorsAndBadJSON(t *testing.T) {

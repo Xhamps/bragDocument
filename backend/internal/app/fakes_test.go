@@ -501,15 +501,6 @@ func (f *fakeSharing) Transfer(_ context.Context, docID, from, to string, a doma
 	f.audit = append(f.audit, a)
 	return nil
 }
-func (f *fakeSharing) Audit(_ context.Context, docID string) ([]domain.AuditEntry, error) {
-	out := []domain.AuditEntry{}
-	for _, a := range slices.Backward(f.audit) {
-		if docID == "" || a.DocumentID == docID {
-			out = append(out, a)
-		}
-	}
-	return out, nil
-}
 
 type fakeMailer struct {
 	sent []string // "to: subject"
@@ -641,4 +632,18 @@ func (f *fakeFiles) Delete(_ context.Context, k string) error {
 	}
 	delete(f.files, k)
 	return nil
+}
+
+type fakeAudit struct {
+	f     domain.AuditFilter
+	owner string
+}
+
+func (a *fakeAudit) List(_ context.Context, f domain.AuditFilter) (domain.AuditPage, error) {
+	a.f = f
+	return domain.AuditPage{Entries: []domain.AuditEntry{}}, nil
+}
+func (a *fakeAudit) Filters(_ context.Context, ownerID string) ([]domain.AuditActor, []domain.AuditDocument, error) {
+	a.owner = ownerID
+	return nil, nil, nil
 }

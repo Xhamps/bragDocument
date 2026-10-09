@@ -3,11 +3,8 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/xhamps/bragdocument/backend/internal/adapters/postgres/sqlcgen"
 	"github.com/xhamps/bragdocument/backend/internal/domain"
-	"github.com/xhamps/bragdocument/backend/internal/telemetry"
 )
 
 // SharingRepo implements ports.SharingRepo for the tenant in the context.
@@ -209,33 +206,4 @@ func (r *SharingRepo) Transfer(ctx context.Context, docID, fromUserID, toUserID 
 		}
 		return audit(ctx, q, a)
 	})
-}
-
-func (r *SharingRepo) Audit(ctx context.Context, docID string) ([]domain.AuditEntry, error) {
-	out := []domain.AuditEntry{}
-	err := r.tx(ctx, func(ctx context.Context, q *sqlcgen.Queries) error {
-		var rows []sqlcgen.AuditEntry
-		if docID == "" {
-			tid, err := parseID(telemetry.TenantID(ctx))
-			if err != nil {
-				return err
-			}
-			if rows, err = q.ListAuditByTenant(ctx, tid); err != nil {
-				return wrap(err)
-			}
-		} else {
-			did, err := parseID(docID)
-			if err != nil {
-				return err
-			}
-			if rows, err = q.ListAuditByDocument(ctx, pgtype.UUID{Bytes: did, Valid: true}); err != nil {
-				return wrap(err)
-			}
-		}
-		for _, a := range rows {
-			out = append(out, toAuditEntry(a))
-		}
-		return nil
-	})
-	return out, err
 }

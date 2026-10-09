@@ -115,6 +115,7 @@ func runAPI(ctx context.Context, cfg config.Config) error {
 	httpadapter.RegisterTelegram(authed, tgUC, cfg.TelegramBotUsername)
 	httpadapter.RegisterTenant(authed, app.NewTenants(postgres.NewTenantRepo(db)))
 	httpadapter.RegisterSharing(authed, app.NewSharing(docRepo, postgres.NewSharingRepo(db), mailer, cfg.AppURL))
+	httpadapter.RegisterAudit(authed, app.NewAudit(docRepo, postgres.NewAuditRepo(db)))
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

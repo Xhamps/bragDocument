@@ -8,7 +8,6 @@ package sqlcgen
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -154,87 +153,6 @@ func (q *Queries) ListAuditActors(ctx context.Context, ownerID pgtype.UUID) ([]L
 	for rows.Next() {
 		var i ListAuditActorsRow
 		if err := rows.Scan(&i.ActorID, &i.ActorName, &i.ActorEmail); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAuditByDocument = `-- name: ListAuditByDocument :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE document_id = $1 ORDER BY id DESC LIMIT 200
-`
-
-// ponytail: PRD-0004 reads for SharingRepo.Audit; the AuditRepo queries replace them.
-func (q *Queries) ListAuditByDocument(ctx context.Context, documentID pgtype.UUID) ([]AuditEntry, error) {
-	rows, err := q.db.Query(ctx, listAuditByDocument, documentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuditEntry
-	for rows.Next() {
-		var i AuditEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.ActorID,
-			&i.ActorEmail,
-			&i.Action,
-			&i.DocumentID,
-			&i.DocumentTitle,
-			&i.Target,
-			&i.Role,
-			&i.At,
-			&i.ActorName,
-			&i.Source,
-			&i.TargetType,
-			&i.TargetID,
-			&i.ChangedFields,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAuditByTenant = `-- name: ListAuditByTenant :many
-SELECT id, tenant_id, actor_id, actor_email, action, document_id, document_title, target, role, at, actor_name, source, target_type, target_id, changed_fields FROM audit_entries WHERE tenant_id = $1 ORDER BY id DESC LIMIT 500
-`
-
-func (q *Queries) ListAuditByTenant(ctx context.Context, tenantID uuid.UUID) ([]AuditEntry, error) {
-	rows, err := q.db.Query(ctx, listAuditByTenant, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuditEntry
-	for rows.Next() {
-		var i AuditEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.ActorID,
-			&i.ActorEmail,
-			&i.Action,
-			&i.DocumentID,
-			&i.DocumentTitle,
-			&i.Target,
-			&i.Role,
-			&i.At,
-			&i.ActorName,
-			&i.Source,
-			&i.TargetType,
-			&i.TargetID,
-			&i.ChangedFields,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

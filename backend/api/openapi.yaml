@@ -271,15 +271,44 @@ paths:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     get:
-      summary: The document's sharing history, newest first; owner only
+      summary: The document's audit entries, newest first; owner or tenant admin, never content (PRD-0009 FR-7)
+      parameters:
+        - { $ref: "#/components/parameters/AuditActor" }
+        - { $ref: "#/components/parameters/AuditAction" }
+        - { $ref: "#/components/parameters/AuditFrom" }
+        - { $ref: "#/components/parameters/AuditTo" }
+        - { $ref: "#/components/parameters/AuditBefore" }
+        - { $ref: "#/components/parameters/AuditLimit" }
       responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } } } } }
-  /tenant/audit:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPage" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: A grant without share permission; message names the caller's role, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /audit:
     get:
-      summary: Every sharing change in the tenant; admin only, no content (PRD-0004 FR-8, FR-9)
+      summary: Audit entries, newest first; admins see the tenant, owners the documents they own now (PRD-0009 FR-5, FR-6)
+      parameters:
+        - { $ref: "#/components/parameters/AuditActor" }
+        - { name: document, in: query, schema: { type: string, format: uuid }, description: "Non-admins: 404 without access, 403 without share permission" }
+        - { $ref: "#/components/parameters/AuditAction" }
+        - { $ref: "#/components/parameters/AuditFrom" }
+        - { $ref: "#/components/parameters/AuditTo" }
+        - { $ref: "#/components/parameters/AuditBefore" }
+        - { $ref: "#/components/parameters/AuditLimit" }
       responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } } } } }
-        "403": { description: Not an admin }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPage" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Not an admin and owns no document, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /audit/filters:
+    get:
+      summary: Picker options from the entries the caller may read; same scope as /audit
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditFilters" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Not an admin and owns no document, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /tags:
     get:
       summary: The tenant's tag vocabulary, sorted
@@ -344,6 +373,16 @@ components:
     Conflict: { description: Conflict with current state, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     TooLarge: { description: Request body exceeds 1 MiB, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Unprocessable: { description: Validation failed; `fields` names the offending inputs, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  parameters:
+    AuditActor: { name: actor, in: query, schema: { type: string, format: uuid } }
+    AuditAction:
+      name: action
+      in: query
+      schema: { $ref: "#/components/schemas/AuditAction" }
+    AuditFrom: { name: from, in: query, schema: { type: string, format: date }, description: "YYYY-MM-DD, inclusive" }
+    AuditTo: { name: to, in: query, schema: { type: string, format: date }, description: "YYYY-MM-DD, inclusive" }
+    AuditBefore: { name: before, in: query, schema: { type: integer, format: int64 }, description: "Cursor: next_before of the previous page" }
+    AuditLimit: { name: limit, in: query, schema: { type: integer, default: 50, maximum: 100 }, description: "Clamped to 100" }
   schemas:
     Tenant:
       type: object
@@ -445,17 +484,63 @@ components:
               email: { type: string }
               role: { type: string, enum: [editor, viewer] }
               created_at: { type: string, format: date-time }
+    AuditAction:
+      type: string
+      enum: [document.created, document.renamed, document.edited, document.archived, document.unarchived, document.deleted,
+        sharing.granted, sharing.invitation_sent, sharing.role_changed, sharing.revoked, sharing.invitation_cancelled,
+        sharing.invitation_accepted, sharing.ownership_transferred,
+        log.created, log.edited, log.deleted, log.status_changed,
+        telegram.linked, telegram.unlinked, export.requested]
     AuditEntry:
       type: object
+      required: [id, at, source, action, actor, document, target, role, changed_fields]
       properties:
-        id: { type: integer }
-        actor_email: { type: string }
-        action: { type: string, enum: [grant, invite, role_change, revoke, invite_cancel, invite_accept, transfer] }
-        document_id: { type: string, format: uuid }
-        document_title: { type: string }
-        target: { type: string }
-        role: { type: string }
+        id: { type: integer, format: int64 }
         at: { type: string, format: date-time }
+        source: { type: string, enum: [web, telegram, system] }
+        action: { $ref: "#/components/schemas/AuditAction" }
+        actor:
+          type: object
+          description: Name and email as they were at the time
+          required: [id, name, email]
+          properties:
+            id: { type: string, format: uuid, nullable: true, description: null for the system }
+            name: { type: string }
+            email: { type: string }
+        document:
+          type: object
+          nullable: true
+          description: Title as it was at the time; null when no document is involved
+          required: [id, title]
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+        target:
+          type: object
+          description: What was acted on, named as it was then; empty strings when none
+          required: [type, id, name]
+          properties:
+            type: { type: string, enum: ["", log, user, invitation] }
+            id: { type: string }
+            name: { type: string }
+        role: { type: string, description: The role granted, changed to, or removed; "" otherwise }
+        changed_fields: { type: array, nullable: true, items: { type: string }, description: Field names only, never values }
+    AuditPage:
+      type: object
+      required: [entries, next_before]
+      properties:
+        entries: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+        next_before: { type: integer, format: int64, nullable: true, description: Pass as before for the next page; null on the last page }
+    AuditFilters:
+      type: object
+      required: [actors, documents]
+      properties:
+        actors:
+          type: array
+          items: { type: object, required: [id, name, email], properties: { id: { type: string, format: uuid }, name: { type: string }, email: { type: string } } }
+        documents:
+          type: array
+          items: { type: object, required: [id, title], properties: { id: { type: string, format: uuid }, title: { type: string } } }
     Error:
       type: object
       required: [error, message, request_id]

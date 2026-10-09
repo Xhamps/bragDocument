@@ -139,7 +139,7 @@ func TestTransfer(t *testing.T) {
 	require.ErrorIs(t, f.s.Transfer(ctx, ada, "d1", carol.ID), domain.ErrForbidden, "ada is only an editor now")
 }
 
-func TestGetAndAudit(t *testing.T) {
+func TestGet(t *testing.T) {
 	f := newSharingFixture()
 	ctx := context.Background()
 	_, err := f.s.Share(ctx, ShareInput{Actor: ada, DocumentID: "d1", Email: "bob@acme.com", Role: domain.RoleViewer})
@@ -148,16 +148,7 @@ func TestGetAndAudit(t *testing.T) {
 	sh, err := f.s.Get(ctx, ada, "d1")
 	require.NoError(t, err)
 	require.Len(t, sh.Grants, 1)
-
-	es, err := f.s.DocumentAudit(ctx, ada, "d1")
-	require.NoError(t, err)
-	require.Len(t, es, 1)
-
-	es, err = f.s.TenantAudit(ctx, carol)
-	require.NoError(t, err)
-	require.Len(t, es, 1)
-	_, err = f.s.TenantAudit(ctx, ada)
-	require.ErrorIs(t, err, domain.ErrForbidden, "admins only")
+	require.Len(t, f.repo.audit, 1)
 }
 
 func TestShareEmailWithoutAppURLHasNoLink(t *testing.T) {

@@ -10,7 +10,7 @@ const surfaceClass =
 
 // Shared by every row: item, checkbox, radio, sub-trigger.
 const itemClass =
-  "relative flex h-10 cursor-pointer items-center gap-3 rounded-md px-3 type-callout text-fg-secondary outline-hidden select-none transition-colors duration-fast ease-standard data-highlighted:bg-container data-highlighted:text-fg-primary data-inset:pl-11 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0";
+  "relative flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-3 type-callout text-fg-secondary outline-hidden select-none transition-colors duration-fast ease-standard data-highlighted:bg-container data-highlighted:text-fg-primary data-inset:pl-11 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0";
 
 function DropdownMenu({
   ...props
@@ -246,7 +246,7 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        "origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden",
+        "origin-(--radix-dropdown-menu-content-transform-origin)",
         surfaceClass,
         className,
       )}

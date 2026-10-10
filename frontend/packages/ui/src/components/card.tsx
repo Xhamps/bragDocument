@@ -38,7 +38,10 @@ type CardProps = Omit<React.ComponentProps<"div">, "title" | "onClick"> & {
   tint?: "sheen" | "accent" | "violet" | "rose" | "cool" | "none";
   /** Hover lift and sheen sweep; implied by onClick. */
   interactive?: boolean;
-  /** Also fires on Enter/Space; makes the card focusable. */
+  /**
+   * Also fires on Enter/Space; makes the card focusable.
+   * Clickable cards have no implicit role; pass aria-label (or role="button" when there's no action), or prefer a real link inside the card for navigation.
+   */
   onClick?: () => void;
   elevation?: keyof typeof elevationClass;
   /** Fade-and-rise entrance; stagger with delay in ms. */
@@ -82,6 +85,7 @@ function Card({
         if (
           onClick &&
           e.target === e.currentTarget &&
+          !e.repeat &&
           (e.key === "Enter" || e.key === " ")
         ) {
           e.preventDefault();
@@ -95,7 +99,7 @@ function Card({
       }
       {...props}
       className={cn(
-        "box-border rounded-lg glass p-6 text-fg-primary shadow-glass transition-[translate,box-shadow,border-color] duration-slow ease-standard",
+        "box-border rounded-lg glass p-6 text-fg-primary shadow-glass [transition:translate_var(--duration-slow)_var(--ease-standard),box-shadow_var(--duration-slow)_var(--ease-standard),border-color_var(--duration-base)_var(--ease-standard)]",
         compact && "p-4",
         cardTintVariants({ tint }),
         elevation && elevationClass[elevation],
@@ -105,8 +109,8 @@ function Card({
       )}
     >
       {(title || action) && (
-        <div data-slot="card-header" className="flex items-start gap-4">
-          {title && <h3 className="mb-2 flex-1 type-title-3">{title}</h3>}
+        <div data-slot="card-header" className="mb-2 flex items-start gap-4">
+          {title && <h3 className="flex-1 type-title-3">{title}</h3>}
           {action && <div className="ml-auto shrink-0">{action}</div>}
         </div>
       )}

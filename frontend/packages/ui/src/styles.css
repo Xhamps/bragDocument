@@ -254,9 +254,22 @@
     box-shadow: 0 0 0 5px var(--glass-tint-blue);
   }
 }
+@keyframes bd-tick {
+  from {
+    transform: translateY(-4px);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 @utility animate-enter {
   animation: bd-enter var(--duration-enter) var(--ease-out) both;
   animation-delay: var(--delay, 0ms);
+}
+@utility animate-tick {
+  animation: bd-tick var(--duration-base) var(--ease-spring);
 }
 @utility animate-pulse-dot {
   animation: bd-pulse 2s var(--ease-standard) infinite;

@@ -1,9 +1,9 @@
 import { useState, type ComponentProps } from "react";
 import Markdown from "react-markdown";
-import { MoreHorizontalIcon, TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import {
   Badge,
-  Button,
+  IconButton,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -51,7 +51,7 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
         >
           <span className="font-medium">{log.name}</span>
           {log.impact_statement ? (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               {log.impact_statement}
             </span>
           ) : log.impact_statement === "" ? (
@@ -74,26 +74,27 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
         <Badge variant="outline">{STATUS_LABEL[log.status]}</Badge>
         <time
           dateTime={log.created_at}
-          className="text-sm text-muted-foreground"
+          className="text-muted-foreground text-sm"
         >
           {new Date(log.created_at).toLocaleDateString()}
         </time>
         {!readOnly && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                <MoreHorizontalIcon />
-              </Button>
+              <IconButton
+                variant="tinted"
+                size="sm"
+                icon="more"
+                label="Actions"
+                tooltip={false}
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => onEdit(log)}>
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => onDelete(log)}
-              >
+              <DropdownMenuItem variant="danger" onSelect={() => onDelete(log)}>
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

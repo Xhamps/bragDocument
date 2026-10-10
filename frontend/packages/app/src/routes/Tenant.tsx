@@ -74,7 +74,7 @@ export function Component() {
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">{me.tenant.name}: members</h2>
-        <ul className="divide-y rounded-xl ring-1 ring-foreground/10">
+        <ul className="ring-foreground/10 divide-y rounded-xl ring-1">
           {members.data.map((m) => (
             <li key={m.id} className="flex items-center gap-3 p-3 text-sm">
               <span>{m.display_name || m.email}</span>
@@ -85,7 +85,7 @@ export function Component() {
               {m.id !== me.id && (
                 <Button
                   className="ml-auto"
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   disabled={remove.isPending}
                   aria-label={`Remove ${m.email}`}
@@ -98,7 +98,7 @@ export function Component() {
           ))}
         </ul>
         {removeError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {removeError}
           </p>
         )}
@@ -106,7 +106,7 @@ export function Component() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">Invitations</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Invited people join this tenant when they sign in with that email. No
           email is sent; share the sign-in link yourself.
         </p>
@@ -124,18 +124,18 @@ export function Component() {
               }}
             />
           </div>
-          <Button type="submit" disabled={invite.isPending}>
+          <Button variant="primary" type="submit" disabled={invite.isPending}>
             Invite
           </Button>
         </form>
         {inviteError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {inviteError}
           </p>
         )}
-        <ul className="divide-y rounded-xl ring-1 ring-foreground/10">
+        <ul className="ring-foreground/10 divide-y rounded-xl ring-1">
           {invitations.data.length === 0 && (
-            <li className="p-3 text-sm text-muted-foreground">
+            <li className="text-muted-foreground p-3 text-sm">
               No pending invitations.
             </li>
           )}
@@ -143,13 +143,13 @@ export function Component() {
             <li key={i.id} className="flex items-center gap-3 p-3 text-sm">
               <span>{i.email}</span>
               {i.document_title ? (
-                <span className="ml-auto text-muted-foreground">
+                <span className="text-muted-foreground ml-auto">
                   via “{i.document_title}”
                 </span>
               ) : (
                 <Button
                   className="ml-auto"
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   disabled={withdraw.isPending}
                   aria-label={`Withdraw ${i.email}`}
@@ -162,7 +162,7 @@ export function Component() {
           ))}
         </ul>
         {withdrawError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {withdrawError}
           </p>
         )}

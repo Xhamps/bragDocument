@@ -70,7 +70,7 @@ export function ExportDialog({
           </DialogDescription>
         </DialogHeader>
         {settings.error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {errorText(settings.error)}
           </p>
         )}
@@ -114,7 +114,7 @@ export function ExportDialog({
                 {j.downloadable && (
                   <Button
                     size="sm"
-                    variant="link"
+                    variant="tinted"
                     onClick={() =>
                       downloadJob(docId, j).then(
                         () => setDlError(null),
@@ -190,7 +190,7 @@ function SettingsForm({
         />
       </div>
       {!canSave && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           These apply to this report only.
         </p>
       )}
@@ -223,12 +223,12 @@ function SettingsForm({
         </table>
       )}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
       )}
       <DialogFooter>
-        <Button type="submit" disabled={pending}>
+        <Button variant="primary" type="submit" disabled={pending}>
           {pending ? "Starting…" : "Generate"}
         </Button>
       </DialogFooter>

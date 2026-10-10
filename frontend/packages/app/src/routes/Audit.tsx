@@ -91,15 +91,15 @@ export function Component() {
       </div>
 
       {audit.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {errorText(audit.error)}{" "}
-          <Button variant="link" size="sm" onClick={() => audit.refetch()}>
+          <Button variant="tinted" size="sm" onClick={() => audit.refetch()}>
             Retry
           </Button>
         </p>
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-left text-muted-foreground">
+          <thead className="text-muted-foreground text-left">
             <tr>
               <th className="py-2 font-medium">Time</th>
               <th className="font-medium">User</th>
@@ -113,7 +113,7 @@ export function Component() {
               [0, 1, 2].map((i) => (
                 <tr key={i} aria-hidden>
                   <td colSpan={5}>
-                    <div className="my-2 h-4 animate-pulse rounded bg-muted" />
+                    <div className="bg-muted my-2 h-4 animate-pulse rounded" />
                   </td>
                 </tr>
               ))}
@@ -125,7 +125,7 @@ export function Component() {
                 <td>
                   {e.actor.id ? (
                     <Button
-                      variant="link"
+                      variant="tinted"
                       size="sm"
                       className="px-0"
                       onClick={() => set("actor", e.actor.id!)}
@@ -140,7 +140,7 @@ export function Component() {
                 <td>
                   {e.document && (
                     <Button
-                      variant="link"
+                      variant="tinted"
                       size="sm"
                       className="px-0"
                       onClick={() => set("document", e.document!.id)}
@@ -160,19 +160,19 @@ export function Component() {
         !audit.error &&
         entries.length === 0 &&
         (filtered ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             No entries match these filters{" "}
-            <Button variant="link" size="sm" onClick={() => setParams({})}>
+            <Button variant="tinted" size="sm" onClick={() => setParams({})}>
               Clear filters
             </Button>
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">No activity yet.</p>
+          <p className="text-muted-foreground text-sm">No activity yet.</p>
         ))}
 
       {audit.hasNextPage && (
         <Button
-          variant="outline"
+          variant="glass"
           className="self-start"
           disabled={audit.isFetchingNextPage}
           onClick={() => audit.fetchNextPage()}

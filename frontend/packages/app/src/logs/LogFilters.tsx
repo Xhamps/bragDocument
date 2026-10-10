@@ -124,7 +124,7 @@ function Toggles({
   return (
     <fieldset className="flex items-center gap-1">
       <legend className="sr-only">{legend}</legend>
-      <span aria-hidden className="mr-1 text-sm text-muted-foreground">
+      <span aria-hidden className="text-muted-foreground mr-1 text-sm">
         {legend}
       </span>
       {values.map((v) => {
@@ -134,7 +134,7 @@ function Toggles({
             key={v}
             type="button"
             size="sm"
-            variant={on ? "default" : "outline"}
+            variant={on ? "primary" : "glass"}
             aria-pressed={on}
             onClick={() => onToggle(v)}
           >
@@ -220,7 +220,7 @@ export function ActiveFilters({
           </button>
         </Badge>
       ))}
-      <Button type="button" variant="link" size="sm" onClick={onClear}>
+      <Button type="button" variant="tinted" size="sm" onClick={onClear}>
         Clear all
       </Button>
     </div>

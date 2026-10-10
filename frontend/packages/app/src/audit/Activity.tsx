@@ -15,22 +15,22 @@ export function Activity({ docId }: { docId: string }) {
         <h3 className="text-lg font-semibold">Activity</h3>
         <Link
           to={`/audit?document=${docId}`}
-          className="text-sm text-muted-foreground hover:underline"
+          className="text-muted-foreground text-sm hover:underline"
         >
           View all
         </Link>
       </div>
       {q.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {errorText(q.error)}{" "}
-          <Button variant="link" size="sm" onClick={() => q.refetch()}>
+          <Button variant="tinted" size="sm" onClick={() => q.refetch()}>
             Retry
           </Button>
         </p>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {q.isPending && (
-            <li className="h-4 animate-pulse rounded bg-muted" aria-hidden />
+            <li className="bg-muted h-4 animate-pulse rounded" aria-hidden />
           )}
           {!q.isPending && entries.length === 0 && (
             <li className="text-muted-foreground">No activity yet.</li>

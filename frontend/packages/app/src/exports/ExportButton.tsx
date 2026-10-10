@@ -21,7 +21,7 @@ export function ExportButton({
   const { data: job, error } = useExportJob(docId, jobId);
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="glass" onClick={() => setOpen(true)}>
         Export PDF
       </Button>
       <ExportDialog
@@ -41,7 +41,7 @@ export function ExportButton({
             Report ready
             <Button
               size="sm"
-              variant="link"
+              variant="tinted"
               onClick={() =>
                 downloadJob(docId, job).then(() => setDlError(null), setDlError)
               }

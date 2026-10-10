@@ -1,6 +1,6 @@
 import {
   Badge,
-  Button,
+  IconButton,
   Card,
   CardAction,
   CardContent,
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@bragdoc/ui";
-import { MoreHorizontalIcon } from "lucide-react";
 import { Link } from "react-router";
 import type { Document } from "../lib/types";
 
@@ -48,9 +47,13 @@ export function DocumentCard({
           <CardAction>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                  <MoreHorizontalIcon />
-                </Button>
+                <IconButton
+                  variant="tinted"
+                  size="sm"
+                  icon="more"
+                  label="Actions"
+                  tooltip={false}
+                />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => onRename(doc)}>
@@ -61,7 +64,7 @@ export function DocumentCard({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  variant="destructive"
+                  variant="danger"
                   onSelect={() => onDelete(doc)}
                 >
                   Delete
@@ -71,7 +74,7 @@ export function DocumentCard({
           </CardAction>
         )}
       </CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-2 text-muted-foreground">
+      <CardContent className="text-muted-foreground flex flex-wrap items-center gap-2">
         <span>
           {doc.log_count} {doc.log_count === 1 ? "log" : "logs"}
           {doc.last_log_at &&

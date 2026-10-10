@@ -93,7 +93,7 @@ export function Component() {
         <h2 className="text-xl font-semibold">Dialog</h2>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline">Open dialog</Button>
+            <Button variant="glass">Open dialog</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -113,13 +113,13 @@ export function Component() {
         <h2 className="text-xl font-semibold">Dropdown menu</h2>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">Actions</Button>
+            <Button variant="glass">Actions</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem>Rename</DropdownMenuItem>
             <DropdownMenuItem>Archive</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+            <DropdownMenuItem variant="danger">Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </section>

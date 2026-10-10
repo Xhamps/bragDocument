@@ -77,7 +77,7 @@ function TelegramCard() {
             {confirming ? (
               <div className="flex gap-2">
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   disabled={unlink.isPending}
                   onClick={() =>
                     unlink.mutate(undefined, {
@@ -90,13 +90,13 @@ function TelegramCard() {
                 >
                   Confirm unlink
                 </Button>
-                <Button variant="ghost" onClick={() => setConfirming(false)}>
+                <Button variant="tinted" onClick={() => setConfirming(false)}>
                   Cancel
                 </Button>
               </div>
             ) : (
               <Button
-                variant="outline"
+                variant="glass"
                 className="self-start"
                 onClick={() => setConfirming(true)}
               >
@@ -110,6 +110,7 @@ function TelegramCard() {
           <>
             <p>Link Telegram to add logs by sending the bot a message.</p>
             <Button
+              variant="primary"
               className="self-start"
               disabled={code.isPending}
               onClick={() => {
@@ -122,11 +123,11 @@ function TelegramCard() {
             {code.data && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <code className="rounded bg-muted px-2 py-1 font-mono text-base">
+                  <code className="bg-muted rounded px-2 py-1 font-mono text-base">
                     {code.data.code}
                   </code>
                   <Button
-                    variant="ghost"
+                    variant="tinted"
                     size="sm"
                     aria-label="Copy link code"
                     onClick={() => void copy(code.data.code)}

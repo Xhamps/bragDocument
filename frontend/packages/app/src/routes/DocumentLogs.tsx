@@ -147,13 +147,13 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-4">
-        <Link to="/" className="text-sm text-muted-foreground hover:underline">
+        <Link to="/" className="text-muted-foreground text-sm hover:underline">
           ← Documents
         </Link>
         <h2 className="text-xl font-semibold">{doc.title}</h2>
         <DocumentTabs id={doc.id} current="logs" />
         {doc.role !== "owner" && (
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {`Shared by ${doc.owner_name} · you are ${doc.role}`}
           </span>
         )}
@@ -163,11 +163,13 @@ export function Component() {
           ) : doc.role === "viewer" ? (
             <Badge variant="secondary">Viewer · read-only</Badge>
           ) : (
-            <Button onClick={() => setEditing("new")}>New log</Button>
+            <Button variant="primary" onClick={() => setEditing("new")}>
+              New log
+            </Button>
           )}
           <ExportButton docId={doc.id} role={doc.role} params={params} />
           {doc.role === "owner" && (
-            <Button variant="outline" onClick={() => setSharing(true)}>
+            <Button variant="glass" onClick={() => setSharing(true)}>
               Share
             </Button>
           )}
@@ -194,7 +196,7 @@ export function Component() {
         <p className="text-muted-foreground">Loading…</p>
       ) : (
         <>
-          <p aria-live="polite" className="text-sm text-muted-foreground">
+          <p aria-live="polite" className="text-muted-foreground text-sm">
             {total} {total === 1 ? "log" : "logs"}
           </p>
           {!readOnly && items.some((l) => l.is_example) && (
@@ -205,7 +207,7 @@ export function Component() {
               </span>
               <Button
                 size="sm"
-                variant="outline"
+                variant="glass"
                 disabled={removeExamples.isPending}
                 onClick={() => removeExamples.mutate(undefined)}
               >
@@ -222,7 +224,7 @@ export function Component() {
             filtered ? (
               <p className="text-muted-foreground">
                 No logs match these filters.{" "}
-                <Button variant="link" onClick={clearFilters}>
+                <Button variant="tinted" onClick={clearFilters}>
                   Clear filters
                 </Button>
               </p>
@@ -235,7 +237,7 @@ export function Component() {
           ) : items.length === 0 ? (
             <p className="text-muted-foreground">
               This page is empty.{" "}
-              <Button variant="link" onClick={() => setPage(1)}>
+              <Button variant="tinted" onClick={() => setPage(1)}>
                 Go to page 1
               </Button>
             </p>
@@ -255,7 +257,7 @@ export function Component() {
           {pages > 1 && (
             <nav aria-label="Pagination" className="flex items-center gap-3">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage(page - 1)}
@@ -266,7 +268,7 @@ export function Component() {
                 Page {page} of {pages}
               </span>
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 disabled={page >= pages}
                 onClick={() => setPage(page + 1)}
@@ -301,16 +303,16 @@ export function Component() {
             </DialogDescription>
           </DialogHeader>
           {remove.error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-destructive text-sm">
               {errorText(remove.error)}
             </p>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(null)}>
+            <Button variant="glass" onClick={() => setDeleting(null)}>
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="danger"
               disabled={remove.isPending}
               onClick={() =>
                 deleting &&

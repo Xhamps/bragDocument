@@ -89,15 +89,19 @@ function Form({
         />
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
       )}
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="glass" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={busy || !form.title.trim()}>
+        <Button
+          variant="primary"
+          type="submit"
+          disabled={busy || !form.title.trim()}
+        >
           {submitLabel}
         </Button>
       </DialogFooter>

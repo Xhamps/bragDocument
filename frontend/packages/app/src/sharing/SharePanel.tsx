@@ -130,32 +130,32 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
           >
             <RoleOptions />
           </select>
-          <Button type="submit" disabled={share.isPending}>
+          <Button variant="primary" type="submit" disabled={share.isPending}>
             Share
           </Button>
         </form>
         {shareError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {shareError}
           </p>
         )}
         {notice && (
-          <p role="status" className="text-sm text-muted-foreground">
+          <p role="status" className="text-muted-foreground text-sm">
             {notice}
           </p>
         )}
 
         {sharing.error ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {errorText(sharing.error)}
           </p>
         ) : !sharing.data ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-muted-foreground text-sm">Loading…</p>
         ) : (
           <ul className="divide-y rounded-md border">
             {sharing.data.grants.length + sharing.data.invitations.length ===
               0 && (
-              <li className="p-3 text-sm text-muted-foreground">
+              <li className="text-muted-foreground p-3 text-sm">
                 Only you have access.
               </li>
             )}
@@ -183,7 +183,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   <RoleOptions />
                 </select>
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Make ${g.email} owner`}
                   onClick={() => setTransferTo(g.user_id)}
@@ -191,7 +191,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   Make owner
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Remove ${g.email}`}
                   disabled={revoke.isPending}
@@ -209,7 +209,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                 <span className="flex-1 truncate">{i.email}</span>
                 <Badge variant="secondary">Pending · {i.role}</Badge>
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Cancel invitation for ${i.email}`}
                   disabled={cancel.isPending}
@@ -225,7 +225,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
           </ul>
         )}
         {actionError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {actionError}
           </p>
         )}
@@ -235,7 +235,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             role="alertdialog"
             aria-label="Confirm ownership transfer"
             aria-describedby="transfer-confirm-text"
-            className="flex flex-col gap-2 rounded-md border border-destructive/50 p-3 text-sm"
+            className="border-destructive/50 flex flex-col gap-2 rounded-md border p-3 text-sm"
           >
             <p id="transfer-confirm-text">
               Make {target.display_name || target.email} the owner? You become
@@ -243,14 +243,14 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             </p>
             <div className="flex justify-end gap-2">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => setTransferTo(null)}
               >
                 Keep ownership
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 size="sm"
                 disabled={transfer.isPending}
                 onClick={() => {

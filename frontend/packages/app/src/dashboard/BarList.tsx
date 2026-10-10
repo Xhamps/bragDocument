@@ -39,18 +39,18 @@ export function BarList({
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-2 rounded-xl p-4 ring-1 ring-foreground/10"
+      className="ring-foreground/10 flex flex-col gap-2 rounded-xl p-4 ring-1"
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
         {!empty && (
-          <Button variant="link" size="sm" onClick={() => setTable(!table)}>
+          <Button variant="tinted" size="sm" onClick={() => setTable(!table)}>
             {table ? "Show as chart" : "Show as table"}
           </Button>
         )}
       </div>
       {empty ? (
-        <p className="text-sm text-muted-foreground">No logs in this period.</p>
+        <p className="text-muted-foreground text-sm">No logs in this period.</p>
       ) : table ? (
         <table className="text-sm">
           <thead>

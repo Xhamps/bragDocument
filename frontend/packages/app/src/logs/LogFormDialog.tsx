@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import { XIcon } from "lucide-react";
 import {
   Button,
+  IconButton,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -144,7 +145,7 @@ function Form({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="glass"
               onClick={() => {
                 setPreview(false);
                 requestAnimationFrame(() => descRef.current?.focus());
@@ -152,7 +153,7 @@ function Form({
             >
               Add impact
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            <Button type="button" size="sm" variant="tinted" onClick={onCancel}>
               Close
             </Button>
           </div>
@@ -192,14 +193,14 @@ function Form({
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Label htmlFor="log-description">Description</Label>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             Markdown. Include the result.
           </span>
           <div className="ml-auto flex gap-1">
             <Button
               type="button"
               size="sm"
-              variant={preview ? "ghost" : "secondary"}
+              variant={preview ? "tinted" : "glass"}
               aria-pressed={!preview}
               onClick={() => setPreview(false)}
             >
@@ -208,7 +209,7 @@ function Form({
             <Button
               type="button"
               size="sm"
-              variant={preview ? "secondary" : "ghost"}
+              variant={preview ? "glass" : "tinted"}
               aria-pressed={preview}
               onClick={() => setPreview(true)}
             >
@@ -313,22 +314,21 @@ function Form({
                 })
               }
             />
-            <Button
+            <IconButton
               type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Remove link ${i + 1}`}
+              variant="tinted"
+              size="sm"
+              icon="close"
+              label={`Remove link ${i + 1}`}
               onClick={() =>
                 setF({ ...f, links: f.links.filter((_, j) => j !== i) })
               }
-            >
-              <XIcon />
-            </Button>
+            />
           </div>
         ))}
         <Button
           type="button"
-          variant="outline"
+          variant="glass"
           size="sm"
           className="w-fit"
           onClick={() =>
@@ -373,16 +373,20 @@ function Form({
         <p
           id="log-form-error"
           role="alert"
-          className="text-sm text-destructive"
+          className="text-destructive text-sm"
         >
           {error}
         </p>
       )}
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="glass" onClick={onCancel}>
           {noImpact ? "Close" : "Cancel"}
         </Button>
-        <Button type="submit" disabled={busy || !f.name.trim()}>
+        <Button
+          variant="primary"
+          type="submit"
+          disabled={busy || !f.name.trim()}
+        >
           Save
         </Button>
       </DialogFooter>

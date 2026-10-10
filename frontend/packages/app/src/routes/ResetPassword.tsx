@@ -16,7 +16,7 @@ export function Component() {
   const [password, setPassword] = useState("");
   const { busy, run, setMessage, status } = useAuthAction();
 
-  if (loading) return <p className="p-4 text-muted-foreground">Loading…</p>;
+  if (loading) return <p className="text-muted-foreground p-4">Loading…</p>;
 
   if (session)
     return (
@@ -39,7 +39,7 @@ export function Component() {
           onChange={setPassword}
         />
         {status}
-        <Button type="submit" disabled={busy}>
+        <Button variant="primary" type="submit" disabled={busy}>
           Update password
         </Button>
       </AuthCard>
@@ -73,7 +73,7 @@ export function Component() {
         onChange={setEmail}
       />
       {status}
-      <Button type="submit" disabled={busy}>
+      <Button variant="primary" type="submit" disabled={busy}>
         Send reset link
       </Button>
     </AuthCard>

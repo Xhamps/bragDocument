@@ -53,7 +53,7 @@ export function Component() {
         onChange={setPassword}
       />
       {status}
-      <Button type="submit" disabled={busy}>
+      <Button variant="primary" type="submit" disabled={busy}>
         Create account
       </Button>
     </AuthCard>

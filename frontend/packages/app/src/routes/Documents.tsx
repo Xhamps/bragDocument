@@ -69,7 +69,7 @@ export function Component() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <h2 className="text-xl font-semibold">Your documents</h2>
-        <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+        <label className="text-muted-foreground ml-auto flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={showArchived}
@@ -78,12 +78,14 @@ export function Component() {
           Show archived
         </label>
         {data.owned.length > 0 && (
-          <Button onClick={() => setCreating(true)}>New document</Button>
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            New document
+          </Button>
         )}
       </div>
 
       {archiveError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {archiveError}
         </p>
       )}
@@ -107,7 +109,7 @@ export function Component() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setCreating(true)}>
+            <Button variant="primary" onClick={() => setCreating(true)}>
               Create your first document
             </Button>
           </CardContent>

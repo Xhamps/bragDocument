@@ -17,6 +17,9 @@ test("signed-out visitor at / sees the home page", async () => {
     "href",
     "/sign-in",
   );
+  expect(
+    screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+  ).toEqual(["Log every win", "See your impact", "Share and export"]);
 });
 
 test("signed-out visitor on a protected page is still sent to sign-in", async () => {

@@ -11,7 +11,10 @@ test("signed-out visitor at / sees the home page", async () => {
   signedOut();
   renderAt("/");
   expect(
-    await screen.findByRole("heading", { level: 1, name: "Brag Document" }),
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "You did the work. We keep the receipts.",
+    }),
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
     "href",

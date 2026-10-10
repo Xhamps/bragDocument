@@ -222,7 +222,7 @@ function TopBar({
           "box-border flex items-center gap-4 glass px-4 transition-[box-shadow,height,background-color] duration-base ease-standard lg:gap-6",
           floating
             ? cn(
-                "mx-auto h-[60px] max-w-[960px] rounded-pill pr-2 pl-4 shadow-lg md:pl-5",
+                "mx-auto h-[60px] max-w-[960px] rounded-pill pr-3 pl-4 shadow-lg md:pl-5",
                 scrolled && "shadow-xl",
               )
             : cn(

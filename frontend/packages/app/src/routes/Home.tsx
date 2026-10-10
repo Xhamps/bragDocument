@@ -66,7 +66,7 @@ export function Component() {
           <Link to={href!} {...props} />
         )}
         cta={
-          <Button asChild variant="primary" size="sm" chevron>
+          <Button asChild variant="primary" pill chevron>
             <Link to="/sign-in">Sign in</Link>
           </Button>
         }

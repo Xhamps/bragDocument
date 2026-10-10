@@ -16,9 +16,13 @@ test("signed-out visitor at / sees the home page", async () => {
       name: "You did the work. We keep the receipts.",
     }),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+  // Header and hero both offer Sign in.
+  const signIns = screen.getAllByRole("link", { name: "Sign in" });
+  expect(signIns).toHaveLength(2);
+  for (const a of signIns) expect(a).toHaveAttribute("href", "/sign-in");
+  expect(screen.getByRole("link", { name: /brag document/i })).toHaveAttribute(
     "href",
-    "/sign-in",
+    "/",
   );
   expect(
     screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),

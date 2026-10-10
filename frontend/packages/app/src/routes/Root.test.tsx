@@ -18,7 +18,7 @@ test("unauthenticated visitor is sent to sign-in", async () => {
   supabaseMock.auth.getSession.mockResolvedValueOnce({
     data: { session: null },
   } as never);
-  renderAt("/");
+  renderAt("/settings");
   expect(
     await screen.findByRole("heading", { name: /sign in/i }),
   ).toBeInTheDocument();

@@ -1,5 +1,5 @@
-import { Link, Outlet, useNavigate } from "react-router";
-import { Button } from "@bragdoc/ui";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { IconButton, TopBar, useTheme, type TopBarItem } from "@bragdoc/ui";
 import { useMe } from "../auth/useMe";
 import { useDocuments } from "../documents/useDocuments";
 import { supabase } from "../lib/supabase";
@@ -9,45 +9,58 @@ export function Component() {
   const { data: docs } = useDocuments();
   const canAudit = me?.role === "admin" || (docs?.owned.length ?? 0) > 0;
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { theme, toggle } = useTheme();
 
   async function signOut() {
     await supabase.auth.signOut();
     navigate("/sign-in");
   }
 
+  const items = [
+    me?.role === "admin" && { label: me.tenant.name, href: "/tenant" },
+    canAudit && { label: "Audit log", href: "/audit" },
+    import.meta.env.DEV && { label: "Kitchen sink", href: "/kitchen-sink" },
+    { label: "Settings", href: "/settings" },
+  ].filter((i): i is TopBarItem & { href: string } => Boolean(i));
+  // TopBar highlights the first item without a value; "" = nothing current (e.g. "/").
+  const current =
+    items.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
+      ?.label ?? "";
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <nav className="mx-auto flex max-w-5xl items-center gap-6 p-4">
-          <h1 className="text-lg font-semibold">
-            <Link to="/">Brag Document</Link>
-          </h1>
-          {me?.role === "admin" && (
-            <Link to="/tenant" className="text-sm text-muted-foreground">
-              {me.tenant.name}
-            </Link>
+    <div className="min-h-screen bd-backdrop">
+      <div className="mx-auto max-w-5xl p-4">
+        {/* Never pass onSelect: it preventDefaults link clicks and blocks router navigation. */}
+        <TopBar
+          brand={{ name: "Brag Document", href: "/" }}
+          items={items}
+          value={current}
+          renderLink={(_item, { href, ...props }) => (
+            <Link to={href} {...props} />
           )}
-          {canAudit && (
-            <Link to="/audit" className="text-sm text-muted-foreground">
-              Audit log
-            </Link>
-          )}
-          {import.meta.env.DEV && (
-            <Link to="/kitchen-sink" className="text-sm text-muted-foreground">
-              Kitchen sink
-            </Link>
-          )}
-          <Link to="/settings" className="text-sm text-muted-foreground">
-            Settings
-          </Link>
-          <span className="ml-auto text-sm text-muted-foreground">
-            {me?.email}
-          </span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            Sign out
-          </Button>
-        </nav>
-      </header>
+          actions={
+            <IconButton
+              icon={theme === "dark" ? "sun" : "moon"}
+              label="Toggle dark mode"
+              pressed={theme === "dark"}
+              onClick={toggle}
+            />
+          }
+          user={{
+            variant: "pill",
+            user: { name: me?.email ?? "" },
+            items: [
+              {
+                label: "Sign out",
+                icon: "signOut",
+                tone: "danger",
+                onSelect: signOut,
+              },
+            ],
+          }}
+        />
+      </div>
       <main className="mx-auto max-w-5xl p-4">
         <Outlet />
       </main>

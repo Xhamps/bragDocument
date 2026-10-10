@@ -31,3 +31,4 @@ export {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#components/dropdown-menu";
+export { useTheme, type Theme } from "#lib/theme";

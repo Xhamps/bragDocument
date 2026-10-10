@@ -1196,7 +1196,8 @@ return (
       <TopBar
         brand={{ name: "Brag Document", href: "/" }}
         items={items}
-        renderLink={(item, props) => <NavLink to={item.href!} {...props}>{item.label}</NavLink>}
+        value={current}
+        renderLink={(_item, { href, ...props }) => <Link to={href!} {...props} />}
         actions={
           <IconButton icon={theme === "dark" ? "sun" : "moon"} label="Toggle dark mode"
             pressed={theme === "dark"} onClick={toggle} />
@@ -1211,6 +1212,8 @@ return (
 ```
 
 Adjust the `items` typing (`.filter((i): i is TopBarItem => Boolean(i))`) and `renderLink`'s props to whatever Task 14 defined; keep the brand a heading named "Brag Document".
+
+**`value` is required here:** TopBar (like the DS) highlights the first item when no `value` is given. Compute `current` from `useLocation().pathname`: the id (TopBar's item id — `value ?? label`, check `top-bar.tsx`) of the item whose `href` prefixes the path, or `""` when none matches (e.g. `/`). **Never pass `onSelect`** — it preventDefaults link clicks and would block router navigation. `renderLink` receives `{ href, className, "aria-current", "data-on", onClick, children }`; map `href` → `to`.
 
 **Step 2:** `npx vitest run packages/app/src/routes/Root.test.tsx` → existing tests (heading "Brag Document", email text, Settings link) PASS. If any test clicked "Sign out" directly, update it to open the user menu first.
 

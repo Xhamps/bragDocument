@@ -42,7 +42,7 @@ function BentoCard({
       <div
         aria-hidden
         inert
-        className="mt-6 flex-1 rounded-md border border-divider p-4"
+        className="mt-6 flex flex-1 flex-col justify-center rounded-md border border-divider p-4"
         style={{
           backgroundImage: `repeating-linear-gradient(0deg, ${gridLine}), repeating-linear-gradient(90deg, ${gridLine})`,
         }}
@@ -59,7 +59,8 @@ export function Component() {
       <TopBar
         variant="floating"
         sticky
-        className="fixed inset-x-0 top-0"
+        // Match the page container so the pill lines up with the content.
+        className="fixed inset-x-0 top-0 [&>div]:max-w-6xl"
         brand={{ name: "Brag Document", href: "/" }}
         renderLink={(_item, { href, ...props }) => (
           <Link to={href!} {...props} />
@@ -73,7 +74,7 @@ export function Component() {
       <main>
         <section className="relative isolate flex min-h-dvh items-center overflow-hidden px-4 py-24">
           <DotWave className="pointer-events-none absolute inset-0 -z-10 size-full" />
-          <div className="mx-auto grid w-full max-w-6xl items-center gap-12 md:grid-cols-2">
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[7fr_5fr] lg:gap-16">
             <div className="flex flex-col items-start gap-6">
               <Tag tone="accent">Your year, in writing</Tag>
               <h1 className="type-display">
@@ -111,7 +112,10 @@ export function Component() {
             </div>
           </div>
         </section>
-        <section id="features" className="mx-auto max-w-6xl px-4 py-24">
+        <section
+          id="features"
+          className="mx-auto box-content max-w-6xl px-4 py-24"
+        >
           <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
             <p className="type-caption text-button-text">
               Everything review season needs
@@ -134,22 +138,6 @@ export function Component() {
               <LogPreview />
             </BentoCard>
             <BentoCard
-              icon="chart"
-              title="See your impact"
-              text="How often you log, which themes come up most, and what's gone quiet."
-              className="md:row-span-3"
-            >
-              <DashboardPreview />
-            </BentoCard>
-            <BentoCard
-              icon="share"
-              title="Share and export"
-              text="Invite your manager as a viewer or editor, and export a review-ready PDF."
-              className="md:col-span-2"
-            >
-              <SharePreview />
-            </BentoCard>
-            <BentoCard
               icon="send"
               title="Telegram bot"
               text="Message the bot and it lands in your document."
@@ -162,6 +150,22 @@ export function Component() {
               text="Every edit and share is recorded."
             >
               <AuditPreview />
+            </BentoCard>
+            <BentoCard
+              icon="chart"
+              title="See your impact"
+              text="How often you log, which themes come up most, and what's gone quiet."
+              className="md:col-span-2"
+            >
+              <DashboardPreview />
+            </BentoCard>
+            <BentoCard
+              icon="share"
+              title="Share and export"
+              text="Invite your manager as a viewer or editor, and export a review-ready PDF."
+              className="md:col-span-3"
+            >
+              <SharePreview />
             </BentoCard>
           </div>
         </section>

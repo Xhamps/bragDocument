@@ -31,24 +31,22 @@ const BARS = [3, 5, 2, 6, 4, 7, 5, 8, 6, 9, 7, 11];
 
 export function DashboardPreview() {
   return (
-    <div className="flex h-full flex-col gap-4">
-      {[
-        ["Total logs", "68"],
-        ["High or critical", "21"],
-        ["In progress", "4"],
-      ].map(([label, value]) => (
-        <Card
-          key={label}
-          compact
-          className="flex items-baseline justify-between"
-        >
-          <p className="type-footnote text-fg-secondary">{label}</p>
-          <p className="type-title-2">{value}</p>
-        </Card>
-      ))}
-      <Card compact className="flex min-h-40 flex-1 flex-col">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          ["Total logs", "68"],
+          ["High or critical", "21"],
+          ["In progress", "4"],
+        ].map(([label, value]) => (
+          <Card key={label} compact>
+            <p className="type-footnote text-fg-secondary">{label}</p>
+            <p className="type-title-2">{value}</p>
+          </Card>
+        ))}
+      </div>
+      <Card compact className="flex flex-col">
         <p className="type-callout">Logs per month</p>
-        <div className="mt-4 flex flex-1 items-end gap-1.5">
+        <div className="mt-4 flex h-32 items-end gap-1.5">
           {BARS.map((n, i) => (
             <div
               key={i}
@@ -68,16 +66,18 @@ export function DashboardPreview() {
 
 export function SharePreview() {
   return (
-    <Card>
-      <div className="flex items-center justify-between gap-4">
-        <MediaCell title="Sam Rivera" subtitle="sam@acme.com" />
-        <Tag tone="accent">Editor</Tag>
+    <Card className="grid items-center gap-6 md:grid-cols-[3fr_2fr]">
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <MediaCell title="Sam Rivera" subtitle="sam@acme.com" />
+          <Tag tone="accent">Editor</Tag>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-4 border-t border-divider pt-4">
+          <MediaCell title="Ana Costa" subtitle="ana@acme.com" />
+          <Tag>Viewer</Tag>
+        </div>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-4 border-t border-divider pt-4">
-        <MediaCell title="Ana Costa" subtitle="ana@acme.com" />
-        <Tag>Viewer</Tag>
-      </div>
-      <div className="mt-6 flex items-center gap-4">
+      <div className="flex items-center gap-4 md:border-l md:border-divider md:pl-6">
         <div
           className="aspect-[3/4] w-20 rounded-md shadow-md"
           style={{ background: "var(--gradient-blue-1)" }}

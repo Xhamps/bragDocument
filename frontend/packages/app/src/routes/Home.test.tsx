@@ -31,10 +31,10 @@ test("signed-out visitor at / sees the home page", async () => {
     screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
   ).toEqual([
     "Log every win",
-    "See your impact",
-    "Share and export",
     "Telegram bot",
     "Audit trail",
+    "See your impact",
+    "Share and export",
   ]);
 });
 

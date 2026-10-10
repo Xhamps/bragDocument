@@ -1,5 +1,11 @@
 export { cn, focusRing } from "#lib/utils";
 export { useTheme, type Theme } from "#lib/theme";
+export {
+  Breadcrumb,
+  type BreadcrumbItem,
+  type BreadcrumbLinkProps,
+  type BreadcrumbProps,
+} from "#components/breadcrumb";
 export { Button, buttonVariants, type ButtonProps } from "#components/button";
 export { ButtonGroup, type ButtonGroupProps } from "#components/button-group";
 export { Card, type CardProps } from "#components/card";
@@ -79,6 +85,12 @@ export {
 } from "#components/select";
 export { Slider, type SliderProps } from "#components/slider";
 export { Stepper, type StepperProps } from "#components/stepper";
+export {
+  Tabs,
+  type TabItem,
+  type TabLinkProps,
+  type TabsProps,
+} from "#components/tabs";
 export { Tag, tagVariants, type TagProps } from "#components/tag";
 export { TextArea, type TextAreaProps } from "#components/text-area";
 export { TextField, type TextFieldProps } from "#components/text-field";
@@ -93,5 +105,6 @@ export {
 export {
   UserMenu,
   type UserMenuItem,
+  type UserMenuLinkProps,
   type UserMenuProps,
 } from "#components/user-menu";

@@ -70,12 +70,11 @@ export function Component() {
     );
   }, [editId, deepLinked.isPending, setParams]);
 
-  if (docQuery.isPending)
-    return <p className="text-muted-foreground">Loading…</p>;
+  if (docQuery.isPending) return <p className="text-fg-secondary">Loading…</p>;
   const doc = docQuery.data;
   if (!doc)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="text-danger">
         {docQuery.error instanceof ApiError && docQuery.error.status === 404
           ? "Document not found."
           : errorText(docQuery.error)}
@@ -147,13 +146,13 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-4">
-        <Link to="/" className="text-muted-foreground text-sm hover:underline">
+        <Link to="/" className="text-sm text-fg-secondary hover:underline">
           ← Documents
         </Link>
-        <h2 className="text-xl font-semibold">{doc.title}</h2>
+        <h2 className="type-title-2">{doc.title}</h2>
         <DocumentTabs id={doc.id} current="logs" />
         {doc.role !== "owner" && (
-          <span className="text-muted-foreground text-sm">
+          <span className="text-sm text-fg-secondary">
             {`Shared by ${doc.owner_name} · you are ${doc.role}`}
           </span>
         )}
@@ -189,14 +188,14 @@ export function Component() {
       />
 
       {logs.error ? (
-        <p role="alert" className="text-destructive">
+        <p role="alert" className="text-danger">
           {errorText(logs.error)}
         </p>
       ) : logs.isPending ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-fg-secondary">Loading…</p>
       ) : (
         <>
-          <p aria-live="polite" className="text-muted-foreground text-sm">
+          <p aria-live="polite" className="text-sm text-fg-secondary">
             {total} {total === 1 ? "log" : "logs"}
           </p>
           {!readOnly && items.some((l) => l.is_example) && (
@@ -214,7 +213,7 @@ export function Component() {
                 Remove examples
               </Button>
               {removeExamples.error && (
-                <p role="alert" className="text-destructive">
+                <p role="alert" className="text-danger">
                   {errorText(removeExamples.error)}
                 </p>
               )}
@@ -222,20 +221,20 @@ export function Component() {
           )}
           {total === 0 ? (
             filtered ? (
-              <p className="text-muted-foreground">
+              <p className="text-fg-secondary">
                 No logs match these filters.{" "}
                 <Button variant="tinted" onClick={clearFilters}>
                   Clear filters
                 </Button>
               </p>
             ) : (
-              <p className="text-muted-foreground">
+              <p className="text-fg-secondary">
                 No logs yet. Capture your latest win while you still remember
                 the details.
               </p>
             )
           ) : items.length === 0 ? (
-            <p className="text-muted-foreground">
+            <p className="text-fg-secondary">
               This page is empty.{" "}
               <Button variant="tinted" onClick={() => setPage(1)}>
                 Go to page 1
@@ -303,7 +302,7 @@ export function Component() {
             </DialogDescription>
           </DialogHeader>
           {remove.error && (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-sm text-danger">
               {errorText(remove.error)}
             </p>
           )}

@@ -51,11 +51,11 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
         >
           <span className="font-medium">{log.name}</span>
           {log.impact_statement ? (
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-fg-secondary">
               {log.impact_statement}
             </span>
           ) : log.impact_statement === "" ? (
-            <span className="flex items-center gap-1 text-sm text-amber-700 dark:text-amber-400">
+            <span className="flex items-center gap-1 text-sm text-danger">
               <TriangleAlertIcon aria-hidden className="size-3.5" />
               No impact stated
             </span>
@@ -72,10 +72,7 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
           {log.impact}
         </Tag>
         <Tag variant="outline">{STATUS_LABEL[log.status]}</Tag>
-        <time
-          dateTime={log.created_at}
-          className="text-muted-foreground text-sm"
-        >
+        <time dateTime={log.created_at} className="text-sm text-fg-secondary">
           {new Date(log.created_at).toLocaleDateString()}
         </time>
         {!readOnly && (

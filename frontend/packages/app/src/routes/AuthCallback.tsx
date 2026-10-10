@@ -20,5 +20,5 @@ export function Component() {
         .
       </p>
     );
-  return <p className="p-4 text-muted-foreground">Signing you in…</p>;
+  return <p className="p-4 text-fg-secondary">Signing you in…</p>;
 }

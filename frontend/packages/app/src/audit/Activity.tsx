@@ -15,13 +15,13 @@ export function Activity({ docId }: { docId: string }) {
         <h3 className="text-lg font-semibold">Activity</h3>
         <Link
           to={`/audit?document=${docId}`}
-          className="text-muted-foreground text-sm hover:underline"
+          className="text-sm text-fg-secondary hover:underline"
         >
           View all
         </Link>
       </div>
       {q.error ? (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-danger">
           {errorText(q.error)}{" "}
           <Button variant="tinted" size="sm" onClick={() => q.refetch()}>
             Retry
@@ -30,15 +30,18 @@ export function Activity({ docId }: { docId: string }) {
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {q.isPending && (
-            <li className="bg-muted h-4 animate-pulse rounded" aria-hidden />
+            <li
+              className="h-4 animate-pulse rounded bg-container"
+              aria-hidden
+            />
           )}
           {!q.isPending && entries.length === 0 && (
-            <li className="text-muted-foreground">No activity yet.</li>
+            <li className="text-fg-secondary">No activity yet.</li>
           )}
           {entries.map((e) => (
             <li key={e.id}>
               {actorName(e)} {describeAction(e)} ·{" "}
-              <span className="text-muted-foreground">
+              <span className="text-fg-secondary">
                 <When at={e.at} />
               </span>
             </li>

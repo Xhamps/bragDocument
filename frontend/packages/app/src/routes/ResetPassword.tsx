@@ -16,7 +16,7 @@ export function Component() {
   const [password, setPassword] = useState("");
   const { busy, run, setMessage, status } = useAuthAction();
 
-  if (loading) return <p className="text-muted-foreground p-4">Loading…</p>;
+  if (loading) return <p className="p-4 text-fg-secondary">Loading…</p>;
 
   if (session)
     return (

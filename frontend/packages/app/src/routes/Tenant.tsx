@@ -46,11 +46,11 @@ export function Component() {
 
   if (me && me.role !== "admin") return <Navigate to="/" replace />;
   if (!me || members.isPending || invitations.isPending)
-    return <p className="text-muted-foreground">Loading…</p>;
+    return <p className="text-fg-secondary">Loading…</p>;
 
   if (members.error || invitations.error)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="text-danger">
         {errorText(members.error ?? invitations.error)}
       </p>
     );
@@ -73,13 +73,13 @@ export function Component() {
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">{me.tenant.name}: members</h2>
-        <ul className="ring-foreground/10 divide-y rounded-xl ring-1">
+        <h2 className="type-title-2">{me.tenant.name}: members</h2>
+        <ul className="divide-y rounded-lg glass shadow-glass">
           {members.data.map((m) => (
             <li key={m.id} className="flex items-center gap-3 p-3 text-sm">
               <span>{m.display_name || m.email}</span>
               {m.display_name && (
-                <span className="text-muted-foreground">{m.email}</span>
+                <span className="text-fg-secondary">{m.email}</span>
               )}
               <Tag tone={m.role === "admin" ? "success" : "neutral"}>
                 {m.role}
@@ -100,15 +100,15 @@ export function Component() {
           ))}
         </ul>
         {removeError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {removeError}
           </p>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">Invitations</h2>
-        <p className="text-muted-foreground text-sm">
+        <h2 className="type-title-2">Invitations</h2>
+        <p className="text-sm text-fg-secondary">
           Invited people join this tenant when they sign in with that email. No
           email is sent; share the sign-in link yourself.
         </p>
@@ -130,13 +130,13 @@ export function Component() {
           </Button>
         </form>
         {inviteError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {inviteError}
           </p>
         )}
-        <ul className="ring-foreground/10 divide-y rounded-xl ring-1">
+        <ul className="divide-y rounded-lg glass shadow-glass">
           {invitations.data.length === 0 && (
-            <li className="text-muted-foreground p-3 text-sm">
+            <li className="p-3 text-sm text-fg-secondary">
               No pending invitations.
             </li>
           )}
@@ -144,7 +144,7 @@ export function Component() {
             <li key={i.id} className="flex items-center gap-3 p-3 text-sm">
               <span>{i.email}</span>
               {i.document_title ? (
-                <span className="text-muted-foreground ml-auto">
+                <span className="ml-auto text-fg-secondary">
                   via “{i.document_title}”
                 </span>
               ) : (
@@ -163,7 +163,7 @@ export function Component() {
           ))}
         </ul>
         {withdrawError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {withdrawError}
           </p>
         )}

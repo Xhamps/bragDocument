@@ -7,12 +7,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Select,
   TextArea,
 } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { DocRole, ExportJob, ReportSettings } from "../lib/types";
-import { FIELD } from "../logs/constants";
 import { useTags } from "../logs/useLogs";
 import { SECTIONS } from "./sections";
 import {
@@ -70,7 +70,7 @@ export function ExportDialog({
           </DialogDescription>
         </DialogHeader>
         {settings.error && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {errorText(settings.error)}
           </p>
         )}
@@ -108,7 +108,7 @@ export function ExportDialog({
             {history.data.map((j) => (
               <div key={j.id} className="flex items-center gap-2">
                 <span>{new Date(j.created_at).toLocaleString()}</span>
-                <span className="text-muted-foreground">
+                <span className="text-fg-secondary">
                   {j.status === "failed" ? j.error : j.status}
                 </span>
                 {j.downloadable && (
@@ -128,7 +128,7 @@ export function ExportDialog({
               </div>
             ))}
             {!!dlError && (
-              <p role="alert" className="text-destructive">
+              <p role="alert" className="text-danger">
                 {errorText(dlError)}
               </p>
             )}
@@ -186,7 +186,7 @@ function SettingsForm({
         onChange={(e) => setGoalsNext(e.target.value)}
       />
       {!canSave && (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-fg-secondary">
           These apply to this report only.
         </p>
       )}
@@ -202,16 +202,12 @@ function SettingsForm({
                   {t}
                 </th>
                 <td>
-                  <select
+                  <Select
                     aria-label={`Section for ${t}`}
-                    className={FIELD}
+                    options={[...SECTIONS]}
                     value={map[t] ?? "Other"}
                     onChange={(e) => setMap({ ...map, [t]: e.target.value })}
-                  >
-                    {SECTIONS.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
+                  />
                 </td>
               </tr>
             ))}
@@ -219,7 +215,7 @@ function SettingsForm({
         </table>
       )}
       {error && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

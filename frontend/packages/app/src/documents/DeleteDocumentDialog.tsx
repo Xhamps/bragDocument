@@ -35,7 +35,7 @@ export function DeleteDocumentDialog({
           </DialogDescription>
         </DialogHeader>
         {error && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}

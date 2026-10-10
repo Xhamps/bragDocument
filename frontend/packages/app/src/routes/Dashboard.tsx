@@ -1,10 +1,11 @@
 import { Link, useParams, useSearchParams } from "react-router";
+import { Select, TextField } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { LogStatus } from "../lib/types";
 import { DocumentTabs } from "../documents/DocumentTabs";
 import { useDocument } from "../documents/useDocuments";
-import { FIELD, STATUS_LABEL } from "../logs/constants";
+import { STATUS_LABEL } from "../logs/constants";
 import { BarList } from "../dashboard/BarList";
 import {
   logsHref,
@@ -44,10 +45,10 @@ export function Component() {
   const doc = useDocument(id);
   const dash = useDashboard(id, range);
 
-  if (doc.isPending) return <p className="text-muted-foreground">Loading…</p>;
+  if (doc.isPending) return <p className="text-fg-secondary">Loading…</p>;
   if (!doc.data)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="text-danger">
         {doc.error instanceof ApiError && doc.error.status === 404
           ? "Document not found."
           : errorText(doc.error)}
@@ -65,9 +66,9 @@ export function Component() {
   const tile = (label: string, value: number | undefined, to: string) => (
     <Link
       to={to}
-      className="flex flex-col gap-1 rounded-xl p-4 ring-1 ring-foreground/10 hover:bg-muted"
+      className="flex flex-col gap-1 rounded-lg glass p-4 shadow-glass hover:border-fg-tertiary"
     >
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm text-fg-secondary">{label}</span>
       <span className="text-2xl font-semibold tabular-nums">
         {value ?? "–"}
       </span>
@@ -77,18 +78,17 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-4">
-        <Link to="/" className="text-sm text-muted-foreground hover:underline">
+        <Link to="/" className="text-sm text-fg-secondary hover:underline">
           ← Documents
         </Link>
-        <h2 className="text-xl font-semibold">{doc.data.title}</h2>
+        <h2 className="type-title-2">{doc.data.title}</h2>
         <DocumentTabs id={id} current="dashboard" />
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <label htmlFor="period" className="text-sm text-muted-foreground">
-            Period
-          </label>
-          <select
+          <Select
             id="period"
-            className={FIELD}
+            aria-label="Period"
+            prefix="Period:"
+            options={PRESETS}
             value={period}
             onChange={(e) => {
               const v = e.target.value;
@@ -98,19 +98,12 @@ export function Component() {
                   : { period: v },
               );
             }}
-          >
-            {PRESETS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          />
           {period === "custom" && (
             <>
-              <input
+              <TextField
                 aria-label="From"
                 type="date"
-                className={FIELD}
                 value={range.from}
                 max={range.to}
                 onChange={(e) =>
@@ -118,10 +111,9 @@ export function Component() {
                   setParams({ period, from: e.target.value, to: range.to })
                 }
               />
-              <input
+              <TextField
                 aria-label="To"
                 type="date"
-                className={FIELD}
                 value={range.to}
                 min={range.from}
                 onChange={(e) =>
@@ -141,7 +133,7 @@ export function Component() {
       </div>
 
       {dash.error && (
-        <p role="alert" className="text-destructive">
+        <p role="alert" className="text-danger">
           {errorText(dash.error)}
         </p>
       )}
@@ -202,10 +194,10 @@ export function Component() {
             </div>
             <section
               aria-label="Coverage of the article's sections"
-              className="flex flex-col gap-2 rounded-xl p-4 ring-1 ring-foreground/10"
+              className="flex flex-col gap-2 rounded-lg glass p-4 shadow-glass"
             >
               <h3 className="text-sm font-medium">Coverage</h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-fg-secondary">
                 The brag document article's sections. Zero means nothing logged
                 there this period.
               </p>
@@ -215,7 +207,7 @@ export function Component() {
                     <Link
                       to={href([["tag", b.key]])}
                       data-zero={b.count === 0 ? "true" : undefined}
-                      className={`flex justify-between hover:underline ${b.count === 0 ? "font-medium text-destructive" : ""}`}
+                      className={`flex justify-between hover:underline ${b.count === 0 ? "font-medium text-danger" : ""}`}
                     >
                       <span>{b.key}</span>
                       <span className="tabular-nums">{b.count}</span>

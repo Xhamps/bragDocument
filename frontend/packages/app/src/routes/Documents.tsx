@@ -25,10 +25,10 @@ export function Component() {
   const [deleting, setDeleting] = useState<Document | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  if (isPending) return <p className="text-muted-foreground">Loading…</p>;
+  if (isPending) return <p className="text-fg-secondary">Loading…</p>;
   if (error)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="text-danger">
         {errorText(error)}
       </p>
     );
@@ -61,8 +61,8 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold">Your documents</h2>
-        <label className="text-muted-foreground ml-auto flex items-center gap-2 text-sm">
+        <h2 className="type-title-2">Your documents</h2>
+        <label className="ml-auto flex items-center gap-2 text-sm text-fg-secondary">
           <input
             type="checkbox"
             checked={showArchived}
@@ -78,7 +78,7 @@ export function Component() {
       </div>
 
       {archiveError && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-danger">
           {archiveError}
         </p>
       )}
@@ -111,14 +111,14 @@ export function Component() {
           </Button>
         </Card>
       ) : owned.length === 0 ? (
-        <p className="text-muted-foreground">No active documents.</p>
+        <p className="text-fg-secondary">No active documents.</p>
       ) : (
         grid(owned)
       )}
 
       {shared.length > 0 && (
         <section className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">Shared with you</h2>
+          <h2 className="type-title-2">Shared with you</h2>
           {grid(shared, true)}
         </section>
       )}

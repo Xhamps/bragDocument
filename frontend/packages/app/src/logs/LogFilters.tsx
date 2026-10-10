@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { XIcon } from "lucide-react";
-import { Button, Tag, TextField } from "@bragdoc/ui";
+import { Button, Select, Tag, TextField } from "@bragdoc/ui";
 import type { LogStatus } from "../lib/types";
-import { FIELD, IMPACTS, SORTS, STATUSES, STATUS_LABEL } from "./constants";
+import { IMPACTS, SORTS, STATUSES, STATUS_LABEL } from "./constants";
 
 type SetFilter = (key: string, values: string[]) => void;
 
@@ -70,9 +70,9 @@ export function LogFilters({
           value={params.get("to") ?? ""}
           onChange={(e) => single("to")(e.target.value)}
         />
-        <select
+        <Select
           aria-label="Sort"
-          className={FIELD}
+          options={SORTS}
           value={params.get("sort") ?? "-created_at"}
           onChange={(e) =>
             onChange(
@@ -80,13 +80,7 @@ export function LogFilters({
               e.target.value === "-created_at" ? [] : [e.target.value],
             )
           }
-        >
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <Toggles
@@ -124,7 +118,7 @@ function Toggles({
   return (
     <fieldset className="flex items-center gap-1">
       <legend className="sr-only">{legend}</legend>
-      <span aria-hidden className="text-muted-foreground mr-1 text-sm">
+      <span aria-hidden className="mr-1 text-sm text-fg-secondary">
         {legend}
       </span>
       {values.map((v) => {

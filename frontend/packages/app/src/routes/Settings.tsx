@@ -10,7 +10,7 @@ import {
 export function Component() {
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-semibold">Settings</h2>
+      <h2 className="type-title-2">Settings</h2>
       <TelegramCard />
     </div>
   );
@@ -19,7 +19,7 @@ export function Component() {
 function Alert({ error }: { error: unknown }) {
   if (!error) return null;
   return (
-    <p role="alert" className="text-destructive">
+    <p role="alert" className="text-danger">
       {errorText(error)}
     </p>
   );
@@ -54,7 +54,7 @@ function TelegramCard() {
       }
     >
       <div className="flex flex-col gap-3 text-sm">
-        {status.isPending && <p className="text-muted-foreground">Loading…</p>}
+        {status.isPending && <p className="text-fg-secondary">Loading…</p>}
         <Alert error={status.error} />
         {status.data?.linked && (
           <>
@@ -113,7 +113,7 @@ function TelegramCard() {
             {code.data && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <code className="bg-muted rounded px-2 py-1 font-mono text-base">
+                  <code className="rounded bg-container px-2 py-1 font-mono text-base">
                     {code.data.code}
                   </code>
                   <Button
@@ -125,7 +125,7 @@ function TelegramCard() {
                     {copied ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-fg-secondary">
                   Send <code>/start {code.data.code}</code> to the bot. Expires
                   at {new Date(code.data.expires_at).toLocaleTimeString()}.
                 </p>

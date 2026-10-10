@@ -32,7 +32,7 @@ export function AuthCard({
           {children}
         </form>
         {footer && (
-          <div className="text-muted-foreground flex flex-col gap-1 text-sm">
+          <div className="flex flex-col gap-1 text-sm text-fg-secondary">
             {footer}
           </div>
         )}

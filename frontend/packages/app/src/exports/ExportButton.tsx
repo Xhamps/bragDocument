@@ -35,7 +35,7 @@ export function ExportButton({
       {/* Always mounted so screen readers announce changes. */}
       <span role="status" className="flex items-center gap-2 text-sm">
         {error ? (
-          <span className="text-destructive">{errorText(error)}</span>
+          <span className="text-danger">{errorText(error)}</span>
         ) : !job ? null : job.status === "done" ? (
           <>
             Report ready
@@ -49,13 +49,11 @@ export function ExportButton({
               Download
             </Button>
             {!!dlError && (
-              <span className="text-destructive">{errorText(dlError)}</span>
+              <span className="text-danger">{errorText(dlError)}</span>
             )}
           </>
         ) : job.status === "failed" ? (
-          <span className="text-destructive">
-            {job.error || "Export failed"}
-          </span>
+          <span className="text-danger">{job.error || "Export failed"}</span>
         ) : (
           <>
             Generating report

@@ -84,7 +84,7 @@ function Form({
         onChange={(e) => setForm({ ...form, description: e.target.value })}
       />
       {error && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

@@ -24,12 +24,12 @@ export function useAuthAction() {
   const status = (
     <>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}
       {message && (
-        <p aria-live="polite" className="text-sm text-muted-foreground">
+        <p aria-live="polite" className="text-sm text-fg-secondary">
           {message}
         </p>
       )}

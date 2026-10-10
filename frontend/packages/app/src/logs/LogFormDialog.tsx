@@ -12,17 +12,11 @@ import {
   DialogTitle,
   Select,
   Tag,
+  TextArea,
   TextField,
-  cn,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
-import {
-  FIELD,
-  IMPACTS,
-  STATUSES,
-  STATUS_LABEL,
-  SUGGESTED_TAGS,
-} from "./constants";
+import { IMPACTS, STATUSES, STATUS_LABEL, SUGGESTED_TAGS } from "./constants";
 import { ExternalLink } from "./LogRow";
 import { useTags, type LogForm } from "./useLogs";
 
@@ -135,7 +129,7 @@ function Form({
       {noImpact && (
         <div
           role="status"
-          className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+          className="flex flex-col gap-2 rounded-md border border-danger bg-glass-tint-rose p-3 type-footnote text-fg-primary"
         >
           <p>
             Saved. We couldn't find an impact in the description. What changed
@@ -188,7 +182,7 @@ function Form({
           >
             Description
           </label>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-fg-secondary">
             Markdown. Include the result.
           </span>
           <div className="ml-auto flex gap-1">
@@ -223,11 +217,11 @@ function Form({
             </Markdown>
           </div>
         ) : (
-          <textarea
+          <TextArea
             id="log-description"
             ref={descRef}
             maxLength={20000}
-            className={cn(FIELD, "min-h-32")}
+            rows={6}
             value={f.description}
             onChange={(e) => setF({ ...f, description: e.target.value })}
           />
@@ -356,11 +350,7 @@ function Form({
       </div>
 
       {error && (
-        <p
-          id="log-form-error"
-          role="alert"
-          className="text-destructive text-sm"
-        >
+        <p id="log-form-error" role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

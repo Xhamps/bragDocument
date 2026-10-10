@@ -16,8 +16,8 @@ export function DocumentTabs({
       aria-current={current === key ? "page" : undefined}
       className={
         current === key
-          ? `${base} border-foreground font-medium`
-          : `${base} border-transparent text-muted-foreground hover:text-foreground`
+          ? `${base} border-fg-primary font-medium`
+          : `${base} border-transparent text-fg-secondary hover:text-fg-primary`
       }
     >
       {label}

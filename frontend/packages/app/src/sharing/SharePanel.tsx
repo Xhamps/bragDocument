@@ -6,6 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Select,
   Tag,
   TextField,
 } from "@bragdoc/ui";
@@ -27,17 +28,10 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
-// ponytail: native select; add a Select to @bragdoc/ui if more screens need one.
-const selectClass = "h-8 rounded-md border bg-transparent px-2 text-sm";
-
-function RoleOptions() {
-  return (
-    <>
-      <option value="viewer">Viewer</option>
-      <option value="editor">Editor</option>
-    </>
-  );
-}
+const roleOptions = [
+  { value: "viewer", label: "Viewer" },
+  { value: "editor", label: "Editor" },
+];
 
 export function SharePanel({ doc, open, onOpenChange }: Props) {
   const sharing = useSharing(doc.id, open);
@@ -120,40 +114,38 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
               if (share.error) share.reset();
             }}
           />
-          <select
+          <Select
             aria-label="Role for new person"
-            className={selectClass}
+            options={roleOptions}
             value={role}
             onChange={(e) => setRole(e.target.value as GrantRole)}
-          >
-            <RoleOptions />
-          </select>
+          />
           <Button variant="primary" type="submit" disabled={share.isPending}>
             Share
           </Button>
         </form>
         {shareError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {shareError}
           </p>
         )}
         {notice && (
-          <p role="status" className="text-muted-foreground text-sm">
+          <p role="status" className="text-sm text-fg-secondary">
             {notice}
           </p>
         )}
 
         {sharing.error ? (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {errorText(sharing.error)}
           </p>
         ) : !sharing.data ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <p className="text-sm text-fg-secondary">Loading…</p>
         ) : (
           <ul className="divide-y rounded-md border">
             {sharing.data.grants.length + sharing.data.invitations.length ===
               0 && (
-              <li className="text-muted-foreground p-3 text-sm">
+              <li className="p-3 text-sm text-fg-secondary">
                 Only you have access.
               </li>
             )}
@@ -165,9 +157,9 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                 <span className="flex-1 truncate" title={g.email}>
                   {g.display_name || g.email}
                 </span>
-                <select
+                <Select
                   aria-label={`Role for ${g.email}`}
-                  className={selectClass}
+                  options={roleOptions}
                   value={g.role}
                   disabled={changeRole.isPending}
                   onChange={(e) => {
@@ -177,9 +169,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                       role: e.target.value as GrantRole,
                     });
                   }}
-                >
-                  <RoleOptions />
-                </select>
+                />
                 <Button
                   variant="tinted"
                   size="sm"
@@ -223,7 +213,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
           </ul>
         )}
         {actionError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-danger">
             {actionError}
           </p>
         )}
@@ -233,7 +223,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             role="alertdialog"
             aria-label="Confirm ownership transfer"
             aria-describedby="transfer-confirm-text"
-            className="border-destructive/50 flex flex-col gap-2 rounded-md border p-3 text-sm"
+            className="flex flex-col gap-2 rounded-md border border-danger p-3 text-sm"
           >
             <p id="transfer-confirm-text">
               Make {target.display_name || target.email} the owner? You become

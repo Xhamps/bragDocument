@@ -37,8 +37,8 @@ export function DotWave({ className }: { className?: string }) {
 
     function draw(t: number) {
       ctx!.clearRect(0, 0, w, h);
-      const focal = h * 0.55;
-      const horizon = h * 0.42;
+      const focal = h * 0.45;
+      const horizon = h * 0.64;
       // Far rows first so near (bigger, brighter) dots paint on top.
       for (let j = ROWS - 1; j >= 0; j--) {
         const z = zs[j];
@@ -130,7 +130,7 @@ export function DotWave({ className }: { className?: string }) {
       className={className}
       style={{
         maskImage:
-          "linear-gradient(to bottom, transparent, black 15%, black 70%, transparent)",
+          "linear-gradient(to bottom, transparent 55%, black 72%, black 88%, transparent)",
       }}
     />
   );

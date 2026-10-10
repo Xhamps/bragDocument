@@ -18,7 +18,7 @@ Design: `docs/plans/2026-10-09-ui-design-system-design.md`. Branch: `feat/ui-des
 - **Translating CSS:** every `bd-*` rule becomes Tailwind utilities inside the component's cva/classes. Use the token utilities defined in Task 1 (`bg-container`, `text-fg-secondary`, `rounded-md`, `shadow-glass`, `duration-base`, `ease-standard` …). Arbitrary values only for one-offs (`h-[30px]`).
 - **Type utilities are `type-*`, not `text-*`.** `cn` uses tailwind-merge, which treats any unknown `text-foo` as a colour and would drop it next to `text-fg-primary`. So the scale is `type-display`, `type-title-1` … `type-code`.
 - **Glass:** `glass` utility = `container-bg` fill + 1px `container-border` + backdrop blur. It does **not** set a shadow; add `shadow-glass` (containers) or `shadow-button` (glass controls) explicitly.
-- **Focus:** every interactive element gets `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring` (or `focus-within:` on the wrapper for TextField/Select). Export this string as `focusRing` from `#lib/utils`.
+- **Focus:** every interactive element gets `focusRing` (`outline-hidden focus-visible:outline-2 focus-visible:outline-solid …`; in Tailwind v4 `outline-none` + `outline-2` renders NO outline) (or `focus-within:` on the wrapper for TextField/Select). Export this string as `focusRing` from `#lib/utils`.
 - **Icons:** string icon names resolve through `#components/icon` (Task 3). Never hand-draw SVGs.
 - **`data-slot`:** keep the existing convention: every component root gets `data-slot="<kebab-name>"`.
 - **Commands** (run from `frontend/`):
@@ -191,7 +191,7 @@ Note on `--radius-*`/`--shadow-*` mapping to the same name: `tokens.css` is unla
 export { cn } from "cn";
 
 export const focusRing =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
+  "outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 ```
 
 **Step 4: Verify the CSS compiles and tokens resolve**
@@ -677,7 +677,7 @@ export function Field({
 }
 
 export const fieldControl =
-  "glass rounded-md text-fg-primary transition-colors duration-fast focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring group-data-invalid/field:border-danger";
+  "glass rounded-md text-fg-primary transition-colors duration-fast focus-within:outline-2 focus-within:outline-solid focus-within:outline-offset-2 focus-within:outline-focus-ring group-data-invalid/field:border-danger";
 ```
 
 `text-field.tsx`: `TextField({ label, hint, error, icon, trailing, className, id, disabled, ...props })` → `const autoId = React.useId(); const fid = id ?? autoId;` render `<Field …>{(aria) => <div className={cn(fieldControl, "flex h-11 items-center gap-2 px-4")}>{icon && <span aria-hidden className="inline-flex text-fg-primary">{renderIcon(icon)}</span>}<input id={fid} type="text" disabled={disabled} className="h-full min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-fg-secondary" {...aria} {...props} />{trailing}</div>}</Field>`. Props type: `Omit<React.ComponentProps<"input">, "children"> & FieldFrameProps & { icon?: IconProp; trailing?: React.ReactNode }`.

@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Tag,
+  focusRing,
 } from "@bragdoc/ui";
 import { Link } from "react-router";
 import type { Document } from "../lib/types";
@@ -35,7 +36,7 @@ export function DocumentCard({
         // Stretched link: the whole card navigates; the menu sits above it.
         <Link
           to={`/documents/${doc.id}`}
-          className="before:absolute before:inset-0 hover:underline"
+          className={`${focusRing} rounded-sm before:absolute before:inset-0 hover:underline`}
         >
           {doc.title}
         </Link>

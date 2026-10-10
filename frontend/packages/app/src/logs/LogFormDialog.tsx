@@ -14,6 +14,7 @@ import {
   Tag,
   TextArea,
   TextField,
+  focusRing,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
 import { IMPACTS, STATUSES, STATUS_LABEL, SUGGESTED_TAGS } from "./constants";
@@ -253,6 +254,7 @@ function Form({
                 <button
                   type="button"
                   aria-label={`Remove tag ${t}`}
+                  className={`${focusRing} rounded-sm`}
                   onClick={() =>
                     setF({ ...f, tags: f.tags.filter((x) => x !== t) })
                   }

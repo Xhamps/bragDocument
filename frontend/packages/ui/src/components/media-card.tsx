@@ -140,7 +140,7 @@ function MediaCard({
             {badge}
           </span>
         )}
-        {/* ponytail: z-2 lifts it above the href hit area so it stays clickable (DS omits this). */}
+        {/* z-2 lifts it above the href hit area so it stays clickable (DS omits this). */}
         {mediaAction && (
           <span className="absolute top-2 right-2 z-2">{mediaAction}</span>
         )}

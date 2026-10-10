@@ -1,11 +1,6 @@
 export { cn, focusRing } from "#lib/utils";
 export { useTheme, type Theme } from "#lib/theme";
-export {
-  Button,
-  buttonColorVariants,
-  buttonVariants,
-  type ButtonProps,
-} from "#components/button";
+export { Button, buttonVariants, type ButtonProps } from "#components/button";
 export { ButtonGroup, type ButtonGroupProps } from "#components/button-group";
 export { Card, type CardProps } from "#components/card";
 export { Checkbox, type CheckboxProps } from "#components/checkbox";

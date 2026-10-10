@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { XIcon } from "lucide-react";
-import { Button, Select, Tag, TextField } from "@bragdoc/ui";
+import { Button, Select, Tag, TextField, focusRing } from "@bragdoc/ui";
 import type { LogStatus } from "../lib/types";
 import { IMPACTS, SORTS, STATUSES, STATUS_LABEL } from "./constants";
 
@@ -208,6 +208,7 @@ export function ActiveFilters({
           <button
             type="button"
             aria-label={`Remove filter ${LABELS[k]}: ${v}`}
+            className={`${focusRing} rounded-sm`}
             onClick={() => onRemove(k, v)}
           >
             <XIcon aria-hidden className="size-3" />

@@ -755,6 +755,7 @@ export function Component() {
           </div>
         </div>
         <TopBar
+          label="Demo"
           brand={{ name: "BragDoc", href: "#" }}
           items={TOPBAR_ITEMS}
           defaultValue="flights"
@@ -785,6 +786,7 @@ export function Component() {
           }}
         />
         <TopBar
+          label="Demo"
           variant="floating"
           brand={{ name: "BragDoc UI", href: "#" }}
           defaultValue="components"

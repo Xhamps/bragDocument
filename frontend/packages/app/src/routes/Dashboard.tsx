@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from "react-router";
-import { Select, TextField } from "@bragdoc/ui";
+import { Select, TextField, focusRing } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
 import type { LogStatus } from "../lib/types";
@@ -66,7 +66,7 @@ export function Component() {
   const tile = (label: string, value: number | undefined, to: string) => (
     <Link
       to={to}
-      className="flex flex-col gap-1 rounded-lg glass p-4 shadow-glass hover:border-fg-tertiary"
+      className={`${focusRing} flex flex-col gap-1 rounded-lg glass p-4 shadow-glass hover:border-fg-tertiary`}
     >
       <span className="text-sm text-fg-secondary">{label}</span>
       <span className="text-2xl font-semibold tabular-nums">

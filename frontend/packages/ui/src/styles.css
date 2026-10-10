@@ -2,8 +2,7 @@
 @import "tw-animate-css";
 @import "./tokens.css";
 
-/* State variants used by the components (subset of shadcn/tailwind.css, inlined
-   to avoid a runtime dependency on the shadcn CLI package). */
+/* State variants for Radix data attributes used by the components. */
 @custom-variant data-open {
   &:where([data-state="open"]),
   &:where([data-open]:not([data-open="false"])) {
@@ -22,36 +21,9 @@
     @slot;
   }
 }
-@custom-variant data-unchecked {
-  &:where([data-state="unchecked"]),
-  &:where([data-unchecked]:not([data-unchecked="false"])) {
-    @slot;
-  }
-}
-@custom-variant data-selected {
-  &:where([data-selected="true"]) {
-    @slot;
-  }
-}
 @custom-variant data-disabled {
   &:where([data-disabled="true"]),
   &:where([data-disabled]:not([data-disabled="false"])) {
-    @slot;
-  }
-}
-@custom-variant data-active {
-  &:where([data-state="active"]),
-  &:where([data-active]:not([data-active="false"])) {
-    @slot;
-  }
-}
-@custom-variant data-horizontal {
-  &:where([data-orientation="horizontal"]) {
-    @slot;
-  }
-}
-@custom-variant data-vertical {
-  &:where([data-orientation="vertical"]) {
     @slot;
   }
 }

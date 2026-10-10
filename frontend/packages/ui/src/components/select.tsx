@@ -68,7 +68,7 @@ function Select({
             {...props}
             {...aria}
             id={fid}
-            className="min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-7 type-body font-medium text-fg-primary outline-hidden [&>option]:text-black"
+            className="min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-7 type-body font-medium text-fg-primary outline-hidden [&>option]:bg-surface [&>option]:text-fg-primary"
           >
             {placeholder && (
               <option value="" disabled>

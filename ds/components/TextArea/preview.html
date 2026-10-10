@@ -1,0 +1,12 @@
+<!-- @dsCard group="Forms" height=190 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>TextArea — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="align-items:flex-start"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h('div', { style: { width: 420 } }, h(D.TextArea, { label: 'Reply to comment', placeholder: 'Write a reply', hint: 'Markdown is supported.' })));
+</script>
+</body>
+</html>

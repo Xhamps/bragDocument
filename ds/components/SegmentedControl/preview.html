@@ -1,0 +1,15 @@
+<!-- @dsCard group="Controls" height=150 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>SegmentedControl — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.SegmentedControl, { label: 'Style', options: ['Glass', 'Outline', 'Flat'] }),
+  h(D.SegmentedControl, { label: 'Range', tone: 'accent', options: ['Day', 'Week', 'Month'], defaultValue: 'Week' }),
+  h(D.SegmentedControl, { label: 'Size', size: 'sm', options: ['sm', 'md', 'lg'] })));
+</script>
+</body>
+</html>

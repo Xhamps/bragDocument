@@ -1,0 +1,17 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>Tag — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.Tag, { tone: 'success' }, 'Active'), h(D.Tag, { tone: 'accent' }, 'In review'), h(D.Tag, { tone: 'danger' }, 'Overdue'), h(D.Tag, null, 'Draft'), h(D.Tag, { tone: 'purple' }, 'Design'), h(D.Tag, { tone: 'teal' }, 'Research'),
+  h(D.Tag, { variant: 'outline', tone: 'violet' }, 'Trial term'), h(D.Tag, { variant: 'outline' }, 'XP + 10'), h(D.Tag, { variant: 'solid', tone: 'accent' }, 'UI/UX Design')));
+</script>
+</body>
+</html>

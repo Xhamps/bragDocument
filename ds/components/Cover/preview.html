@@ -1,0 +1,56 @@
+<!-- @dsCard height=320 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BragDoc UI</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--page); color:var(--fg-primary); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:320px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:320px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:320px; }
+  .blue { fill:var(--button); }
+  .purple { fill:var(--chart-2); }
+  .violet { fill:var(--chart-3); }
+  .ink { fill:var(--fg-primary); }
+  .cut { fill:var(--page); }
+  .blk { rx:var(--radius-lg); }
+  .pill { rx:var(--radius-md); }
+  .words { position:absolute; left:var(--space-12); bottom:var(--space-8); max-width:440px; }
+  .name { margin:0; font-size:104px; line-height:.95; font-weight:700; letter-spacing:-.03em; color:var(--fg-primary); }
+  .tag { margin:var(--space-3) 0 0 4px; font-size:14px; line-height:20px; color:var(--fg-secondary); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 320" width="480" height="320">
+<!--
+  blocks      button 144×296 bled off the top (the one accent, largest) · chart-2 purple 128×160 · fg-primary ink 192×232 bleeding off the right edge · chart-3 violet 64×20 once — ≈40% of 960×320
+  arrangement one tall blue slab with satellites, bottoms on one line space-6 above the edge, space-4 gutters
+  pattern     pills, from "radius-pill for search, segmented controls, toggles": 20-tall pills (rx radius-md) at a space-6 pitch on the purple, a segmented row cut from the ink slab in page
+  scales      sides in space-2 multiples; gutters space-4; pitch space-6 (24 + 4); corners radius-lg; pills rx radius-md
+-->
+<rect class="blue blk" x="16" y="-24" width="144" height="320" rx="16"/>
+<rect class="purple blk" x="176" y="136" width="128" height="160" rx="16"/>
+<rect class="ink blk" x="320" y="64" width="192" height="232" rx="16"/>
+<rect class="violet pill" x="176" y="104" width="64" height="20" rx="10"/>
+<rect class="cut pill" x="192" y="152" width="56" height="20" rx="10"/>
+<rect class="cut pill" x="192" y="180" width="80" height="20" rx="10"/>
+<rect class="cut pill" x="192" y="208" width="40" height="20" rx="10"/>
+<rect class="cut pill" x="192" y="236" width="96" height="20" rx="10"/>
+<rect class="cut pill" x="336" y="80" width="64" height="20" rx="10"/>
+<rect class="cut pill" x="408" y="80" width="56" height="20" rx="10"/>
+<rect class="cut pill" x="336" y="248" width="128" height="20" rx="10"/>
+<rect class="cut pill" x="32" y="248" width="88" height="20" rx="10"/>
+<rect class="cut pill" x="32" y="220" width="56" height="20" rx="10"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">BragDoc UI</h1>
+<p class="tag">Glass that absorbs the mood.</p>
+</div>
+</div>
+</body>
+</html>

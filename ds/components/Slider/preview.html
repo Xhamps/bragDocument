@@ -1,0 +1,12 @@
+<!-- @dsCard group="Forms" height=140 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Slider — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="align-items:flex-start"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h('div', { style: { width: 360 } }, h(D.Slider, { label: 'Up to CA$6000', min: 0, max: 10000, step: 100, defaultValue: 6000, format: function (v) { return 'CA$ ' + v; }, onClear: function () {} })));
+</script>
+</body>
+</html>

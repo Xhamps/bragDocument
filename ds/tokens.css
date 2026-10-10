@@ -1,0 +1,144 @@
+/* BragDoc UI — generated from tokens.json */
+:root, [data-theme="light"] {
+  --page: #f3f3fb;
+  --surface: #ffffff;
+  --mood-1: #4d73e6;
+  --mood-2: #bc839c;
+  --mood-3: #c7cefd;
+  --fg-primary: #000000;
+  --fg-secondary: rgba(0, 0, 0, 0.7);
+  --fg-tertiary: rgba(0, 0, 0, 0.55);
+  --container-bg: rgba(255, 255, 255, 0.55);
+  --container-border: rgba(255, 255, 255, 0.35);
+  --container-divider: rgba(0, 0, 0, 0.2);
+  --glass-sheen: rgba(255, 255, 255, 0.7);
+  --glass-tint-blue: rgba(0, 104, 214, 0.16);
+  --glass-tint-violet: rgba(164, 89, 215, 0.18);
+  --glass-tint-rose: rgba(241, 49, 83, 0.14);
+  --glass-tint-teal: rgba(118, 191, 208, 0.28);
+  --button: #0068d6;
+  --button-hover: #00336c;
+  --button-fg: #ffffff;
+  --button-text: var(--button);
+  --button-selected: var(--button-text);
+  --button-inactive: #c5c4c9;
+  --focus-ring: var(--button-text);
+  --success: #58ac5b;
+  --danger: #d1213f;
+  --chart-1: var(--button);
+  --chart-2: #6a5de0;
+  --chart-3: #a459d7;
+  --chart-4: #76bfd0;
+  --chart-muted: var(--button-inactive);
+  --tg-primary-start: #321d4c;
+  --tg-primary-end: #010101;
+  --tg-secondary-start: #43469c;
+  --tg-secondary-mid: #4d2c77;
+  --tg-secondary-end: #130b1d;
+  --shadow-sm: 0 1px 2px rgba(23, 25, 60, 0.08), 0 1px 1px rgba(23, 25, 60, 0.04);
+  --shadow-md: 0 4px 12px rgba(23, 25, 60, 0.1), 0 2px 4px rgba(23, 25, 60, 0.06);
+  --shadow-lg: 0 16px 40px rgba(23, 25, 60, 0.16), 0 4px 12px rgba(23, 25, 60, 0.08);
+  --shadow-xl: 0 32px 64px rgba(23, 25, 60, 0.22), 0 8px 24px rgba(23, 25, 60, 0.1);
+  --shadow-inset: inset 0 1px 2px rgba(23, 25, 60, 0.12);
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 32px rgba(23, 25, 60, 0.12);
+  --shadow-button: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 24px rgba(51, 149, 255, 0.45);
+  --shadow-cta: 0 8px 24px rgba(176, 46, 224, 0.35);
+  --shadow-glow-strong: 0 0 32px rgba(51, 149, 255, 0.6), 0 0 8px rgba(51, 149, 255, 0.4);
+}
+[data-theme="dark"] {
+  --page: #040617;
+  --surface: #080b20;
+  --mood-1: #0d1433;
+  --mood-2: #1a113e;
+  --mood-3: #11152c;
+  --fg-primary: #ffffff;
+  --fg-secondary: rgba(255, 255, 255, 0.7);
+  --fg-tertiary: rgba(255, 255, 255, 0.5);
+  --container-bg: rgba(0, 0, 0, 0.5);
+  --container-border: rgba(255, 255, 255, 0.15);
+  --container-divider: rgba(255, 255, 255, 0.2);
+  --glass-sheen: rgba(255, 255, 255, 0.08);
+  --glass-tint-blue: rgba(51, 149, 255, 0.16);
+  --glass-tint-violet: rgba(164, 89, 215, 0.2);
+  --glass-tint-rose: rgba(241, 49, 83, 0.16);
+  --glass-tint-teal: rgba(118, 191, 208, 0.16);
+  --button: #1a6fdb;
+  --button-hover: #00438c;
+  --button-fg: #ffffff;
+  --button-text: #3395ff;
+  --button-selected: var(--button-text);
+  --button-inactive: rgba(255, 255, 255, 0.2);
+  --focus-ring: var(--button-text);
+  --success: #58ac5b;
+  --danger: #fc6a71;
+  --chart-1: #5093f7;
+  --chart-2: #6a5de0;
+  --chart-3: #a459d7;
+  --chart-4: #76bfd0;
+  --chart-muted: #122134;
+  --tg-primary-start: #bb86b9;
+  --tg-primary-end: #d3d5f7;
+  --tg-secondary-start: #7266a6;
+  --tg-secondary-mid: #949ecd;
+  --tg-secondary-end: #c7d1f4;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-button: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 24px rgba(51, 149, 255, 0.45);
+  --shadow-cta: 0 8px 24px rgba(176, 46, 224, 0.35);
+  --shadow-glow-strong: 0 0 32px rgba(51, 149, 255, 0.6), 0 0 8px rgba(51, 149, 255, 0.4);
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --blur-glass: 24px;
+  --blur-heavy: 48px;
+  --gradient-blue-1: linear-gradient(135deg, #3e13a3, #295fc3);
+  --gradient-blue-2: linear-gradient(135deg, #2562bb, #0c3265);
+  --gradient-blue-3: linear-gradient(180deg, #2c3054, #1e1e39);
+  --gradient-light-blue-1: linear-gradient(135deg, #367cbc, #adc6e6);
+  --gradient-light-blue-2: linear-gradient(135deg, #bdcfe9, #f3f6fc);
+  --gradient-red-1: linear-gradient(120deg, #f92636, #f13153 45%, #89297d);
+  --gradient-red-2: linear-gradient(135deg, #f13153, #fc6a71);
+  --gradient-red-3: linear-gradient(120deg, #fa8259, #b02ee0 55%, #6d52e4);
+  --gradient-yellow-1: linear-gradient(135deg, #f79436, #f6b354);
+  --gradient-learn: linear-gradient(90deg, #e378d8, #7856ea);
+  --gradient-angular-1: conic-gradient(from 0deg, #dfe7ee, #b479bd, #7b7edb, #4083f8, #5a5cff, #5b7af2, #a6c4e6, #dfe7ee);
+  --gradient-angular-2: conic-gradient(from 0deg, #3174e4, #45a7f2, #5fd3f5, #a8baa2, #f1a14f, #fa8556, #f46970, #a339e4, #3174e4);
+  --gradient-angular-3: conic-gradient(from 0deg, #ec0e45, #ff1a40, #ff5f5f, #ff939b, #f6a7b0, #e49caa, #b7457e, #cd2660, #ec0e45);
+  --gradient-angular-4: conic-gradient(from 0deg, #133e7c, #0a2d5d, #25436d, #58749b, #84a0c7, #3d78ce, #2562ba, #1c509b, #133e7c);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --duration-enter: 480ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.display { font-family: var(--font-sans); font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.03em; }
+.title-1 { font-family: var(--font-sans); font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+.title-2 { font-family: var(--font-sans); font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.01em; }
+.title-3 { font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 500; }
+.body { font-family: var(--font-sans); font-size: 15px; line-height: 22px; font-weight: 400; }
+.callout { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 500; }
+.footnote { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.caption { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.code { font-family: var(--font-mono); font-size: 13px; line-height: 20px; font-weight: 400; }

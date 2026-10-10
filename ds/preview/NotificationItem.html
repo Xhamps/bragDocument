@@ -1,0 +1,20 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>NotificationItem — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(D.Card, { style: { width: 360 }, compact: true },
+  h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 } }, h('span', { style: { fontSize: 17, fontWeight: 500 } }, 'Notifications'), h('span', { style: { fontSize: 13, color: 'var(--fg-secondary)' } }, 'See all')),
+  h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+    h(D.NotificationItem, { name: 'Hola Spine', action: 'prepared a report', time: '2m ago', unread: true }),
+    h(D.NotificationItem, { name: 'Eva Solain', action: 'invited you to a chat', time: '5m ago', unread: true }),
+    h(D.NotificationItem, { name: 'Pierre Ford', action: 'invited you to a meeting', time: '15m ago' }))));
+</script>
+</body>
+</html>

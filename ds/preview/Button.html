@@ -1,0 +1,19 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>Button — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="r0" class="bd-row"></div><div id="r1" class="bd-row" style="padding-top:0"></div><div id="r2" class="bd-row" style="padding-top:0"></div><div id="r3" class="bd-row" style="padding-top:0"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('r0')).render(h(React.Fragment, null, h(D.Button, { chevron: true }, 'Learn more'), h(D.Button, { variant: 'primary', chevron: true }, 'Primary color'), h(D.Button, { variant: 'ghost' }, 'Ghost color'), h(D.Button, { variant: 'tinted' }, 'See all'), h(D.Button, { variant: 'primary', disabled: true, chevron: true }, 'Primary inactive')));
+ReactDOM.createRoot(document.getElementById('r1')).render(h(React.Fragment, null, h(D.Button, { trailingIcon: 'download' }, 'Download'), h(D.Button, { trailingIcon: 'card' }, 'Buy now'), h(D.Button, { trailingIcon: 'plusCircle' }, 'Add card'), h(D.Button, { icon: 'mail' }, 'Email address'), h(D.Button, { variant: 'ghost', trailingIcon: 'arrowRight' }, 'Start course')));
+ReactDOM.createRoot(document.getElementById('r2')).render(h(React.Fragment, null, h(D.Button, { size: 'sm' }, 'Mark all as read'), h(D.Button, { pill: true }, 'Subscribe'), h(D.Button, { pill: true, variant: 'ghost' }, 'Start a free trial'), h(D.Button, { variant: 'primary', size: 'lg', glow: true }, 'Search flights')));
+ReactDOM.createRoot(document.getElementById('r3')).render(h(React.Fragment, null, h(D.Button, { variant: 'gradient', size: 'lg', chevron: true }, 'Get Started'), h(D.Button, { variant: 'gradient', chevron: true }, 'Get Started'), h(D.Button, { variant: 'ghost', disabled: true }, 'Ghost inactive')));
+
+</script>
+</body>
+</html>

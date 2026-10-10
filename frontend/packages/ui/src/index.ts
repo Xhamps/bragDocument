@@ -21,7 +21,6 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "#components/dialog";
-export { Badge, badgeVariants } from "#components/badge";
 export {
   DropdownMenu,
   DropdownMenuContent,

@@ -97,18 +97,20 @@ export function DotWave({ className }: { className?: string }) {
       update();
     });
     io.observe(canvas);
-    // ponytail: only explicit data-theme switches; an OS scheme change with no
-    // data-theme set keeps the old colours until reload.
-    const mo = new MutationObserver(() => {
+    function recolor() {
       readColors();
       if (!raf) draw(performance.now() / 1000);
-    });
+    }
+    // Explicit theme switches and OS scheme changes (when no data-theme is set).
+    const mo = new MutationObserver(recolor);
+    const scheme = matchMedia("(prefers-color-scheme: dark)");
     mo.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
     document.addEventListener("visibilitychange", update);
     reduced.addEventListener("change", update);
+    scheme.addEventListener("change", recolor);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -117,6 +119,7 @@ export function DotWave({ className }: { className?: string }) {
       mo.disconnect();
       document.removeEventListener("visibilitychange", update);
       reduced.removeEventListener("change", update);
+      scheme.removeEventListener("change", recolor);
     };
   }, []);
 

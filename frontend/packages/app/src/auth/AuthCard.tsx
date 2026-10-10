@@ -1,13 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Label,
-} from "@bragdoc/ui";
+import { Card, TextField } from "@bragdoc/ui";
 
 export function AuthCard({
   title,
@@ -24,29 +16,26 @@ export function AuthCard({
 }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm items-center p-4">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>
-            <h1>{title}</h1>
-          </CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSubmit();
-            }}
-            className="flex flex-col gap-3"
-          >
-            {children}
-          </form>
-          {footer && (
-            <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-              {footer}
-            </div>
-          )}
-        </CardContent>
+      {/* Not Card's title prop: that renders an h3, and this page needs its h1. */}
+      <Card className="flex w-full flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="type-title-2">{title}</h1>
+          <p className="type-body text-fg-secondary">{description}</p>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          {children}
+        </form>
+        {footer && (
+          <div className="text-muted-foreground flex flex-col gap-1 text-sm">
+            {footer}
+          </div>
+        )}
       </Card>
     </main>
   );
@@ -68,15 +57,13 @@ export function Field({
   required?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type={type}
-        required={required}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
+    <TextField
+      id={id}
+      label={label}
+      type={type}
+      required={required}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }

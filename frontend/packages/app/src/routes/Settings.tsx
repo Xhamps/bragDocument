@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@bragdoc/ui";
+import { Button, Card, Tag } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import {
   useTelegramCode,
@@ -48,22 +41,19 @@ function TelegramCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle
-          role="heading"
-          aria-level={3}
-          className="flex items-center gap-2"
-        >
+    <Card
+      title={
+        <span className="flex items-center gap-2">
           Telegram
           {status.data && (
-            <Badge variant={status.data.linked ? "default" : "secondary"}>
+            <Tag tone={status.data.linked ? "success" : "neutral"}>
               {status.data.linked ? "Linked" : "Not linked"}
-            </Badge>
+            </Tag>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
+        </span>
+      }
+    >
+      <div className="flex flex-col gap-3 text-sm">
         {status.isPending && <p className="text-muted-foreground">Loading…</p>}
         <Alert error={status.error} />
         {status.data?.linked && (
@@ -154,7 +144,7 @@ function TelegramCard() {
             <Alert error={code.error} />
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

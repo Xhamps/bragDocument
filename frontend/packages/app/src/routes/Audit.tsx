@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router";
-import { Button, Input } from "@bragdoc/ui";
+import { Button, TextField } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import { FIELD } from "../logs/constants";
 import { actionLabels, actorName, describeAction } from "../audit/describe";
@@ -72,7 +72,7 @@ export function Component() {
             </option>
           ))}
         </select>
-        <Input
+        <TextField
           type="date"
           aria-label="From"
           className="w-40"
@@ -80,7 +80,7 @@ export function Component() {
           max={filters.to || undefined}
           onChange={(e) => set("from", e.target.value)}
         />
-        <Input
+        <TextField
           type="date"
           aria-label="To"
           className="w-40"

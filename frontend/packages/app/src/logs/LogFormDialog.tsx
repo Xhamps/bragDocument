@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
-  Badge,
+  Select,
+  Tag,
+  TextField,
   cn,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
@@ -161,38 +161,33 @@ function Form({
       )}
 
       <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-name">Name</Label>
-          <Input
-            id="log-name"
-            required
-            maxLength={120}
-            value={f.name}
-            onChange={(e) => setF({ ...f, name: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-impact">Impact</Label>
-          <select
-            id="log-impact"
-            className={FIELD}
-            value={f.impact}
-            onChange={(e) =>
-              setF({ ...f, impact: e.target.value as typeof f.impact })
-            }
-          >
-            {IMPACTS.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </select>
-        </div>
+        <TextField
+          id="log-name"
+          label="Name"
+          required
+          maxLength={120}
+          value={f.name}
+          onChange={(e) => setF({ ...f, name: e.target.value })}
+        />
+        <Select
+          id="log-impact"
+          label="Impact"
+          options={IMPACTS}
+          value={f.impact}
+          onChange={(e) =>
+            setF({ ...f, impact: e.target.value as typeof f.impact })
+          }
+        />
       </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <Label htmlFor="log-description">Description</Label>
+          <label
+            htmlFor="log-description"
+            className="type-footnote font-medium text-fg-secondary"
+          >
+            Description
+          </label>
           <span className="text-muted-foreground text-xs">
             Markdown. Include the result.
           </span>
@@ -240,27 +235,9 @@ function Form({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="log-tags">Tags</Label>
-        {f.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {f.tags.map((t) => (
-              <Badge key={t} variant="secondary">
-                {t}
-                <button
-                  type="button"
-                  aria-label={`Remove tag ${t}`}
-                  onClick={() =>
-                    setF({ ...f, tags: f.tags.filter((x) => x !== t) })
-                  }
-                >
-                  <XIcon aria-hidden />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <Input
+        <TextField
           id="log-tags"
+          label="Tags"
           list="log-tag-options"
           placeholder="Type and press Enter"
           value={tagDraft}
@@ -274,6 +251,24 @@ function Form({
             }
           }}
         />
+        {f.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {f.tags.map((t) => (
+              <Tag key={t}>
+                {t}
+                <button
+                  type="button"
+                  aria-label={`Remove tag ${t}`}
+                  onClick={() =>
+                    setF({ ...f, tags: f.tags.filter((x) => x !== t) })
+                  }
+                >
+                  <XIcon aria-hidden className="size-3" />
+                </button>
+              </Tag>
+            ))}
+          </div>
+        )}
         <datalist id="log-tag-options">
           {options.map((t) => (
             <option key={t} value={t} />
@@ -285,8 +280,9 @@ function Form({
         <legend className="text-sm font-medium">Links</legend>
         {f.links.map((l, i) => (
           <div key={i} className="flex gap-2">
-            <Input
+            <TextField
               type="url"
+              className="flex-1"
               aria-label={`Link ${i + 1} URL`}
               placeholder="https://"
               value={l.url}
@@ -299,7 +295,7 @@ function Form({
                 })
               }
             />
-            <Input
+            <TextField
               aria-label={`Link ${i + 1} label`}
               placeholder="Label"
               maxLength={100}
@@ -340,33 +336,23 @@ function Form({
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-status">Status</Label>
-          <select
-            id="log-status"
-            className={FIELD}
-            value={f.status}
-            onChange={(e) =>
-              setF({ ...f, status: e.target.value as typeof f.status })
-            }
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-date">Date</Label>
-          <Input
-            id="log-date"
-            type="date"
-            required
-            value={f.date}
-            onChange={(e) => setF({ ...f, date: e.target.value })}
-          />
-        </div>
+        <Select
+          id="log-status"
+          label="Status"
+          options={STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+          value={f.status}
+          onChange={(e) =>
+            setF({ ...f, status: e.target.value as typeof f.status })
+          }
+        />
+        <TextField
+          id="log-date"
+          label="Date"
+          type="date"
+          required
+          value={f.date}
+          onChange={(e) => setF({ ...f, date: e.target.value })}
+        />
       </div>
 
       {error && (

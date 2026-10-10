@@ -7,8 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
+  TextField,
 } from "@bragdoc/ui";
 import type { DocumentForm } from "./useDocuments";
 
@@ -69,25 +68,21 @@ function Form({
           A title is required; the description is optional.
         </DialogDescription>
       </DialogHeader>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="doc-title">Title</Label>
-        <Input
-          id="doc-title"
-          required
-          maxLength={200}
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="doc-description">Description</Label>
-        <Input
-          id="doc-description"
-          maxLength={2000}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-      </div>
+      <TextField
+        id="doc-title"
+        label="Title"
+        required
+        maxLength={200}
+        value={form.title}
+        onChange={(e) => setForm({ ...form, title: e.target.value })}
+      />
+      <TextField
+        id="doc-description"
+        label="Description"
+        maxLength={2000}
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+      />
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}

@@ -2,13 +2,13 @@ import { useState, type ComponentProps } from "react";
 import Markdown from "react-markdown";
 import { TriangleAlertIcon } from "lucide-react";
 import {
-  Badge,
   IconButton,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tag,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
 import { STATUS_LABEL } from "./constants";
@@ -61,17 +61,17 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
             </span>
           ) : null}
         </button>
-        {log.is_example && <Badge variant="secondary">Example</Badge>}
-        <Badge
-          variant={
+        {log.is_example && <Tag>Example</Tag>}
+        <Tag
+          tone={
             log.impact === "high" || log.impact === "critical"
-              ? "default"
-              : "secondary"
+              ? "accent"
+              : "neutral"
           }
         >
           {log.impact}
-        </Badge>
-        <Badge variant="outline">{STATUS_LABEL[log.status]}</Badge>
+        </Tag>
+        <Tag variant="outline">{STATUS_LABEL[log.status]}</Tag>
         <time
           dateTime={log.created_at}
           className="text-muted-foreground text-sm"
@@ -104,9 +104,9 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
       {log.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {log.tags.map((t) => (
-            <Badge key={t} variant="outline">
+            <Tag key={t} variant="outline">
               #{t}
-            </Badge>
+            </Tag>
           ))}
         </div>
       )}

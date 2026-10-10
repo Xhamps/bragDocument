@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import {
-  Badge,
+  Tag,
   Button,
   Dialog,
   DialogContent,
@@ -159,9 +159,9 @@ export function Component() {
         )}
         <div className="ml-auto flex items-center gap-2">
           {archived ? (
-            <Badge variant="secondary">Archived · read-only</Badge>
+            <Tag>Archived · read-only</Tag>
           ) : doc.role === "viewer" ? (
-            <Badge variant="secondary">Viewer · read-only</Badge>
+            <Tag>Viewer · read-only</Tag>
           ) : (
             <Button variant="primary" onClick={() => setEditing("new")}>
               New log

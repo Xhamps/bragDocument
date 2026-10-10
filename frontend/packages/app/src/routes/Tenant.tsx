@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Input, Label } from "@bragdoc/ui";
+import { Button, Tag, TextField } from "@bragdoc/ui";
 import { useMe } from "../auth/useMe";
 import { api, ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
@@ -81,7 +81,9 @@ export function Component() {
               {m.display_name && (
                 <span className="text-muted-foreground">{m.email}</span>
               )}
-              <Badge variant="secondary">{m.role}</Badge>
+              <Tag tone={m.role === "admin" ? "success" : "neutral"}>
+                {m.role}
+              </Tag>
               {m.id !== me.id && (
                 <Button
                   className="ml-auto"
@@ -111,19 +113,18 @@ export function Component() {
           email is sent; share the sign-in link yourself.
         </p>
         <form onSubmit={submit} className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="invite-email">Invite by email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (invite.error) invite.reset();
-              }}
-            />
-          </div>
+          <TextField
+            id="invite-email"
+            label="Invite by email"
+            className="flex-1"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (invite.error) invite.reset();
+            }}
+          />
           <Button variant="primary" type="submit" disabled={invite.isPending}>
             Invite
           </Button>

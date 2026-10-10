@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@bragdoc/ui";
+import { Button, Card } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Document } from "../lib/types";
 import { DocumentCard } from "../documents/DocumentCard";
@@ -91,10 +84,10 @@ export function Component() {
       )}
 
       {data.owned.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>What is a brag document?</CardTitle>
-            <CardDescription>
+        <Card
+          title="What is a brag document?"
+          description={
+            <>
               A running record of the work you did and why it mattered, so
               reviews and promotions are not a memory test. Read{" "}
               <a
@@ -106,13 +99,16 @@ export function Component() {
                 jvns.ca: Get your work recognized
               </a>
               .
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Create your first document
-            </Button>
-          </CardContent>
+            </>
+          }
+        >
+          <Button
+            variant="primary"
+            className="mt-4"
+            onClick={() => setCreating(true)}
+          >
+            Create your first document
+          </Button>
         </Card>
       ) : owned.length === 0 ? (
         <p className="text-muted-foreground">No active documents.</p>

@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Label,
+  TextArea,
 } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
@@ -171,24 +171,20 @@ function SettingsForm({
         });
       }}
     >
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="goals-this-year">Goals for this year</Label>
-        <textarea
-          id="goals-this-year"
-          className={`${FIELD} min-h-20 w-full`}
-          value={goalsThis}
-          onChange={(e) => setGoalsThis(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="goals-next-year">Goals for next year</Label>
-        <textarea
-          id="goals-next-year"
-          className={`${FIELD} min-h-20 w-full`}
-          value={goalsNext}
-          onChange={(e) => setGoalsNext(e.target.value)}
-        />
-      </div>
+      <TextArea
+        id="goals-this-year"
+        label="Goals for this year"
+        rows={3}
+        value={goalsThis}
+        onChange={(e) => setGoalsThis(e.target.value)}
+      />
+      <TextArea
+        id="goals-next-year"
+        label="Goals for next year"
+        rows={3}
+        value={goalsNext}
+        onChange={(e) => setGoalsNext(e.target.value)}
+      />
       {!canSave && (
         <p className="text-muted-foreground text-sm">
           These apply to this report only.

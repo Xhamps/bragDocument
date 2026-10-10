@@ -1,17 +1,12 @@
 import {
-  Badge,
   IconButton,
   Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tag,
 } from "@bragdoc/ui";
 import { Link } from "react-router";
 import type { Document } from "../lib/types";
@@ -33,18 +28,22 @@ export function DocumentCard({
 }: Props) {
   const archived = doc.state === "archived";
   return (
-    <Card className={archived ? "opacity-60" : undefined}>
-      <CardHeader>
-        <CardTitle>
-          <Link to={`/documents/${doc.id}`} className="hover:underline">
-            {doc.title}
-          </Link>
-        </CardTitle>
-        {doc.description && (
-          <CardDescription>{doc.description}</CardDescription>
-        )}
-        {!readOnly && (
-          <CardAction>
+    <Card
+      interactive
+      className={archived ? "opacity-60" : undefined}
+      title={
+        // Stretched link: the whole card navigates; the menu sits above it.
+        <Link
+          to={`/documents/${doc.id}`}
+          className="before:absolute before:inset-0 hover:underline"
+        >
+          {doc.title}
+        </Link>
+      }
+      description={doc.description || undefined}
+      action={
+        !readOnly && (
+          <div className="relative z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <IconButton
@@ -71,10 +70,11 @@ export function DocumentCard({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent className="text-muted-foreground flex flex-wrap items-center gap-2">
+          </div>
+        )
+      }
+    >
+      <div className="mt-4 flex flex-wrap items-center gap-2 type-footnote text-fg-secondary">
         <span>
           {doc.log_count} {doc.log_count === 1 ? "log" : "logs"}
           {doc.last_log_at &&
@@ -82,15 +82,20 @@ export function DocumentCard({
           {" ·"}
         </span>
         <span>Updated {new Date(doc.updated_at).toLocaleDateString()}</span>
-        {archived && <Badge variant="secondary">Archived</Badge>}
+        {archived && <Tag>Archived</Tag>}
         {doc.role !== "owner" && (
           <>
             <span>Shared by {doc.owner_name}</span>
-            <Badge variant="outline">{doc.role}</Badge>
-            {doc.is_new && <Badge>New</Badge>}
+            <Tag
+              variant="outline"
+              tone={doc.role === "editor" ? "accent" : "neutral"}
+            >
+              {doc.role}
+            </Tag>
+            {doc.is_new && <Tag tone="accent">New</Tag>}
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

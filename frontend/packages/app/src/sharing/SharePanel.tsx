@@ -1,14 +1,13 @@
 import { useState, type FormEvent } from "react";
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
+  Tag,
+  TextField,
 } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
@@ -109,19 +108,18 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <form onSubmit={submit} className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="share-email">Email</Label>
-            <Input
-              id="share-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (share.error) share.reset();
-              }}
-            />
-          </div>
+          <TextField
+            id="share-email"
+            label="Email"
+            className="flex-1"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (share.error) share.reset();
+            }}
+          />
           <select
             aria-label="Role for new person"
             className={selectClass}
@@ -207,7 +205,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             {sharing.data.invitations.map((i) => (
               <li key={i.id} className="flex items-center gap-2 p-3 text-sm">
                 <span className="flex-1 truncate">{i.email}</span>
-                <Badge variant="secondary">Pending · {i.role}</Badge>
+                <Tag>Pending · {i.role}</Tag>
                 <Button
                   variant="tinted"
                   size="sm"

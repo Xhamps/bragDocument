@@ -23,7 +23,7 @@ function ButtonGroup({
       aria-label={label}
       data-slot="button-group"
       className={cn(
-        "inline-flex items-stretch overflow-hidden rounded-pill glass shadow-button",
+        "inline-flex items-stretch overflow-hidden rounded-pill glass shadow-glass",
         "*:translate-none! *:scale-none! *:rounded-none! *:border-0! *:shadow-none! *:[backdrop-filter:none]!",
         "[&>*+*]:border-l! [&>*+*]:border-divider!",
         "[&>:not([data-variant=primary])]:bg-transparent [&>:not([data-variant=primary])]:hover:bg-container",

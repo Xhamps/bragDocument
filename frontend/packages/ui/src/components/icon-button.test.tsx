@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IconButton } from "#components/icon-button";
 import { ButtonGroup } from "#components/button-group";
 
@@ -17,9 +18,25 @@ test("numeric badge renders", () => {
   expect(screen.getByText("3")).toBeInTheDocument();
 });
 
-test("tooltip defaults to the label", () => {
+test("tooltip defaults to the label", async () => {
   render(<IconButton icon="moon" label="Dark mode" />);
-  expect(screen.getByRole("button", { name: "Dark mode" })).toBeInTheDocument();
+  await userEvent.tab();
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Dark mode");
+});
+
+test("gradient does not override the square shape", () => {
+  render(
+    <IconButton
+      icon="plus"
+      label="Add"
+      variant="gradient"
+      shape="square"
+      tooltip={false}
+    />,
+  );
+  const cls = screen.getByRole("button").className.split(" ");
+  expect(cls).toContain("rounded-md");
+  expect(cls).not.toContain("rounded-pill");
 });
 
 test("ButtonGroup is a labelled group", () => {

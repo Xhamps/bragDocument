@@ -8,7 +8,7 @@ type TooltipProps = {
   placement?: "top" | "bottom" | "left" | "right";
   /** Keyboard shortcut shown as a key cap ("⌘K"). */
   shortcut?: string;
-  /** Force it open (docs, onboarding). */
+  /** Force it open (docs, onboarding); false behaves like unset. */
   open?: boolean;
 };
 
@@ -22,14 +22,14 @@ function Tooltip({
 }: TooltipProps) {
   return (
     <T.Provider delayDuration={300}>
-      <T.Root open={open}>
+      <T.Root open={open || undefined}>
         <T.Trigger asChild>{children}</T.Trigger>
         <T.Portal>
           <T.Content
             data-slot="tooltip"
             side={placement}
             sideOffset={8}
-            className="z-50 inline-flex animate-in items-center gap-2 rounded-sm bg-fg-primary px-3 py-1.5 type-footnote font-medium whitespace-nowrap text-page shadow-lg fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+            className="z-50 inline-flex animate-in items-center gap-2 rounded-sm bg-fg-primary px-3 py-1.5 type-footnote font-medium whitespace-nowrap text-page shadow-lg fade-in-0 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           >
             {content}
             {shortcut && (

@@ -18,7 +18,7 @@ const buttonColorVariants = cva("", {
       tinted:
         "bg-transparent text-button-text hover:bg-container disabled:text-button-inactive",
       gradient:
-        "rounded-pill bg-(image:--gradient-red-3) font-semibold text-button-fg shadow-cta hover:brightness-105 hover:saturate-115 disabled:bg-button-inactive disabled:bg-none",
+        "bg-(image:--gradient-red-3) font-semibold text-button-fg shadow-cta hover:brightness-105 hover:saturate-115 disabled:bg-button-inactive disabled:bg-none",
       // Extension: the DS has a danger token but no destructive button.
       danger:
         "border-danger bg-transparent text-danger hover:bg-glass-tint-rose disabled:border-button-inactive disabled:text-button-inactive",
@@ -89,6 +89,8 @@ function Button({
       className={cn(
         buttonVariants({ size, pill, fullWidth }),
         buttonColorVariants({ variant }),
+        // DS: the gradient CTA is always pill-shaped (Button only, not IconButton).
+        variant === "gradient" && "rounded-pill",
         glow && glowClass,
         className,
       )}

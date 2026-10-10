@@ -24,7 +24,6 @@ const iconButtonVariants = cva(
   },
 );
 
-// Applied after the colour classes so the radius beats gradient's rounded-pill.
 const pressedSvg =
   "aria-pressed:[&>svg]:-rotate-12 aria-pressed:[&>svg]:scale-106";
 const SHAPES = {

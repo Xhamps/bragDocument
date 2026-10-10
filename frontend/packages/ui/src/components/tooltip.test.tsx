@@ -20,3 +20,13 @@ test("open forces it visible", () => {
   );
   expect(screen.getByRole("tooltip")).toHaveTextContent("Hi");
 });
+
+test("open={false} does not lock it closed", async () => {
+  render(
+    <Tooltip content="Hi" open={false}>
+      <button>s</button>
+    </Tooltip>,
+  );
+  await userEvent.tab();
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Hi");
+});

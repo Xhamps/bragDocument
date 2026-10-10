@@ -39,3 +39,28 @@ test("danger variant is supported", () => {
   render(<Button variant="danger">Delete</Button>);
   expect(screen.getByRole("button")).toHaveAttribute("data-variant", "danger");
 });
+
+test("glow wins over the variant shadow, also on hover", () => {
+  render(<Button glow>Go</Button>);
+  const cls = screen.getByRole("button").className.split(" ");
+  expect(cls).toContain("hover:shadow-glow-strong");
+  expect(cls).not.toContain("hover:shadow-md");
+  expect(cls).not.toContain("shadow-button");
+});
+
+test("lg size and sm pill resolve their conflicts", () => {
+  render(
+    <>
+      <Button size="lg">L</Button>
+      <Button size="sm" pill>
+        S
+      </Button>
+    </>,
+  );
+  const lg = screen.getByRole("button", { name: "L" }).className.split(" ");
+  expect(lg).toContain("type-body");
+  expect(lg).not.toContain("type-callout");
+  const sm = screen.getByRole("button", { name: "S" }).className.split(" ");
+  expect(sm).toContain("rounded-pill");
+  expect(sm).not.toContain("rounded-sm");
+});

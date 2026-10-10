@@ -58,6 +58,9 @@ const subRowClass =
   "h-9 pl-3 text-sm font-normal hover:not-[[aria-current]]:pl-3.5 [&[aria-current]]:font-medium";
 const flyRowClass =
   "h-[38px] pl-3 whitespace-nowrap hover:bg-container hover:not-[[aria-current]]:pl-3 focus-visible:bg-container [&[aria-current]]:bg-container [&[aria-current]]:text-button-text [&[aria-current]]:before:absolute [&[aria-current]]:before:inset-y-2.5 [&[aria-current]]:before:left-0 [&[aria-current]]:before:w-0.5 [&[aria-current]]:before:rounded-[2px] [&[aria-current]]:before:bg-button-text";
+// ponytail: basic tabbable query; swap for a tabbable lib if menus hold odd controls.
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const caretClass =
   "inline-flex text-fg-tertiary transition-transform duration-base ease-standard";
 
@@ -213,63 +216,82 @@ function MenuList({
                     )}
                   </button>
                 </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Content
-                    role="group"
-                    aria-label={it.label}
-                    side="right"
-                    align="start"
-                    sideOffset={14}
-                    alignOffset={-8}
-                    onMouseEnter={() => hoverOpen(id)}
-                    onMouseLeave={hoverClose}
-                    onOpenAutoFocus={(e) => {
-                      if (!byKey.current) e.preventDefault();
-                      byKey.current = false;
-                    }}
-                    onCloseAutoFocus={(e) => {
-                      if (!restore.current) e.preventDefault();
-                      restore.current = false;
-                    }}
-                    onEscapeKeyDown={() => (restore.current = true)}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowLeft") {
-                        e.preventDefault();
-                        restore.current = true;
-                        setFly(null);
-                      }
-                      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                        e.preventDefault();
-                        const els = Array.from(
-                          e.currentTarget.querySelectorAll<HTMLElement>(
-                            "[data-menu-row]",
-                          ),
-                        );
-                        const k = els.indexOf(
-                          document.activeElement as HTMLElement,
-                        );
-                        const step = e.key === "ArrowDown" ? 1 : -1;
-                        els[(k + step + els.length) % els.length]?.focus();
-                      }
-                    }}
-                    className={cn(
-                      "z-50 min-w-[200px] rounded-lg border border-container-border bg-surface p-2 shadow-xl backdrop-blur-(--blur-heavy)",
-                      "data-[state=open]:slide-in-from-left-1.5 origin-(--radix-popover-content-transform-origin) data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-                    )}
-                  >
-                    <div className="px-3 pt-1 pb-2 type-caption text-fg-tertiary">
-                      {it.label}
-                    </div>
-                    <ul role="list" className="m-0 flex flex-col gap-0.5 p-0">
-                      {renderList(it.children, depth + 1, true)}
-                    </ul>
-                    <Popover.Arrow
-                      width={12}
-                      height={6}
-                      className="fill-surface"
-                    />
-                  </Popover.Content>
-                </Popover.Portal>
+                <Popover.Content
+                  role="group"
+                  aria-label={it.label}
+                  side="right"
+                  align="start"
+                  sideOffset={14}
+                  alignOffset={-8}
+                  onOpenAutoFocus={(e) => {
+                    if (!byKey.current) e.preventDefault();
+                    byKey.current = false;
+                  }}
+                  onCloseAutoFocus={(e) => {
+                    if (!restore.current) e.preventDefault();
+                    restore.current = false;
+                  }}
+                  onEscapeKeyDown={() => (restore.current = true)}
+                  // Radix loops Tab inside the panel; leave it in DOM order
+                  // instead, as the DS does (Shift+Tab back to the row).
+                  onKeyDownCapture={(e) => {
+                    if (e.key !== "Tab") return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const panel = e.currentTarget;
+                    const row = panel.closest("li")?.querySelector("button");
+                    restore.current = e.shiftKey;
+                    setFly(null);
+                    if (e.shiftKey || !row) return;
+                    const all = Array.from(
+                      document.querySelectorAll<HTMLElement>(TABBABLE),
+                    ).filter(
+                      (el) => !panel.contains(el) && !el.closest("[inert]"),
+                    );
+                    (all[all.indexOf(row) + 1] ?? row).focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      restore.current = true;
+                      setFly(null);
+                    }
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      const els = Array.from(
+                        e.currentTarget.querySelectorAll<HTMLElement>(
+                          "[data-menu-row]",
+                        ),
+                      );
+                      const k = els.indexOf(
+                        document.activeElement as HTMLElement,
+                      );
+                      const step = e.key === "ArrowDown" ? 1 : -1;
+                      els[(k + step + els.length) % els.length]?.focus();
+                    }
+                  }}
+                  className={cn(
+                    "z-50 min-w-[200px] rounded-lg border border-container-border bg-surface p-2 shadow-xl backdrop-blur-(--blur-heavy)",
+                    "origin-(--radix-popover-content-transform-origin) data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-left-[6px]",
+                  )}
+                >
+                  <div className="px-3 pt-1 pb-2 type-caption text-fg-tertiary">
+                    {it.label}
+                  </div>
+                  <ul role="list" className="m-0 flex flex-col gap-0.5 p-0">
+                    {renderList(it.children, depth + 1, true)}
+                  </ul>
+                  {/* Open path: the 1px border strokes the two slanted edges, not the base. */}
+                  <Popover.Arrow asChild width={12} height={6}>
+                    <svg>
+                      <path
+                        d="M0 0 L15 10 L30 0"
+                        vectorEffect="non-scaling-stroke"
+                        className="fill-surface stroke-container-border"
+                      />
+                    </svg>
+                  </Popover.Arrow>
+                </Popover.Content>
               </Popover.Root>
             </li>
           );
@@ -376,6 +398,7 @@ function MenuList({
       data-slot="menu-list"
       className={cn(
         "relative isolate m-0 flex list-none flex-col gap-0.5 rounded-lg p-2",
+        flyOpen != null && "z-30",
         glass && "glass shadow-glass",
         className,
       )}

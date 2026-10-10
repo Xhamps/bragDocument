@@ -83,3 +83,19 @@ test("ArrowRight opens the flyout and focuses its first row; Escape returns focu
   expect(group).toHaveAttribute("aria-expanded", "false");
   expect(group).toHaveFocus();
 });
+
+test("Tab from the flyout moves on to the next row in the list", async () => {
+  render(<MenuList items={items} />);
+  screen.getByRole("button", { name: "Reports" }).focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(await screen.findByRole("button", { name: "Weekly" })).toHaveFocus();
+  await userEvent.tab();
+  expect(screen.getByRole("link", { name: /Docs/ })).toHaveFocus();
+  const group = screen.getByRole("button", { name: "Reports" });
+  expect(group).toHaveAttribute("aria-expanded", "false");
+  group.focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(await screen.findByRole("button", { name: "Weekly" })).toHaveFocus();
+  await userEvent.tab({ shift: true });
+  expect(group).toHaveFocus();
+});

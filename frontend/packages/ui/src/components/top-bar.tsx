@@ -50,7 +50,10 @@ type TopBarProps = {
   /** Sticks to the top; on scroll the bar shrinks and lifts. */
   sticky?: boolean;
   label?: string;
-  /** Renders every link (brand, nav, menus). Defaults to a plain `<a>`. */
+  /**
+   * Renders every link (brand, nav, menus). Defaults to a plain `<a>`.
+   * With `onSelect` set, link clicks are preventDefault'ed, so the caller must navigate itself.
+   */
   renderLink?: (item: TopBarItem, props: TopBarLinkProps) => React.ReactNode;
   className?: string;
 };

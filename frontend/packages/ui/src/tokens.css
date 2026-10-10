@@ -2,6 +2,7 @@
 /* Copied from ds/tokens.css; re-copy with the commands in docs/plans/2026-10-09-ui-design-system.md Task 1. */
 :root,
 [data-theme="light"] {
+  color-scheme: light; /* addition over the DS copy */
   --page: #f3f3fb;
   --surface: #ffffff;
   --mood-1: #4d73e6;
@@ -57,6 +58,7 @@
     0 0 32px rgba(51, 149, 255, 0.6), 0 0 8px rgba(51, 149, 255, 0.4);
 }
 [data-theme="dark"] {
+  color-scheme: dark; /* addition over the DS copy */
   --page: #040617;
   --surface: #080b20;
   --mood-1: #0d1433;
@@ -191,6 +193,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark; /* addition over the DS copy */
     --page: #040617;
     --surface: #080b20;
     --mood-1: #0d1433;

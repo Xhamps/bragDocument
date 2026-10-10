@@ -204,7 +204,7 @@ function SettingsForm({
                 <td>
                   <Select
                     aria-label={`Section for ${t}`}
-                    options={[...SECTIONS]}
+                    options={SECTIONS}
                     value={map[t] ?? "Other"}
                     onChange={(e) => setMap({ ...map, [t]: e.target.value })}
                   />

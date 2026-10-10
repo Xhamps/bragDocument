@@ -22,11 +22,14 @@ export function Component() {
     canAudit && { label: "Audit log", href: "/audit" },
     import.meta.env.DEV && { label: "Kitchen sink", href: "/kitchen-sink" },
     { label: "Settings", href: "/settings" },
-  ].filter((i): i is TopBarItem & { href: string } => Boolean(i));
-  // TopBar highlights the first item without a value; "" = nothing current (e.g. "/").
+  ]
+    .filter((i): i is TopBarItem & { href: string } => Boolean(i))
+    // value = href: labels can collide (a tenant named "Settings").
+    .map((i) => ({ ...i, value: i.href }));
+  // "" = nothing current (e.g. "/").
   const current =
     items.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
-      ?.label ?? "";
+      ?.href ?? "";
 
   return (
     <div className="min-h-screen bd-backdrop">

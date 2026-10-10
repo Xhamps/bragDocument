@@ -12,7 +12,7 @@ type SelectOption = { value: string; label: React.ReactNode };
 
 type SelectProps = Omit<React.ComponentProps<"select">, "children" | "prefix"> &
   FieldFrameProps & {
-    options: Array<string | SelectOption>;
+    options: ReadonlyArray<string | SelectOption>;
     /** Inline lead-in inside the pill ("Corner Radius:"). */
     prefix?: React.ReactNode;
     /** Adds a disabled empty first option ("Sort by"); shows only with `value=""` or `defaultValue=""`. */

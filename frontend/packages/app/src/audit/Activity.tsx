@@ -12,7 +12,7 @@ export function Activity({ docId }: { docId: string }) {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Activity</h3>
+        <h3 className="type-title-3">Activity</h3>
         <Link
           to={`/audit?document=${docId}`}
           className="text-sm text-fg-secondary hover:underline"

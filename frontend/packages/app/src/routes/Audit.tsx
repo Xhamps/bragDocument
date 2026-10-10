@@ -1,10 +1,16 @@
 import { useSearchParams } from "react-router";
-import { Button, Input } from "@bragdoc/ui";
+import {
+  Button,
+  DataTable,
+  Select,
+  TextField,
+  type DataTableColumn,
+} from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
-import { FIELD } from "../logs/constants";
 import { actionLabels, actorName, describeAction } from "../audit/describe";
 import { useAudit, useAuditFilters, type AuditQuery } from "../audit/useAudit";
 import { When } from "../audit/When";
+import type { AuditEntry } from "../lib/types";
 
 const keys = ["actor", "document", "action", "from", "to"] as const;
 type Key = (typeof keys)[number];
@@ -28,51 +34,71 @@ export function Component() {
     });
 
   const entries = audit.data?.pages.flatMap((p) => p.entries) ?? [];
+  const link = (label: string, onClick: () => void) => (
+    <Button variant="tinted" size="sm" className="px-0" onClick={onClick}>
+      {label}
+    </Button>
+  );
+  const columns: DataTableColumn<AuditEntry>[] = [
+    {
+      key: "at",
+      header: "Time",
+      render: (e) => <When at={e.at} />,
+    },
+    {
+      key: "actor",
+      header: "User",
+      render: (e) =>
+        e.actor.id
+          ? link(actorName(e), () => set("actor", e.actor.id!))
+          : actorName(e),
+    },
+    { key: "action", header: "Action", wrap: true, render: describeAction },
+    {
+      key: "document",
+      header: "Target",
+      render: (e) =>
+        e.document &&
+        link(e.document.title, () => set("document", e.document!.id)),
+    },
+    { key: "source", header: "Source" },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-xl font-semibold">Audit log</h2>
+      <h2 className="type-title-2">Audit log</h2>
       <div className="flex flex-wrap gap-2">
-        <select
+        <Select
           aria-label="User"
-          className={FIELD}
           value={filters.actor}
           onChange={(e) => set("actor", e.target.value)}
-        >
-          <option value="">All users</option>
-          {options.data?.actors.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name || a.email}
-            </option>
-          ))}
-        </select>
-        <select
+          options={[
+            { value: "", label: "All users" },
+            ...(options.data?.actors ?? []).map((a) => ({
+              value: a.id,
+              label: a.name || a.email,
+            })),
+          ]}
+        />
+        <Select
           aria-label="Document"
-          className={FIELD}
           value={filters.document}
           onChange={(e) => set("document", e.target.value)}
-        >
-          <option value="">All documents</option>
-          {options.data?.documents.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.title}
-            </option>
-          ))}
-        </select>
-        <select
+          options={[
+            { value: "", label: "All documents" },
+            ...(options.data?.documents ?? []).map((d) => ({
+              value: d.id,
+              label: d.title,
+            })),
+          ]}
+        />
+        <Select
           aria-label="Action"
-          className={FIELD}
           value={filters.action}
           onChange={(e) => set("action", e.target.value)}
-        >
-          <option value="">All actions</option>
-          {actionLabels.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-        <Input
+          options={[{ value: "", label: "All actions" }, ...actionLabels]}
+        />
+        <TextField
           type="date"
           aria-label="From"
           className="w-40"
@@ -80,7 +106,7 @@ export function Component() {
           max={filters.to || undefined}
           onChange={(e) => set("from", e.target.value)}
         />
-        <Input
+        <TextField
           type="date"
           aria-label="To"
           className="w-40"
@@ -91,94 +117,48 @@ export function Component() {
       </div>
 
       {audit.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {errorText(audit.error)}{" "}
-          <Button variant="link" size="sm" onClick={() => audit.refetch()}>
+          <Button variant="tinted" size="sm" onClick={() => audit.refetch()}>
             Retry
           </Button>
         </p>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="text-left text-muted-foreground">
-            <tr>
-              <th className="py-2 font-medium">Time</th>
-              <th className="font-medium">User</th>
-              <th className="font-medium">Action</th>
-              <th className="font-medium">Target</th>
-              <th className="font-medium">Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {audit.isPending &&
-              [0, 1, 2].map((i) => (
-                <tr key={i} aria-hidden>
-                  <td colSpan={5}>
-                    <div className="my-2 h-4 animate-pulse rounded bg-muted" />
-                  </td>
-                </tr>
-              ))}
-            {entries.map((e) => (
-              <tr key={e.id} className="border-t">
-                <td className="py-2 whitespace-nowrap">
-                  <When at={e.at} />
-                </td>
-                <td>
-                  {e.actor.id ? (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="px-0"
-                      onClick={() => set("actor", e.actor.id!)}
-                    >
-                      {actorName(e)}
-                    </Button>
-                  ) : (
-                    actorName(e)
-                  )}
-                </td>
-                <td>{describeAction(e)}</td>
-                <td>
-                  {e.document && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="px-0"
-                      onClick={() => set("document", e.document!.id)}
-                    >
-                      {e.document.title}
-                    </Button>
-                  )}
-                </td>
-                <td>{e.source}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {!audit.isPending &&
-        !audit.error &&
-        entries.length === 0 &&
-        (filtered ? (
-          <p className="text-sm text-muted-foreground">
-            No entries match these filters{" "}
-            <Button variant="link" size="sm" onClick={() => setParams({})}>
-              Clear filters
-            </Button>
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">No activity yet.</p>
-        ))}
-
-      {audit.hasNextPage && (
-        <Button
-          variant="outline"
-          className="self-start"
-          disabled={audit.isFetchingNextPage}
-          onClick={() => audit.fetchNextPage()}
-        >
-          Load more
-        </Button>
+        <DataTable
+          caption="Audit log"
+          density="compact"
+          columns={columns}
+          rows={entries}
+          empty={
+            audit.isPending ? (
+              "Loading…"
+            ) : filtered ? (
+              <>
+                No entries match these filters{" "}
+                <Button
+                  variant="tinted"
+                  size="sm"
+                  onClick={() => setParams({})}
+                >
+                  Clear filters
+                </Button>
+              </>
+            ) : (
+              "No activity yet."
+            )
+          }
+          footer={
+            audit.hasNextPage && (
+              <Button
+                variant="glass"
+                disabled={audit.isFetchingNextPage}
+                onClick={() => audit.fetchNextPage()}
+              >
+                Load more
+              </Button>
+            )
+          }
+        />
       )}
     </div>
   );

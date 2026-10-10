@@ -1,102 +1,125 @@
-import * as React from "react";
-import { cn } from "#lib/utils";
+import type * as React from "react";
+import { cva } from "class-variance-authority";
+import { cn, focusRing } from "#lib/utils";
+
+// Gradients from .bd-card-tint-* layered over the glass fill.
+const cardTintVariants = cva("", {
+  variants: {
+    tint: {
+      sheen:
+        "bg-[image:linear-gradient(135deg,var(--glass-sheen),transparent_55%)]",
+      accent:
+        "bg-[image:linear-gradient(135deg,var(--glass-sheen),transparent_45%),linear-gradient(135deg,var(--glass-tint-blue),transparent_55%,var(--glass-tint-violet))]",
+      violet:
+        "bg-[image:linear-gradient(135deg,var(--glass-sheen),transparent_45%),radial-gradient(120%_90%_at_100%_0%,var(--glass-tint-violet),transparent_65%)]",
+      rose: "bg-[image:linear-gradient(135deg,var(--glass-sheen),transparent_45%),linear-gradient(160deg,transparent_30%,var(--glass-tint-rose))]",
+      cool: "bg-[image:linear-gradient(135deg,var(--glass-sheen),transparent_45%),linear-gradient(200deg,var(--glass-tint-teal),transparent_50%,var(--glass-tint-blue))]",
+      none: "",
+    },
+  },
+  defaultVariants: { tint: "sheen" },
+});
+
+const elevationClass = {
+  sm: "shadow-sm",
+  md: "shadow-md",
+  lg: "shadow-lg",
+  xl: "shadow-xl",
+} as const;
+
+// .bd-card-interactive: lift, press, and a sheen sweeping across on hover.
+const interactiveClass = [
+  "relative cursor-pointer overflow-hidden hover:-translate-y-1 hover:border-fg-tertiary hover:shadow-lg active:-translate-y-px active:shadow-md active:duration-fast motion-reduce:hover:translate-y-0",
+  "after:pointer-events-none after:absolute after:inset-0 after:-translate-x-full after:bg-[image:linear-gradient(115deg,transparent_35%,var(--glass-sheen)_50%,transparent_65%)] after:opacity-60 after:transition-none hover:after:translate-x-full hover:after:transition-transform hover:after:duration-(--duration-enter) hover:after:ease-standard",
+  focusRing,
+];
+
+type CardProps = Omit<React.ComponentProps<"div">, "title" | "onClick"> & {
+  tint?: "sheen" | "accent" | "violet" | "rose" | "cool" | "none";
+  /** Hover lift and sheen sweep; implied by onClick. */
+  interactive?: boolean;
+  /**
+   * Also fires on Enter/Space; makes the card focusable.
+   * Clickable cards have no implicit role; pass aria-label (or role="button" when there's no action), or prefer a real link inside the card for navigation.
+   */
+  onClick?: () => void;
+  elevation?: keyof typeof elevationClass;
+  /** Fade-and-rise entrance; stagger with delay in ms. */
+  animate?: boolean;
+  delay?: number;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  /** Header slot to the right of the title (e.g. an IconButton). */
+  action?: React.ReactNode;
+  compact?: boolean;
+  as?: React.ElementType;
+};
 
 function Card({
+  tint = "sheen",
+  interactive,
+  onClick,
+  elevation,
+  animate,
+  delay,
+  title,
+  description,
+  action,
+  compact,
+  as: Comp = "div",
   className,
-  size = "default",
+  style,
+  onKeyDown,
+  children,
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: CardProps) {
+  const isInteractive = interactive || !!onClick;
   return (
-    <div
+    <Comp
       data-slot="card"
-      data-size={size}
+      data-interactive={isInteractive || undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+        onKeyDown?.(e);
+        if (
+          onClick &&
+          e.target === e.currentTarget &&
+          !e.repeat &&
+          (e.key === "Enter" || e.key === " ")
+        ) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      style={
+        animate && delay
+          ? ({ "--delay": `${delay}ms`, ...style } as React.CSSProperties)
+          : style
+      }
+      {...props}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "box-border rounded-lg glass p-6 text-fg-primary shadow-glass [transition:translate_var(--duration-slow)_var(--ease-standard),box-shadow_var(--duration-slow)_var(--ease-standard),border-color_var(--duration-base)_var(--ease-standard)]",
+        compact && "p-4",
+        cardTintVariants({ tint }),
+        elevation && elevationClass[elevation],
+        isInteractive && interactiveClass,
+        animate && "animate-enter",
         className,
       )}
-      {...props}
-    />
-  );
-}
-
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
-        className,
+    >
+      {(title || action) && (
+        <div data-slot="card-header" className="mb-2 flex items-start gap-4">
+          {title && <h3 className="flex-1 type-title-3">{title}</h3>}
+          {action && <div className="ml-auto shrink-0">{action}</div>}
+        </div>
       )}
-      {...props}
-    />
-  );
-}
-
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn(
-        "text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
-        className,
+      {description && (
+        <p className="type-body text-fg-secondary">{description}</p>
       )}
-      {...props}
-    />
+      {children}
+    </Comp>
   );
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  );
-}
-
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-(--card-spacing)", className)}
-      {...props}
-    />
-  );
-}
-
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-};
+export { Card, type CardProps };

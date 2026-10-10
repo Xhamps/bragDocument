@@ -3,25 +3,21 @@ import Markdown from "react-markdown";
 import { XIcon } from "lucide-react";
 import {
   Button,
+  IconButton,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
-  Badge,
-  cn,
+  Select,
+  Tag,
+  TextArea,
+  TextField,
+  focusRing,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
-import {
-  FIELD,
-  IMPACTS,
-  STATUSES,
-  STATUS_LABEL,
-  SUGGESTED_TAGS,
-} from "./constants";
+import { IMPACTS, STATUSES, STATUS_LABEL, SUGGESTED_TAGS } from "./constants";
 import { ExternalLink } from "./LogRow";
 import { useTags, type LogForm } from "./useLogs";
 
@@ -134,7 +130,7 @@ function Form({
       {noImpact && (
         <div
           role="status"
-          className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+          className="flex flex-col gap-2 rounded-md border border-danger bg-glass-tint-rose p-3 type-footnote text-fg-primary"
         >
           <p>
             Saved. We couldn't find an impact in the description. What changed
@@ -144,7 +140,7 @@ function Form({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="glass"
               onClick={() => {
                 setPreview(false);
                 requestAnimationFrame(() => descRef.current?.focus());
@@ -152,7 +148,7 @@ function Form({
             >
               Add impact
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            <Button type="button" size="sm" variant="tinted" onClick={onCancel}>
               Close
             </Button>
           </div>
@@ -160,46 +156,41 @@ function Form({
       )}
 
       <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-name">Name</Label>
-          <Input
-            id="log-name"
-            required
-            maxLength={120}
-            value={f.name}
-            onChange={(e) => setF({ ...f, name: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-impact">Impact</Label>
-          <select
-            id="log-impact"
-            className={FIELD}
-            value={f.impact}
-            onChange={(e) =>
-              setF({ ...f, impact: e.target.value as typeof f.impact })
-            }
-          >
-            {IMPACTS.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </select>
-        </div>
+        <TextField
+          id="log-name"
+          label="Name"
+          required
+          maxLength={120}
+          value={f.name}
+          onChange={(e) => setF({ ...f, name: e.target.value })}
+        />
+        <Select
+          id="log-impact"
+          label="Impact"
+          options={IMPACTS}
+          value={f.impact}
+          onChange={(e) =>
+            setF({ ...f, impact: e.target.value as typeof f.impact })
+          }
+        />
       </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <Label htmlFor="log-description">Description</Label>
-          <span className="text-xs text-muted-foreground">
+          <label
+            htmlFor="log-description"
+            className="type-footnote font-medium text-fg-secondary"
+          >
+            Description
+          </label>
+          <span className="text-xs text-fg-secondary">
             Markdown. Include the result.
           </span>
           <div className="ml-auto flex gap-1">
             <Button
               type="button"
               size="sm"
-              variant={preview ? "ghost" : "secondary"}
+              variant={preview ? "tinted" : "glass"}
               aria-pressed={!preview}
               onClick={() => setPreview(false)}
             >
@@ -208,7 +199,7 @@ function Form({
             <Button
               type="button"
               size="sm"
-              variant={preview ? "secondary" : "ghost"}
+              variant={preview ? "glass" : "tinted"}
               aria-pressed={preview}
               onClick={() => setPreview(true)}
             >
@@ -227,11 +218,11 @@ function Form({
             </Markdown>
           </div>
         ) : (
-          <textarea
+          <TextArea
             id="log-description"
             ref={descRef}
             maxLength={20000}
-            className={cn(FIELD, "min-h-32")}
+            rows={6}
             value={f.description}
             onChange={(e) => setF({ ...f, description: e.target.value })}
           />
@@ -239,27 +230,9 @@ function Form({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="log-tags">Tags</Label>
-        {f.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {f.tags.map((t) => (
-              <Badge key={t} variant="secondary">
-                {t}
-                <button
-                  type="button"
-                  aria-label={`Remove tag ${t}`}
-                  onClick={() =>
-                    setF({ ...f, tags: f.tags.filter((x) => x !== t) })
-                  }
-                >
-                  <XIcon aria-hidden />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <Input
+        <TextField
           id="log-tags"
+          label="Tags"
           list="log-tag-options"
           placeholder="Type and press Enter"
           value={tagDraft}
@@ -273,6 +246,25 @@ function Form({
             }
           }}
         />
+        {f.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {f.tags.map((t) => (
+              <Tag key={t}>
+                {t}
+                <button
+                  type="button"
+                  aria-label={`Remove tag ${t}`}
+                  className={`${focusRing} rounded-sm`}
+                  onClick={() =>
+                    setF({ ...f, tags: f.tags.filter((x) => x !== t) })
+                  }
+                >
+                  <XIcon aria-hidden className="size-3" />
+                </button>
+              </Tag>
+            ))}
+          </div>
+        )}
         <datalist id="log-tag-options">
           {options.map((t) => (
             <option key={t} value={t} />
@@ -284,8 +276,9 @@ function Form({
         <legend className="text-sm font-medium">Links</legend>
         {f.links.map((l, i) => (
           <div key={i} className="flex gap-2">
-            <Input
+            <TextField
               type="url"
+              className="flex-1"
               aria-label={`Link ${i + 1} URL`}
               placeholder="https://"
               value={l.url}
@@ -298,7 +291,7 @@ function Form({
                 })
               }
             />
-            <Input
+            <TextField
               aria-label={`Link ${i + 1} label`}
               placeholder="Label"
               maxLength={100}
@@ -313,22 +306,21 @@ function Form({
                 })
               }
             />
-            <Button
+            <IconButton
               type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Remove link ${i + 1}`}
+              variant="tinted"
+              size="sm"
+              icon="close"
+              label={`Remove link ${i + 1}`}
               onClick={() =>
                 setF({ ...f, links: f.links.filter((_, j) => j !== i) })
               }
-            >
-              <XIcon />
-            </Button>
+            />
           </div>
         ))}
         <Button
           type="button"
-          variant="outline"
+          variant="glass"
           size="sm"
           className="w-fit"
           onClick={() =>
@@ -340,49 +332,39 @@ function Form({
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-status">Status</Label>
-          <select
-            id="log-status"
-            className={FIELD}
-            value={f.status}
-            onChange={(e) =>
-              setF({ ...f, status: e.target.value as typeof f.status })
-            }
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="log-date">Date</Label>
-          <Input
-            id="log-date"
-            type="date"
-            required
-            value={f.date}
-            onChange={(e) => setF({ ...f, date: e.target.value })}
-          />
-        </div>
+        <Select
+          id="log-status"
+          label="Status"
+          options={STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+          value={f.status}
+          onChange={(e) =>
+            setF({ ...f, status: e.target.value as typeof f.status })
+          }
+        />
+        <TextField
+          id="log-date"
+          label="Date"
+          type="date"
+          required
+          value={f.date}
+          onChange={(e) => setF({ ...f, date: e.target.value })}
+        />
       </div>
 
       {error && (
-        <p
-          id="log-form-error"
-          role="alert"
-          className="text-sm text-destructive"
-        >
+        <p id="log-form-error" role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="glass" onClick={onCancel}>
           {noImpact ? "Close" : "Cancel"}
         </Button>
-        <Button type="submit" disabled={busy || !f.name.trim()}>
+        <Button
+          variant="primary"
+          type="submit"
+          disabled={busy || !f.name.trim()}
+        >
           Save
         </Button>
       </DialogFooter>

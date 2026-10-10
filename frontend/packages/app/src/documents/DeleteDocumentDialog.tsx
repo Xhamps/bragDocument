@@ -35,16 +35,16 @@ export function DeleteDocumentDialog({
           </DialogDescription>
         </DialogHeader>
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="glass" onClick={onCancel}>
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            variant="danger"
             disabled={busy}
             onClick={() => doc && onConfirm(doc)}
           >

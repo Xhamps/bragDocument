@@ -31,7 +31,3 @@ export const SORTS = [
   { value: "status", label: "Status: idea → dropped" },
   { value: "-status", label: "Status: dropped → idea" },
 ];
-
-/** Native <select>/<textarea> styled like the ui Input. */
-export const FIELD =
-  "rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";

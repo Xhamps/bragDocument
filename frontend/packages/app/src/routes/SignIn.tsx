@@ -78,23 +78,18 @@ export function Component() {
         onChange={setPassword}
       />
       {status}
-      <Button type="submit" disabled={busy}>
+      <Button variant="primary" type="submit" disabled={busy}>
         Sign in
       </Button>
       <Button
         type="button"
-        variant="outline"
+        variant="glass"
         disabled={busy || !email}
         onClick={magicLink}
       >
         Send magic link
       </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={busy}
-        onClick={google}
-      >
+      <Button type="button" variant="glass" disabled={busy} onClick={google}>
         Continue with Google
       </Button>
     </AuthCard>

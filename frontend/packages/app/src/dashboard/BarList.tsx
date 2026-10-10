@@ -35,26 +35,26 @@ export function BarList({
   const data = buckets.map((b) => ({ ...b, name: label(b.key) }));
   const rows = layout === "rows";
   const empty = buckets.every((b) => b.count === 0);
-  const tick = { fill: "var(--muted-foreground)", fontSize: 12 };
+  const tick = { fill: "var(--fg-secondary)", fontSize: 12 };
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-2 rounded-xl p-4 ring-1 ring-foreground/10"
+      className="flex flex-col gap-2 rounded-lg glass p-4 shadow-glass"
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
         {!empty && (
-          <Button variant="link" size="sm" onClick={() => setTable(!table)}>
+          <Button variant="tinted" size="sm" onClick={() => setTable(!table)}>
             {table ? "Show as chart" : "Show as table"}
           </Button>
         )}
       </div>
       {empty ? (
-        <p className="text-sm text-muted-foreground">No logs in this period.</p>
+        <p className="text-sm text-fg-secondary">No logs in this period.</p>
       ) : table ? (
         <table className="text-sm">
           <thead>
-            <tr className="text-muted-foreground">
+            <tr className="text-fg-secondary">
               <th className="text-left font-normal">{title}</th>
               <th className="text-right font-normal">Logs</th>
             </tr>
@@ -99,13 +99,13 @@ export function BarList({
                 axisLine={false}
               />
               <Tooltip
-                cursor={{ fill: "var(--muted)" }}
+                cursor={{ fill: "var(--container-bg)" }}
                 contentStyle={{
-                  background: "var(--popover)",
-                  color: "var(--popover-foreground)",
-                  border: "1px solid var(--border)",
+                  background: "var(--surface)",
+                  color: "var(--fg-primary)",
+                  border: "1px solid var(--container-border)",
                 }}
-                itemStyle={{ color: "var(--popover-foreground)" }}
+                itemStyle={{ color: "var(--fg-primary)" }}
               />
               <Bar
                 dataKey="count"

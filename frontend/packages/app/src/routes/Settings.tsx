@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@bragdoc/ui";
+import { Button, Card, Tag } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import {
   useTelegramCode,
@@ -17,7 +10,7 @@ import {
 export function Component() {
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-semibold">Settings</h2>
+      <h2 className="type-title-2">Settings</h2>
       <TelegramCard />
     </div>
   );
@@ -26,7 +19,7 @@ export function Component() {
 function Alert({ error }: { error: unknown }) {
   if (!error) return null;
   return (
-    <p role="alert" className="text-destructive">
+    <p role="alert" className="text-danger">
       {errorText(error)}
     </p>
   );
@@ -48,23 +41,20 @@ function TelegramCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle
-          role="heading"
-          aria-level={3}
-          className="flex items-center gap-2"
-        >
+    <Card
+      title={
+        <span className="flex items-center gap-2">
           Telegram
           {status.data && (
-            <Badge variant={status.data.linked ? "default" : "secondary"}>
+            <Tag tone={status.data.linked ? "success" : "neutral"}>
               {status.data.linked ? "Linked" : "Not linked"}
-            </Badge>
+            </Tag>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
-        {status.isPending && <p className="text-muted-foreground">Loading…</p>}
+        </span>
+      }
+    >
+      <div className="flex flex-col gap-3 text-sm">
+        {status.isPending && <p className="text-fg-secondary">Loading…</p>}
         <Alert error={status.error} />
         {status.data?.linked && (
           <>
@@ -77,7 +67,7 @@ function TelegramCard() {
             {confirming ? (
               <div className="flex gap-2">
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   disabled={unlink.isPending}
                   onClick={() =>
                     unlink.mutate(undefined, {
@@ -90,13 +80,13 @@ function TelegramCard() {
                 >
                   Confirm unlink
                 </Button>
-                <Button variant="ghost" onClick={() => setConfirming(false)}>
+                <Button variant="tinted" onClick={() => setConfirming(false)}>
                   Cancel
                 </Button>
               </div>
             ) : (
               <Button
-                variant="outline"
+                variant="glass"
                 className="self-start"
                 onClick={() => setConfirming(true)}
               >
@@ -110,6 +100,7 @@ function TelegramCard() {
           <>
             <p>Link Telegram to add logs by sending the bot a message.</p>
             <Button
+              variant="primary"
               className="self-start"
               disabled={code.isPending}
               onClick={() => {
@@ -122,11 +113,11 @@ function TelegramCard() {
             {code.data && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <code className="rounded bg-muted px-2 py-1 font-mono text-base">
+                  <code className="rounded bg-container px-2 py-1 font-mono text-base">
                     {code.data.code}
                   </code>
                   <Button
-                    variant="ghost"
+                    variant="tinted"
                     size="sm"
                     aria-label="Copy link code"
                     onClick={() => void copy(code.data.code)}
@@ -134,7 +125,7 @@ function TelegramCard() {
                     {copied ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-fg-secondary">
                   Send <code>/start {code.data.code}</code> to the bot. Expires
                   at {new Date(code.data.expires_at).toLocaleTimeString()}.
                 </p>
@@ -153,7 +144,7 @@ function TelegramCard() {
             <Alert error={code.error} />
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

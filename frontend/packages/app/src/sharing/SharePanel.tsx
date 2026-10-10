@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from "react";
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
+  Select,
+  Tag,
+  TextField,
 } from "@bragdoc/ui";
 import { ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
@@ -28,17 +28,10 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
-// ponytail: native select; add a Select to @bragdoc/ui if more screens need one.
-const selectClass = "h-8 rounded-md border bg-transparent px-2 text-sm";
-
-function RoleOptions() {
-  return (
-    <>
-      <option value="viewer">Viewer</option>
-      <option value="editor">Editor</option>
-    </>
-  );
-}
+const roleOptions = [
+  { value: "viewer", label: "Viewer" },
+  { value: "editor", label: "Editor" },
+];
 
 export function SharePanel({ doc, open, onOpenChange }: Props) {
   const sharing = useSharing(doc.id, open);
@@ -109,53 +102,50 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <form onSubmit={submit} className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="share-email">Email</Label>
-            <Input
-              id="share-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (share.error) share.reset();
-              }}
-            />
-          </div>
-          <select
+          <TextField
+            id="share-email"
+            label="Email"
+            className="flex-1"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (share.error) share.reset();
+            }}
+          />
+          <Select
             aria-label="Role for new person"
-            className={selectClass}
+            options={roleOptions}
             value={role}
             onChange={(e) => setRole(e.target.value as GrantRole)}
-          >
-            <RoleOptions />
-          </select>
-          <Button type="submit" disabled={share.isPending}>
+          />
+          <Button variant="primary" type="submit" disabled={share.isPending}>
             Share
           </Button>
         </form>
         {shareError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm text-danger">
             {shareError}
           </p>
         )}
         {notice && (
-          <p role="status" className="text-sm text-muted-foreground">
+          <p role="status" className="text-sm text-fg-secondary">
             {notice}
           </p>
         )}
 
         {sharing.error ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm text-danger">
             {errorText(sharing.error)}
           </p>
         ) : !sharing.data ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-fg-secondary">Loading…</p>
         ) : (
           <ul className="divide-y rounded-md border">
             {sharing.data.grants.length + sharing.data.invitations.length ===
               0 && (
-              <li className="p-3 text-sm text-muted-foreground">
+              <li className="p-3 text-sm text-fg-secondary">
                 Only you have access.
               </li>
             )}
@@ -167,9 +157,9 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                 <span className="flex-1 truncate" title={g.email}>
                   {g.display_name || g.email}
                 </span>
-                <select
+                <Select
                   aria-label={`Role for ${g.email}`}
-                  className={selectClass}
+                  options={roleOptions}
                   value={g.role}
                   disabled={changeRole.isPending}
                   onChange={(e) => {
@@ -179,11 +169,9 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                       role: e.target.value as GrantRole,
                     });
                   }}
-                >
-                  <RoleOptions />
-                </select>
+                />
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Make ${g.email} owner`}
                   onClick={() => setTransferTo(g.user_id)}
@@ -191,7 +179,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
                   Make owner
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Remove ${g.email}`}
                   disabled={revoke.isPending}
@@ -207,9 +195,9 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             {sharing.data.invitations.map((i) => (
               <li key={i.id} className="flex items-center gap-2 p-3 text-sm">
                 <span className="flex-1 truncate">{i.email}</span>
-                <Badge variant="secondary">Pending · {i.role}</Badge>
+                <Tag>Pending · {i.role}</Tag>
                 <Button
-                  variant="ghost"
+                  variant="tinted"
                   size="sm"
                   aria-label={`Cancel invitation for ${i.email}`}
                   disabled={cancel.isPending}
@@ -225,7 +213,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
           </ul>
         )}
         {actionError && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm text-danger">
             {actionError}
           </p>
         )}
@@ -235,7 +223,7 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             role="alertdialog"
             aria-label="Confirm ownership transfer"
             aria-describedby="transfer-confirm-text"
-            className="flex flex-col gap-2 rounded-md border border-destructive/50 p-3 text-sm"
+            className="flex flex-col gap-2 rounded-md border border-danger p-3 text-sm"
           >
             <p id="transfer-confirm-text">
               Make {target.display_name || target.email} the owner? You become
@@ -243,14 +231,14 @@ export function SharePanel({ doc, open, onOpenChange }: Props) {
             </p>
             <div className="flex justify-end gap-2">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => setTransferTo(null)}
               >
                 Keep ownership
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 size="sm"
                 disabled={transfer.isPending}
                 onClick={() => {

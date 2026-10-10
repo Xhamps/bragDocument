@@ -21,3 +21,18 @@ test("opens menu on trigger click", async () => {
     await screen.findByRole("menuitem", { name: "Rename" }),
   ).toBeInTheDocument();
 });
+
+test("danger variant marks the item", async () => {
+  render(
+    <DropdownMenu>
+      <DropdownMenuTrigger>Actions</DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem variant="danger">Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+  expect(
+    await screen.findByRole("menuitem", { name: "Delete" }),
+  ).toHaveAttribute("data-variant", "danger");
+});

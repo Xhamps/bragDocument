@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { XIcon } from "lucide-react";
-import { Badge, Button, Input } from "@bragdoc/ui";
+import { Button, Select, Tag, TextField, focusRing } from "@bragdoc/ui";
 import type { LogStatus } from "../lib/types";
-import { FIELD, IMPACTS, SORTS, STATUSES, STATUS_LABEL } from "./constants";
+import { IMPACTS, SORTS, STATUSES, STATUS_LABEL } from "./constants";
 
 type SetFilter = (key: string, values: string[]) => void;
 
@@ -32,7 +32,7 @@ export function LogFilters({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         <SearchInput value={params.get("q") ?? ""} onCommit={single("q")} />
-        <Input
+        <TextField
           aria-label="Filter by tag"
           placeholder="Tag"
           className="w-36"
@@ -45,7 +45,7 @@ export function LogFilters({
             }
           }}
         />
-        <Input
+        <TextField
           key={params.get("domain") ?? ""} // remount when a chip clears it
           aria-label="Filter by link domain"
           placeholder="Domain, e.g. github.com"
@@ -56,23 +56,23 @@ export function LogFilters({
             e.key === "Enter" && commitDomain(e.currentTarget.value)
           }
         />
-        <Input
+        <TextField
           type="date"
           aria-label="From"
           className="w-40"
           value={params.get("from") ?? ""}
           onChange={(e) => single("from")(e.target.value)}
         />
-        <Input
+        <TextField
           type="date"
           aria-label="To"
           className="w-40"
           value={params.get("to") ?? ""}
           onChange={(e) => single("to")(e.target.value)}
         />
-        <select
+        <Select
           aria-label="Sort"
-          className={FIELD}
+          options={SORTS}
           value={params.get("sort") ?? "-created_at"}
           onChange={(e) =>
             onChange(
@@ -80,13 +80,7 @@ export function LogFilters({
               e.target.value === "-created_at" ? [] : [e.target.value],
             )
           }
-        >
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <Toggles
@@ -124,7 +118,7 @@ function Toggles({
   return (
     <fieldset className="flex items-center gap-1">
       <legend className="sr-only">{legend}</legend>
-      <span aria-hidden className="mr-1 text-sm text-muted-foreground">
+      <span aria-hidden className="mr-1 text-sm text-fg-secondary">
         {legend}
       </span>
       {values.map((v) => {
@@ -134,7 +128,7 @@ function Toggles({
             key={v}
             type="button"
             size="sm"
-            variant={on ? "default" : "outline"}
+            variant={on ? "primary" : "glass"}
             aria-pressed={on}
             onClick={() => onToggle(v)}
           >
@@ -167,7 +161,7 @@ function SearchInput({
     return () => clearTimeout(t);
   }, [text, value]);
   return (
-    <Input
+    <TextField
       type="search"
       aria-label="Search logs"
       placeholder="Search name and description"
@@ -204,7 +198,7 @@ export function ActiveFilters({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {chips.map(([k, v]) => (
-        <Badge key={k + v} variant="secondary">
+        <Tag key={k + v}>
           {LABELS[k]}:{" "}
           {k === "status"
             ? STATUS_LABEL[v as LogStatus]
@@ -214,13 +208,14 @@ export function ActiveFilters({
           <button
             type="button"
             aria-label={`Remove filter ${LABELS[k]}: ${v}`}
+            className={`${focusRing} rounded-sm`}
             onClick={() => onRemove(k, v)}
           >
-            <XIcon aria-hidden />
+            <XIcon aria-hidden className="size-3" />
           </button>
-        </Badge>
+        </Tag>
       ))}
-      <Button type="button" variant="link" size="sm" onClick={onClear}>
+      <Button type="button" variant="tinted" size="sm" onClick={onClear}>
         Clear all
       </Button>
     </div>

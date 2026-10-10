@@ -1,14 +1,14 @@
 import { useState, type ComponentProps } from "react";
 import Markdown from "react-markdown";
-import { MoreHorizontalIcon, TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import {
-  Badge,
-  Button,
+  IconButton,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tag,
 } from "@bragdoc/ui";
 import type { Log } from "../lib/types";
 import { STATUS_LABEL } from "./constants";
@@ -51,49 +51,47 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
         >
           <span className="font-medium">{log.name}</span>
           {log.impact_statement ? (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-fg-secondary">
               {log.impact_statement}
             </span>
           ) : log.impact_statement === "" ? (
-            <span className="flex items-center gap-1 text-sm text-amber-700 dark:text-amber-400">
+            <span className="flex items-center gap-1 text-sm text-danger">
               <TriangleAlertIcon aria-hidden className="size-3.5" />
               No impact stated
             </span>
           ) : null}
         </button>
-        {log.is_example && <Badge variant="secondary">Example</Badge>}
-        <Badge
-          variant={
+        {log.is_example && <Tag>Example</Tag>}
+        <Tag
+          tone={
             log.impact === "high" || log.impact === "critical"
-              ? "default"
-              : "secondary"
+              ? "accent"
+              : "neutral"
           }
         >
           {log.impact}
-        </Badge>
-        <Badge variant="outline">{STATUS_LABEL[log.status]}</Badge>
-        <time
-          dateTime={log.created_at}
-          className="text-sm text-muted-foreground"
-        >
+        </Tag>
+        <Tag variant="outline">{STATUS_LABEL[log.status]}</Tag>
+        <time dateTime={log.created_at} className="text-sm text-fg-secondary">
           {new Date(log.created_at).toLocaleDateString()}
         </time>
         {!readOnly && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                <MoreHorizontalIcon />
-              </Button>
+              <IconButton
+                variant="tinted"
+                size="sm"
+                icon="more"
+                label="Actions"
+                tooltip={false}
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => onEdit(log)}>
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => onDelete(log)}
-              >
+              <DropdownMenuItem variant="danger" onSelect={() => onDelete(log)}>
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -103,9 +101,9 @@ export function LogRow({ log, readOnly, onEdit, onDelete }: Props) {
       {log.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {log.tags.map((t) => (
-            <Badge key={t} variant="outline">
+            <Tag key={t} variant="outline">
               #{t}
-            </Badge>
+            </Tag>
           ))}
         </div>
       )}

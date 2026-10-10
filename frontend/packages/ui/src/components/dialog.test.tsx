@@ -20,3 +20,15 @@ test("opens on trigger click", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Open" }));
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
+
+test("close button closes the dialog", async () => {
+  render(
+    <Dialog defaultOpen>
+      <DialogContent>
+        <DialogTitle>Hello</DialogTitle>
+      </DialogContent>
+    </Dialog>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});

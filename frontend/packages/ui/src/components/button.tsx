@@ -1,66 +1,119 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "#lib/utils";
 import { Slot } from "radix-ui";
+import { cn, focusRing } from "#lib/utils";
+import { Icon, renderIcon, type IconProp } from "#components/icon";
+
+// Colour per variant only; shared with IconButton. Applied after the base so
+// its border colours win over `border-transparent` in cn.
+const buttonColorVariants = cva("", {
+  variants: {
+    variant: {
+      glass:
+        "glass border-container-border text-fg-primary shadow-button hover:border-fg-tertiary hover:shadow-md active:inset-shadow-ds disabled:border-button-inactive disabled:bg-transparent disabled:text-button-inactive",
+      primary:
+        "bg-button font-semibold text-button-fg hover:bg-button-hover hover:shadow-md active:bg-button-hover disabled:bg-button-inactive",
+      ghost:
+        "border-button-text bg-transparent text-button-text hover:border-button-hover hover:text-button-hover hover:shadow-md disabled:border-button-inactive disabled:text-button-inactive dark:hover:border-fg-primary dark:hover:text-fg-primary",
+      tinted:
+        "bg-transparent text-button-text hover:bg-container disabled:text-button-inactive",
+      gradient:
+        "bg-(image:--gradient-red-3) font-semibold text-button-fg shadow-cta hover:brightness-105 hover:saturate-115 disabled:bg-button-inactive disabled:bg-none",
+      // Extension: the DS has a danger token but no destructive button.
+      danger:
+        "border-danger bg-transparent text-danger hover:bg-glass-tint-rose disabled:border-button-inactive disabled:text-button-inactive",
+    },
+  },
+  defaultVariants: { variant: "glass" },
+});
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  [
+    "group/button inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md border border-transparent whitespace-nowrap select-none type-callout",
+    "transition-[background-color,border-color,color,box-shadow,translate,scale,filter] duration-base ease-standard",
+    "hover:-translate-y-px active:translate-y-0 active:scale-[0.98]",
+    "disabled:pointer-events-none disabled:cursor-default disabled:shadow-none",
+    "[&_svg]:size-4 [&_svg]:shrink-0",
+    focusRing,
+  ],
   {
     variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+        sm: "h-7 rounded-sm px-2 type-footnote font-medium",
+        md: "h-9 px-3",
+        lg: "h-11 px-4 type-body font-semibold",
       },
+      pill: { true: "rounded-pill" },
+      fullWidth: { true: "flex w-full" },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+    defaultVariants: { size: "md" },
   },
 );
 
+// After the colour classes so it beats their own shadow.
+const glowClass = "shadow-glow hover:shadow-glow-strong";
+
+type ButtonProps = Omit<React.ComponentProps<"button">, "children"> &
+  VariantProps<typeof buttonVariants> &
+  VariantProps<typeof buttonColorVariants> & {
+    asChild?: boolean;
+    /** Adds `shadow-glow`. At most one per view. */
+    glow?: boolean;
+    chevron?: boolean;
+    icon?: IconProp;
+    trailingIcon?: IconProp;
+    children?: React.ReactNode;
+  };
+
 function Button({
   className,
-  variant = "default",
-  size = "default",
+  variant = "glass",
+  size = "md",
+  pill,
+  fullWidth,
+  glow,
   asChild = false,
+  chevron,
+  icon,
+  trailingIcon,
+  children,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+}: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button";
-
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      {...(asChild ? {} : { type: "button" as const })}
+      className={cn(
+        buttonVariants({ size, pill, fullWidth }),
+        buttonColorVariants({ variant }),
+        // DS: the gradient CTA is always pill-shaped (Button only, not IconButton).
+        variant === "gradient" && "rounded-pill",
+        glow && glowClass,
+        className,
+      )}
       {...props}
-    />
+    >
+      {icon != null && renderIcon(icon, 16)}
+      <Slot.Slottable>{children}</Slot.Slottable>
+      {trailingIcon != null && renderIcon(trailingIcon, 16)}
+      {chevron && (
+        <Icon
+          name="chevron"
+          size={16}
+          className="transition-transform duration-base group-hover/button:translate-x-0.5"
+        />
+      )}
+    </Comp>
   );
 }
 
-export { Button, buttonVariants };
+export {
+  Button,
+  buttonVariants,
+  buttonColorVariants,
+  glowClass,
+  type ButtonProps,
+};

@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@bragdoc/ui";
+import { Button, Card, Checkbox } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Document } from "../lib/types";
 import { DocumentCard } from "../documents/DocumentCard";
@@ -32,10 +25,10 @@ export function Component() {
   const [deleting, setDeleting] = useState<Document | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  if (isPending) return <p className="text-muted-foreground">Loading…</p>;
+  if (isPending) return <p className="text-fg-secondary">Loading…</p>;
   if (error)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="text-danger">
         {errorText(error)}
       </p>
     );
@@ -68,31 +61,31 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold">Your documents</h2>
-        <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-          />
-          Show archived
-        </label>
+        <h2 className="type-title-2">Your documents</h2>
+        <Checkbox
+          className="ml-auto"
+          label="Show archived"
+          checked={showArchived}
+          onCheckedChange={(v) => setShowArchived(v === true)}
+        />
         {data.owned.length > 0 && (
-          <Button onClick={() => setCreating(true)}>New document</Button>
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            New document
+          </Button>
         )}
       </div>
 
       {archiveError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {archiveError}
         </p>
       )}
 
       {data.owned.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>What is a brag document?</CardTitle>
-            <CardDescription>
+        <Card
+          title="What is a brag document?"
+          description={
+            <>
               A running record of the work you did and why it mattered, so
               reviews and promotions are not a memory test. Read{" "}
               <a
@@ -104,23 +97,26 @@ export function Component() {
                 jvns.ca: Get your work recognized
               </a>
               .
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => setCreating(true)}>
-              Create your first document
-            </Button>
-          </CardContent>
+            </>
+          }
+        >
+          <Button
+            variant="primary"
+            className="mt-4"
+            onClick={() => setCreating(true)}
+          >
+            Create your first document
+          </Button>
         </Card>
       ) : owned.length === 0 ? (
-        <p className="text-muted-foreground">No active documents.</p>
+        <p className="text-fg-secondary">No active documents.</p>
       ) : (
         grid(owned)
       )}
 
       {shared.length > 0 && (
         <section className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">Shared with you</h2>
+          <h2 className="type-title-2">Shared with you</h2>
           {grid(shared, true)}
         </section>
       )}

@@ -40,3 +40,27 @@ test("sign-out clears the cached caller", async () => {
     expect(screen.queryByText("a@acme.com")).not.toBeInTheDocument(),
   );
 });
+
+test("nav highlights the current route by href", async () => {
+  mockFetch({
+    "GET /me": me,
+    "GET /documents": { owned: [], shared: [] },
+    "GET /audit": { entries: [], next_before: null },
+    "GET /audit/filters": { actors: [], documents: [] },
+  });
+  const { router } = renderAt("/");
+  await screen.findByText("a@acme.com");
+  // The mobile menu may duplicate links, so check every copy.
+  const navLinks = () =>
+    ["Acme", "Audit log", "Settings"].flatMap((name) =>
+      screen.getAllByRole("link", { name }),
+    );
+  for (const link of navLinks())
+    expect(link).not.toHaveAttribute("aria-current");
+
+  await act(() => router.navigate("/audit"));
+  for (const link of screen.getAllByRole("link", { name: "Audit log" }))
+    expect(link).toHaveAttribute("aria-current", "page");
+  for (const link of navLinks().filter((l) => l.textContent !== "Audit log"))
+    expect(link).not.toHaveAttribute("aria-current");
+});

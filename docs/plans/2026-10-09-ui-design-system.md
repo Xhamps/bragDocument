@@ -1191,7 +1191,7 @@ const items = [
 ].filter(Boolean);
 
 return (
-  <div className="min-h-screen bd-backdrop">
+  <div className="min-h-screen"> {/* bd-backdrop lives on body (styles.css base layer) */}
     <div className="mx-auto max-w-5xl p-4">
       <TopBar
         brand={{ name: "Brag Document", href: "/" }}

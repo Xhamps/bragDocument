@@ -18,16 +18,17 @@ Restyle `frontend/packages/ui` with the BragDoc glass design system exported to 
 
 ## 1. Foundation
 
-`packages/ui/src/styles.css` is rewritten:
+`packages/ui/src/styles.css` is rewritten and imports `packages/ui/src/tokens.css`:
 
 - Remove the shadcn oklch tokens and the `.dark`/`.light` blocks.
-- Copy DS tokens from `ds/tokens.css`:
+- Copy DS tokens from `ds/tokens.css` into `tokens.css` (plus `color-scheme` per theme):
   - Light on `:root, [data-theme="light"]`.
   - Dark on `[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`.
   - Theme-independent: space, radius, blur, gradients, motion, fonts.
-- `@theme inline` exposes them as utilities: colours (`page`, `surface`, `fg-primary|secondary|tertiary`, `container`, `container-border`, `container-divider`, `button`, `button-hover`, `button-fg`, `button-text`, `button-inactive`, `focus-ring`, `success`, `danger`, `chart-1..4`, `chart-muted`, glass tints), radii (`sm|md|lg|xl|pill` = 6/10/16/24/999), shadows (`sm|md|lg|xl|inset|glass|button|glow|glow-strong|cta`), durations, easings, fonts.
-- Type scale as `@utility`: `text-display`, `text-title-1..3`, `text-body`, `text-callout`, `text-footnote`, `text-caption`, `text-code` (DS metrics and tracking).
-- Helper utilities: `glass`, `bd-backdrop` (three mood radial washes on `page`), `text-gradient`, `text-gradient-secondary`, `animate-enter` (staggered via `--delay`).
+- `@theme inline` exposes them as utilities: colours (`page`, `surface`, `fg-primary|secondary|tertiary`, `container`, `container-border`, `divider`, `button`, `button-hover`, `button-fg`, `button-text`, `button-inactive`, `focus-ring`, `success`, `danger`, `chart-1..4`, `chart-muted`, glass tints), radii (`sm|md|lg|xl|pill` = 6/10/16/24/999), shadows (`sm|md|lg|xl|glass|button|glow|glow-strong|cta`, plus `inset-shadow-ds`), durations (`duration-fast|base|slow`), easings, fonts.
+- Type scale as `@utility`: `type-display`, `type-title-1..3`, `type-body`, `type-callout`, `type-footnote`, `type-caption`, `type-code` (DS metrics and tracking). Named `type-*`, not `text-*`, because tailwind-merge would treat an unknown `text-foo` as a colour; `cn` is configured (`createCn`) so `type-*`, `rounded-pill` and the DS shadows merge correctly.
+- Helper utilities: `glass` (fill + border + blur, no shadow), `bd-backdrop` (three mood radial washes on `page`, applied to `body`), `text-gradient`, `text-gradient-secondary`, `text-gradient-accent`, `animate-enter` (staggered via `--delay`), `animate-pulse-dot`.
+- `focusRing` class string in `lib/utils` (`outline-hidden` + `focus-visible:outline-2 outline-solid outline-offset-2 outline-focus-ring`; Tailwind v4 needs `outline-solid`).
 - `@custom-variant dark` targets `[data-theme=dark]` and the OS media query.
 - Global `prefers-reduced-motion` collapses durations.
 - Inter loaded from Google Fonts (400/500/600/700) in the app's `index.html`.
@@ -69,7 +70,7 @@ String icon names (`icon="download"`) resolve through a name→lucide-react map;
 
 ### App migration
 
-- `Root.tsx` header → `TopBar` (brand, nav items, theme `IconButton`, `UserMenu` with email and Sign out); page on `bd-backdrop`.
+- `Root.tsx` header → `TopBar` (brand, nav items, theme `IconButton`, `UserMenu` with email and Sign out; `value` from the route, never `onSelect`). `bd-backdrop` is on `body` for every screen.
 - 8 native `<select>` → `Select`; `<textarea>` → `TextArea`; Audit `<table>` → `DataTable`.
 - Amber warning boxes in `LogFormDialog`/`LogRow` → DS `danger` / `Tag` tokens.
 - Unused components (MediaCard, HeroHeader, NotificationItem, Slider, Stepper, FieldTile, …) appear in `KitchenSink` only. No screen redesign.

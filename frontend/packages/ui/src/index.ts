@@ -1,14 +1,6 @@
 export { cn } from "#lib/utils";
 export { Button, buttonVariants } from "#components/button";
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-} from "#components/card";
+export { Card } from "#components/card";
 export {
   Dialog,
   DialogClose,

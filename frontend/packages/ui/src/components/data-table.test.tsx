@@ -68,3 +68,22 @@ test("empty state spans the table", () => {
     "2",
   );
 });
+
+test("selecting one of two rows makes the header checkbox indeterminate", async () => {
+  render(
+    <DataTable
+      columns={columns}
+      rows={rows}
+      selectable
+      rowLabel={(r) => r.name}
+    />,
+  );
+  const all = screen.getByRole<HTMLInputElement>("checkbox", {
+    name: "Select all rows",
+  });
+  expect(all.indeterminate).toBe(false);
+  await userEvent.click(
+    screen.getByRole("checkbox", { name: "Select row Beta" }),
+  );
+  expect(all.indeterminate).toBe(true);
+});

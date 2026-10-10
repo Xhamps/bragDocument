@@ -12,7 +12,13 @@ const overlayBody = [
 
 type MediaCardProps = Omit<
   CardProps,
-  "title" | "description" | "action" | "compact" | "elevation" | "as"
+  | "title"
+  | "description"
+  | "action"
+  | "compact"
+  | "elevation"
+  | "as"
+  | "onClick"
 > & {
   title: React.ReactNode;
   /** Image URL, or a gradient token name ("gradient-blue-1") as an artwork placeholder. */
@@ -35,8 +41,10 @@ type MediaCardProps = Omit<
   /** A small IconButton on the image's top-right corner (save, play). */
   mediaAction?: React.ReactNode;
   actions?: React.ReactNode;
-  /** Makes the whole card a link (the title gets the hit area). */
+  /** Makes the whole card a link (the title gets the hit area). Use href or onClick, not both. */
   href?: string;
+  /** Makes the card clickable and focusable. Use href or onClick, not both. */
+  onClick?: () => void;
   titleAs?: "h2" | "h3" | "h4";
 };
 
@@ -188,7 +196,7 @@ function MediaCard({
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={progress}
+            aria-valuenow={Math.max(0, Math.min(100, progress))}
             aria-label={progressLabel || "Progress"}
             className={cn(
               "mt-1 h-1 overflow-hidden rounded-pill",

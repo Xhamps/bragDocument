@@ -48,7 +48,7 @@ function Pagination({
 }: PaginationProps) {
   const count = Math.max(1, pageCount || 1);
   const [own, setOwn] = React.useState(defaultPage);
-  const page = pageProp || own;
+  const page = Math.min(count, pageProp || own);
   const go = (n: number) => {
     n = Math.max(1, Math.min(count, n));
     if (!pageProp) setOwn(n);

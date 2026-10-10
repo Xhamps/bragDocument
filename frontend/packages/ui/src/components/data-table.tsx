@@ -8,7 +8,7 @@ import { MediaCell, type MediaCellProps } from "#components/media-cell";
 type Key = string | number;
 type Field<Row> = string | ((row: Row) => React.ReactNode);
 
-type DataTableColumn<Row = Record<string, unknown>> = {
+type DataTableColumn<Row extends object = object> = {
   key: string;
   header: React.ReactNode;
   sortable?: boolean;
@@ -39,14 +39,14 @@ type DataTableColumn<Row = Record<string, unknown>> = {
 
 type DataTableSort = { key: string; dir: "asc" | "desc" };
 
-type DataTableProps<Row = Record<string, unknown>> = Omit<
+type DataTableProps<Row extends object = object> = Omit<
   React.ComponentProps<"div">,
   "title" | "children"
 > & {
   columns: DataTableColumn<Row>[];
   rows: Row[];
   /** Field name (default "id") or function giving each row a unique key. */
-  rowKey?: string | ((row: Row) => Key);
+  rowKey?: (keyof Row & string) | ((row: Row) => Key);
   /** Short row name for checkbox labels ("Select row Hola Spine"). */
   rowLabel?: (row: Row) => string;
   title?: React.ReactNode;
@@ -133,10 +133,10 @@ function Check({
   );
 }
 
-function DataTable<Row>({
+function DataTable<Row extends object>({
   columns,
   rows,
-  rowKey = "id",
+  rowKey = "id" as keyof Row & string,
   rowLabel,
   title,
   toolbar,

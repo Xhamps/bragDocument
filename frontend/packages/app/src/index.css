@@ -1,2 +1,8 @@
 @import "@bragdoc/ui/styles.css";
 @source "../../ui/src";
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

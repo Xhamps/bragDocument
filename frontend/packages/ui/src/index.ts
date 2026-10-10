@@ -1,6 +1,5 @@
 export { cn } from "#lib/utils";
 export { Button, buttonVariants } from "#components/button";
-export { Input } from "#components/input";
 export {
   Card,
   CardHeader,
@@ -22,7 +21,6 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "#components/dialog";
-export { Label } from "#components/label";
 export { Badge, badgeVariants } from "#components/badge";
 export {
   DropdownMenu,

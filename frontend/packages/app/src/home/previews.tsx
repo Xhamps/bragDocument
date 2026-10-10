@@ -95,7 +95,7 @@ export function SharePreview() {
 
 export function TelegramPreview() {
   return (
-    <p className="type-code font-mono">
+    <p className="type-footnote">
       <span className="text-button-text">/log</span> Fixed the flaky deploy
     </p>
   );
@@ -103,7 +103,7 @@ export function TelegramPreview() {
 
 export function AuditPreview() {
   return (
-    <div className="flex flex-col gap-1 type-code font-mono text-fg-secondary">
+    <div className="flex flex-col gap-1 type-footnote text-fg-secondary">
       <p>10:42 ana edited “New landing page”</p>
       <p>09:15 sam shared the document</p>
     </div>

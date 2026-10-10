@@ -31,22 +31,24 @@ const BARS = [3, 5, 2, 6, 4, 7, 5, 8, 6, 9, 7, 11];
 
 export function DashboardPreview() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          ["Total logs", "68"],
-          ["High or critical", "21"],
-          ["In progress", "4"],
-        ].map(([label, value]) => (
-          <Card key={label} compact>
-            <p className="type-footnote text-fg-secondary">{label}</p>
-            <p className="type-title-2">{value}</p>
-          </Card>
-        ))}
-      </div>
-      <Card>
+    <div className="flex h-full flex-col gap-4">
+      {[
+        ["Total logs", "68"],
+        ["High or critical", "21"],
+        ["In progress", "4"],
+      ].map(([label, value]) => (
+        <Card
+          key={label}
+          compact
+          className="flex items-baseline justify-between"
+        >
+          <p className="type-footnote text-fg-secondary">{label}</p>
+          <p className="type-title-2">{value}</p>
+        </Card>
+      ))}
+      <Card compact className="flex min-h-40 flex-1 flex-col">
         <p className="type-callout">Logs per month</p>
-        <div className="mt-4 flex h-32 items-end gap-2">
+        <div className="mt-4 flex flex-1 items-end gap-1.5">
           {BARS.map((n, i) => (
             <div
               key={i}
@@ -88,5 +90,22 @@ export function SharePreview() {
         </div>
       </div>
     </Card>
+  );
+}
+
+export function TelegramPreview() {
+  return (
+    <p className="type-code font-mono">
+      <span className="text-button-text">/log</span> Fixed the flaky deploy
+    </p>
+  );
+}
+
+export function AuditPreview() {
+  return (
+    <div className="flex flex-col gap-1 type-code font-mono text-fg-secondary">
+      <p>10:42 ana edited “New landing page”</p>
+      <p>09:15 sam shared the document</p>
+    </div>
   );
 }

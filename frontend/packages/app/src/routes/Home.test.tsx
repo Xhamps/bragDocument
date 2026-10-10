@@ -22,7 +22,16 @@ test("signed-out visitor at / sees the home page", async () => {
   );
   expect(
     screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-  ).toEqual(["Log every win", "See your impact", "Share and export"]);
+  ).toEqual(["From a quick note to a review-ready story"]);
+  expect(
+    screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+  ).toEqual([
+    "Log every win",
+    "See your impact",
+    "Share and export",
+    "Telegram bot",
+    "Audit trail",
+  ]);
 });
 
 test("signed-out visitor on a protected page is still sent to sign-in", async () => {

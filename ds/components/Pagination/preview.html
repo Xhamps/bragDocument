@@ -1,0 +1,15 @@
+<!-- @dsCard group="Navigation" height=200 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Pagination — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-stack" style="gap:24px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.Pagination, { pageCount: 25, defaultPage: 12, total: 248, pageSize: 10 }),
+  h(D.Pagination, { pageCount: 6, defaultPage: 2, pageSize: 10, pageSizeOptions: [10, 25, 50] }),
+  h(D.Pagination, { pageCount: 4, defaultPage: 1, variant: 'simple' })));
+</script>
+</body>
+</html>

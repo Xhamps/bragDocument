@@ -1,0 +1,44 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>DataTable — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" style="padding:24px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+var ROWS = [
+  { id: 1, name: 'Hola Spine', role: 'Product Designer', team: ['Design'], status: 'Active', wins: 14, updated: '2026-10-08' },
+  { id: 2, name: 'Eva Solain', role: 'Staff Engineer', team: ['Platform', 'AI'], status: 'In review', wins: 22, updated: '2026-10-06' },
+  { id: 3, name: 'Pierre Ford', role: 'Eng Manager', team: ['Platform'], status: 'Active', wins: 9, updated: '2026-09-30' },
+  { id: 4, name: 'Steve Ater', role: 'Data Scientist', team: ['Research'], status: 'Overdue', wins: 5, updated: '2026-09-12' },
+  { id: 5, name: 'Meng To', role: 'Design Lead', team: ['Design', 'Research'], status: 'Draft', wins: 31, updated: '2026-10-09' }
+];
+var TEAM = { Design: 'purple', Platform: 'accent', AI: 'violet', Research: 'teal' };
+var STATUS = { 'Active': 'success', 'In review': 'accent', 'Overdue': 'danger', 'Draft': 'neutral' };
+function App() {
+  var s = React.useState(1), page = s[0];
+  return h(D.DataTable, {
+    title: 'Brag documents', caption: 'Brag documents by person', rowLabel: function (r) { return r.name; },
+    toolbar: h(React.Fragment, null, h(D.Button, { size: 'sm', icon: 'download' }, 'Export'), h(D.Button, { size: 'sm', variant: 'primary', icon: 'plus' }, 'New entry')),
+    selectable: true, defaultSelected: [2], defaultSort: { key: 'updated', dir: 'desc' },
+    bulkActions: function (keys, clear) { return h(React.Fragment, null, h(D.Button, { size: 'sm', icon: 'download' }, 'Export'), h(D.Button, { size: 'sm', icon: 'trash', onClick: clear }, 'Delete')); },
+    columns: [
+      { key: 'name', header: 'Name', sortable: true, primary: true },
+      { key: 'role', header: 'Role', sortable: true },
+      { key: 'team', header: 'Team', tags: function (t) { return { tone: TEAM[t] }; }, sortValue: function (r) { return r.team[0]; }, sortable: true },
+      { key: 'status', header: 'Status', sortable: true, tags: function (t) { return { tone: STATUS[t] }; } },
+      { key: 'wins', header: 'Wins', sortable: true, align: 'right' },
+      { key: 'updated', header: 'Updated', sortable: true, render: function (r) { return new Date(r.updated + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } }
+    ],
+    rows: ROWS,
+    rowActions: function (r) { return h(React.Fragment, null, h(D.IconButton, { icon: 'edit', label: 'Edit ' + r.name, variant: 'tinted', size: 'sm', tooltip: 'Edit' }), h(D.IconButton, { icon: 'trash', label: 'Delete ' + r.name, variant: 'tinted', size: 'sm', tooltip: 'Delete' })); },
+    footer: h(D.Pagination, { pageCount: 10, page: page, onChange: s[1], total: 48, pageSize: 5 })
+  });
+}
+ReactDOM.createRoot(document.getElementById('a')).render(h(App));
+</script>
+</body>
+</html>

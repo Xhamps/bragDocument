@@ -1,0 +1,18 @@
+<!-- @dsCard group="Forms" height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>FieldTile — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="align-items:flex-start"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(D.Card, { style: { width: 600 } },
+  h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } },
+    h(D.FieldTile, { label: 'From', value: 'Montreal, Canada', icon: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z' }),
+    h(D.FieldTile, { label: 'To', value: 'Tokyo, Japan', icon: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z' }),
+    h(D.FieldTile, { label: 'Depart', value: 'Dec 15, 2023', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' }),
+    h(D.FieldTile, { label: 'Return', placeholder: 'Add date', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' })),
+  h('div', { style: { display: 'flex', justifyContent: 'center', marginTop: 20 } }, h(D.Button, { variant: 'primary' }, 'Search flights'))));
+</script>
+</body>
+</html>

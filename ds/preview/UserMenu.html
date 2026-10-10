@@ -1,0 +1,18 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>UserMenu — preview</title></head>
+<body>
+<div class="bd-backdrop" style="height:360px"><div id="a" class="bd-row" style="align-items:flex-start;justify-content:space-between;padding:24px 32px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.UserMenu, { placement: 'bottom-start', defaultOpen: true, user: { name: 'Riley Anderson', role: 'UI/UX Designer', email: 'riley@bragdoc.app', status: 'online' } }),
+  h(D.UserMenu, { user: { name: 'Hola Spine', role: 'Product Designer', email: 'hola@bragdoc.app' }, items: [{ label: 'Profile', icon: 'user' }, { label: 'Settings', icon: 'settings', shortcut: '⌘,' }, { label: 'Billing', icon: 'card' }, 'separator', { label: 'Sign out', icon: 'signOut', tone: 'danger' }] }),
+  h(D.UserMenu, { variant: 'avatar', user: { name: 'Eva Solain', email: 'eva@bragdoc.app', status: 'busy' } })));
+</script>
+</body>
+</html>

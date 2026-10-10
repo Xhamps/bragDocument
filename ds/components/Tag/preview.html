@@ -1,0 +1,14 @@
+<!-- @dsCard group="Data display" height=110 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Tag — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.Tag, { tone: 'success' }, 'Active'), h(D.Tag, { tone: 'accent' }, 'In review'), h(D.Tag, { tone: 'danger' }, 'Overdue'), h(D.Tag, null, 'Draft'), h(D.Tag, { tone: 'purple' }, 'Design'), h(D.Tag, { tone: 'teal' }, 'Research'),
+  h(D.Tag, { variant: 'outline', tone: 'violet' }, 'Trial term'), h(D.Tag, { variant: 'outline' }, 'XP + 10'), h(D.Tag, { variant: 'solid', tone: 'accent' }, 'UI/UX Design')));
+</script>
+</body>
+</html>

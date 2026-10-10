@@ -1,0 +1,23 @@
+<!-- @dsCard group="Containers" height=450 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Card — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:24px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+function c(tint, title, body, action) {
+  return h(D.Card, { tint: tint, title: title, description: body },
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 } },
+      h(D.Tag, { variant: 'outline' }, 'tint: ' + tint), action || null));
+}
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  c('sheen', 'UI Templates', 'Introducing a collection of fully designed and functional components.', h(D.Button, { size: 'sm' }, 'Browse')),
+  c('accent', 'Pro Plan', 'Everything in Starter, plus AI summaries of your wins.', h(D.Button, { size: 'sm', variant: 'primary' }, 'Upgrade')),
+  c('violet', 'Mastering modular design systems', 'Build scalable, cohesive systems for your team.', h(D.Button, { size: 'sm', trailingIcon: 'arrowRight' }, 'Start')),
+  c('rose', 'Limited offer', 'Unlock full access to premium features at 50% off.', h(D.Button, { size: 'sm' }, 'Claim')),
+  c('cool', 'Charging', '30 min remaining · 65% of the set charge limit.'),
+  c('none', 'Confirmation', 'Are you sure you want to change your profile information?', h(D.Button, { size: 'sm' }, 'Cancel'))));
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>PageHeader — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(D.PageHeader, {
+  breadcrumbs: [{ label: 'Workspace', href: '#' }, { label: 'Courses', href: '#' }, { label: 'Web development' }],
+  eyebrow: h(React.Fragment, null, h(D.Tag, { variant: 'outline', tone: 'violet' }, 'Trial term'), h(D.Tag, { tone: 'accent' }, 'Level 6')),
+  title: 'Web development', gradient: 'accent',
+  subtitle: 'Getting started with HTML: the basic web technology, HTML code, headers and formatting text.',
+  meta: h(React.Fragment, null, h('span', null, '12 lessons'), h('span', null, '·'), h('span', null, 'Updated Oct 9'), h('span', null, '·'), h('span', null, '34% complete')),
+  actions: h(React.Fragment, null, h(D.Button, null, 'Preview'), h(D.Button, { variant: 'primary', chevron: true }, 'Continue')),
+  tabs: h(D.SegmentedControl, { label: 'Section', tone: 'accent', options: ['Lessons', 'Resources', 'Discussion'] }) }));
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!-- @dsCard group="Actions" height=150 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ButtonGroup — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="r0" class="bd-row"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('r0')).render(h(React.Fragment, null, h(D.ButtonGroup, { label: 'Pager', size: 'sm' }, h(D.IconButton, { icon: 'arrowLeft', label: 'Previous', disabled: true }), h(D.IconButton, { icon: 'arrowRight', label: 'Next' })), h(D.ButtonGroup, { label: 'Channel' }, h(D.Button, null, 'Join'), h(D.Button, { icon: 'bell', chevron: false, trailingIcon: h(D.Icon, { name: 'chevronDown', size: 16 }) }, 'Subscribed')), h(D.ButtonGroup, { label: 'Channel' }, h(D.Button, null, 'Join'), h(D.Button, { variant: 'primary', icon: 'bell' }, 'Subscribed')), h(D.ButtonGroup, { label: 'Copy' }, h(D.Button, { icon: 'download' }, 'Export'), h(D.IconButton, { icon: 'chevronDown', label: 'More export options' }))));
+
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>MediaCard — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" style="padding:24px;display:flex;flex-direction:column;gap:16px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+var IMG = { blob: '../assets/Images/blob.jpg', nebula: '../assets/Images/nebula.jpg', sky: '../assets/Images/sky.jpg', violet: '../assets/Images/violet.jpg' };
+function App() {
+  return h(React.Fragment, null,
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 } },
+      h(D.MediaCard, { image: IMG.blob, imageAlt: 'Violet 3D blob', tag: h(D.Tag, { variant: 'solid', tone: 'accent' }, 'UI/UX Design'), title: 'Designing a Travel App', description: 'Embark on a creative journey as you learn how to design a captivating travel app from concept to user-centric experience.', progress: 42, author: { name: 'Riley Anderson', role: 'UI/UX Designer' }, href: '#', animate: true }),
+      h(D.MediaCard, { image: 'gradient-red-3', badge: '12:30', eyebrow: 'Spline Academy · 9.2k views', title: 'Create 3D Site with Spline and React', tint: 'rose', mediaAction: h(D.IconButton, { icon: 'play', label: 'Play preview', size: 'sm', tooltip: false }), actions: h(React.Fragment, null, h(D.Button, { size: 'sm', variant: 'primary', icon: 'play' }, 'Watch'), h(D.Button, { size: 'sm' }, 'Save')), animate: true, delay: 60 }),
+      h(D.MediaCard, { layout: 'overlay', image: IMG.violet, imageAlt: 'Lilac light over deep violet', tag: h(D.Tag, { variant: 'outline', tone: 'violet' }, 'Trial term'), title: 'Mastering Modular Design Systems', description: 'Build scalable, cohesive systems that streamline UI development.', actions: h(D.Button, { size: 'sm', trailingIcon: 'arrowRight' }, 'Start course'), onClick: function () {}, animate: true, delay: 120 })),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } },
+      h(D.MediaCard, { layout: 'horizontal', image: IMG.nebula, title: 'Lesson 4 · Formatting Text', eyebrow: 'Web Development', description: 'Headings, emphasis and lists in HTML.', progress: 80, tint: 'accent', href: '#', animate: true, delay: 180 }),
+      h(D.MediaCard, { layout: 'horizontal', image: IMG.sky, title: 'Smart cards', eyebrow: 'All your cards in one place', description: 'Make your finances work for you with the power of AI.', actions: h(D.Button, { size: 'sm', trailingIcon: 'plusCircle' }, 'Add card'), animate: true, delay: 240 })));
+}
+ReactDOM.createRoot(document.getElementById('a')).render(h(App));
+</script>
+</body>
+</html>

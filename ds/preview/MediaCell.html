@@ -1,0 +1,35 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>MediaCell — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" style="padding:24px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+var ROWS = [
+  { id: 'c1', title: 'Design and Prototype an App with Play – Full 3-hour Course', channel: 'Designcode', meta: '14k views · 1 month ago', art: 'gradient-blue-1', len: '4:30', author: 'Meng To', role: 'Design Lead', level: 'Beginner', price: 120, per: 'per year' },
+  { id: 'c2', title: 'Create 3D Site with Spline and React', channel: 'Spline Academy', meta: '9.2k views · 2 weeks ago', art: 'gradient-red-3', len: '12:30', author: 'Riley Anderson', role: 'UI/UX Designer', level: 'Intermediate', price: 49, per: 'one-time' },
+  { id: 'c3', title: 'Desktop App UI Design in Figma', channel: 'Designcode', meta: '21k views · 3 months ago', art: 'gradient-light-blue-1', len: '40:36', author: 'Hola Spine', role: 'Product Designer', level: 'Beginner', price: 0, per: 'free' },
+  { id: 'c4', title: 'Build a 3D Site Without Code with Framer', channel: 'Framer Studio', meta: '5.8k views · 6 days ago', art: 'gradient-yellow-1', len: '54:30', author: 'Eva Solain', role: 'Staff Engineer', level: 'Advanced', price: 25, per: 'per month' }
+];
+var LEVEL = { Beginner: 'success', Intermediate: 'accent', Advanced: 'purple' };
+ReactDOM.createRoot(document.getElementById('a')).render(h(D.DataTable, {
+  title: 'Courses', caption: 'Courses with author and price', density: 'spacious', selectable: true,
+  rowLabel: function (r) { return r.title; }, defaultSort: { key: 'title', dir: 'asc' },
+  bulkActions: function () { return h(D.Button, { size: 'sm', icon: 'download' }, 'Export'); },
+  columns: [
+    { key: 'title', header: 'Course', sortable: true, maxWidth: 340, media: { image: 'art', subtitle: 'channel', meta: 'meta', badge: 'len', shape: 'thumb' } },
+    { key: 'author', header: 'Author', sortable: true, media: { subtitle: 'role' } },
+    { key: 'level', header: 'Level', sortable: true, tags: function (t) { return { tone: LEVEL[t] }; } },
+    { key: 'price', header: 'Price', sortable: true, align: 'right', render: function (r) { return h('span', { className: 'bd-dt-two' }, h('span', { className: 'bd-dt-two-main' }, r.price ? '$' + r.price : 'Free'), h('span', { className: 'bd-dt-two-sub' }, r.per)); } }
+  ],
+  rows: ROWS,
+  rowActions: function (r) { return h(D.IconButton, { icon: 'more', label: 'More actions for ' + r.title, variant: 'tinted', size: 'sm', tooltip: 'More' }); },
+  footer: h(D.Pagination, { pageCount: 3, defaultPage: 1, variant: 'simple' })
+}));
+</script>
+</body>
+</html>

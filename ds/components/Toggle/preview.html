@@ -1,0 +1,15 @@
+<!-- @dsCard group="Controls" height=110 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Toggle — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="gap:32px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.Toggle, { label: 'Lock', defaultChecked: true }),
+  h(D.Toggle, { label: 'Select all airlines' }),
+  h(D.Toggle, { label: 'Disabled', disabled: true })));
+</script>
+</body>
+</html>

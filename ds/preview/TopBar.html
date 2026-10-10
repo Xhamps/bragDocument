@@ -1,0 +1,40 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>TopBar — preview</title></head>
+<body>
+<div class="bd-backdrop" style="min-height:600px">
+  <div id="a"></div>
+  <div id="b" style="margin-top:32px"></div>
+  <div id="c" style="max-width:960px;margin:0 auto"></div>
+</div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+var ITEMS = [
+  { value: 'flights', label: 'Flights', href: '#' },
+  { value: 'stays', label: 'Stays', href: '#' },
+  { value: 'cars', label: 'Cars', href: '#' },
+  { value: 'packages', label: 'Packages', children: [
+    { value: 'weekend', label: 'Weekend getaways', description: 'Two nights, flight and hotel', icon: 'sun', href: '#' },
+    { value: 'family', label: 'Family trips', description: 'Rooms for four or more', icon: 'home', href: '#' },
+    { value: 'business', label: 'Business travel', description: 'Flexible fares, lounge access', icon: 'card', href: '#' } ] } ];
+ReactDOM.createRoot(document.getElementById('a')).render(h(D.TopBar, {
+  brand: { name: 'BragDoc', href: '#' }, items: ITEMS, defaultValue: 'flights', search: { placeholder: 'Search', 'aria-label': 'Search trips' },
+  actions: h(React.Fragment, null, h(D.IconButton, { icon: 'bell', label: 'Notifications', badge: true, variant: 'tinted', tooltipPlacement: 'bottom' }), h(D.IconButton, { icon: 'moon', label: 'Dark mode', variant: 'tinted', tooltipPlacement: 'bottom' })),
+  user: { user: { name: 'Riley Anderson', email: 'riley@bragdoc.app', status: 'online' } } }));
+ReactDOM.createRoot(document.getElementById('b')).render(h(D.TopBar, { variant: 'floating',
+  brand: { name: 'BragDoc UI', href: '#' }, defaultValue: 'components',
+  items: [{ value: 'components', label: 'Components', href: '#' }, { value: 'pricing', label: 'Pricing', href: '#' }, { value: 'changelog', label: 'Changelog', href: '#' }],
+  actions: h(D.Button, { variant: 'tinted' }, 'Log in'), cta: h(D.Button, { pill: true, variant: 'primary' }, 'Buy now') }));
+ReactDOM.createRoot(document.getElementById('c')).render(h(D.PageHeader, {
+  breadcrumbs: [{ label: 'Home', href: '#' }, { label: 'Brag docs', href: '#' }, { label: '2026 review' }],
+  eyebrow: h(D.Tag, { tone: 'success' }, 'In progress'),
+  title: '2026 performance review', subtitle: 'Every win, shipped project and piece of feedback from this year, ready to turn into your review.',
+  actions: h(React.Fragment, null, h(D.Button, { icon: 'share' }, 'Share'), h(D.Button, { variant: 'primary', icon: 'plus' }, 'Add win')),
+  tabs: h(D.SegmentedControl, { label: 'View', options: ['Timeline', 'By project', 'Feedback'] }) }));
+</script>
+</body>
+</html>

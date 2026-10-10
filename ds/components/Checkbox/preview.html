@@ -1,0 +1,16 @@
+<!-- @dsCard group="Forms" height=190 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Checkbox — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="align-items:flex-start"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
+  h(D.Checkbox, { label: 'Seat choice included', defaultChecked: true }),
+  h(D.Checkbox, { label: 'No cancel fee' }),
+  h(D.Checkbox, { label: 'No change fee', description: 'Change dates up to 24h before departure.' }),
+  h(D.Checkbox, { label: 'Lounge access', disabled: true })));
+</script>
+</body>
+</html>

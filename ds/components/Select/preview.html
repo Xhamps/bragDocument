@@ -1,0 +1,15 @@
+<!-- @dsCard group="Forms" height=130 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Select — preview</title></head>
+<body>
+<div class="bd-backdrop"><div id="a" class="bd-row" style="align-items:flex-start"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h(D.Select, { 'aria-label': 'Corner radius', prefix: 'Corner Radius:', options: ['6', '10', '16', '24'], defaultValue: '10' }),
+  h(D.Select, { 'aria-label': 'Sort by', placeholder: 'Sort by', defaultValue: '', options: ['Price', 'Duration', 'Departure'] }),
+  h('div', { style: { width: 220 } }, h(D.Select, { label: 'Currency', options: ['USD', 'CAD', 'BRL'], defaultValue: 'USD' }))));
+</script>
+</body>
+</html>

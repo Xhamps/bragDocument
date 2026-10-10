@@ -1,0 +1,33 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<script src="../components/lib/react.production.min.js"></script><script src="../components/lib/react-dom.production.min.js"></script><script src="../components/bundle.js"></script>
+<script>try{var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script><meta charset="utf-8"><title>MenuList — preview</title></head>
+<body>
+<div class="bd-backdrop" style="min-height:620px"><div id="a" class="bd-row" style="align-items:flex-start;gap:260px"></div></div>
+<script>
+var D = window.BragDocUI, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('a')).render(h(React.Fragment, null,
+  h('div', { style: { width: 260 } }, h(D.MenuList, { label: 'Main', defaultValue: 'buttons', items: [
+    'Workspace',
+    { value: 'home', label: 'Dashboard', icon: 'home', href: '#dashboard' },
+    { value: 'docs', label: 'Brag docs', icon: 'book', badge: 3, href: '#docs' },
+    { value: 'components', label: 'Components', icon: 'grid', children: [
+      { value: 'all', label: 'All components', href: '#all' },
+      { value: 'buttons', label: 'Buttons', href: '#buttons' },
+      { value: 'menus', label: 'Menus', href: '#menus' },
+      { value: 'cards', label: 'Cards', href: '#cards' } ] },
+    { value: 'reports', label: 'Reports', icon: 'chart', children: [
+      { value: 'quarterly', label: 'Quarterly review', href: '#q' },
+      { value: 'impact', label: 'Impact summary', href: '#impact' } ] },
+    'separator',
+    { value: 'settings', label: 'Settings', icon: 'settings', href: '#settings' },
+    { value: 'help', label: 'Help center', icon: 'help', href: 'https://example.com/help', external: true } ] })),
+  h('div', { style: { width: 240 } }, h(D.MenuList, { label: 'Inline groups', submenu: 'inline', defaultValue: 'quarterly', items: [
+    { value: 'r', label: 'Reports', icon: 'chart', children: [{ value: 'quarterly', label: 'Quarterly review' }, { value: 'impact', label: 'Impact summary' }] },
+    { value: 's', label: 'Settings', icon: 'settings' }] }))));
+</script>
+</body>
+</html>

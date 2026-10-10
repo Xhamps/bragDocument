@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { ReactNode } from "react";
 import { Button, Card, cn, Icon, Tag, TopBar } from "@bragdoc/ui";
 import { DotWave } from "../home/DotWave";
+import { Logo } from "../layout/Logo";
 import {
   AuditPreview,
   DashboardPreview,
@@ -61,7 +62,7 @@ export function Component() {
         sticky
         // Match the page container so the pill lines up with the content.
         className="fixed inset-x-0 top-0 [&>div]:max-w-6xl"
-        brand={{ name: "Brag Document", href: "/" }}
+        brand={{ name: "Brag Document", href: "/", logo: <Logo /> }}
         renderLink={(_item, { href, ...props }) => (
           <Link to={href!} {...props} />
         )}

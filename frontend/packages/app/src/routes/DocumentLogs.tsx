@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import {
-  Tag,
   Button,
   Dialog,
   DialogContent,
@@ -12,12 +11,10 @@ import {
 } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Log } from "../lib/types";
-import { DocumentTabs } from "../documents/DocumentTabs";
+import { DocumentPage } from "../documents/DocumentPage";
 import { useDocument } from "../documents/useDocuments";
 import { ApiError } from "../lib/api";
 import { SharePanel } from "../sharing/SharePanel";
-import { Activity } from "../audit/Activity";
-import { useMe } from "../auth/useMe";
 import { ExportButton } from "../exports/ExportButton";
 import { LogFormDialog } from "../logs/LogFormDialog";
 import { ActiveFilters, LogFilters } from "../logs/LogFilters";
@@ -38,7 +35,6 @@ export function Component() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const docQuery = useDocument(id);
-  const { data: me } = useMe();
   const [sharing, setSharing] = useState(false);
   // The bot's deep link (PRD-0003 FR-6): `edit` is a UI param, not a filter.
   const editId = params.get("edit");
@@ -145,139 +141,129 @@ export function Component() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <Link to="/" className="text-sm text-fg-secondary hover:underline">
-          ← Documents
-        </Link>
-        <h2 className="type-title-2">{doc.title}</h2>
-        <DocumentTabs id={doc.id} current="logs" />
-        {doc.role !== "owner" && (
-          <span className="text-sm text-fg-secondary">
-            {`Shared by ${doc.owner_name} · you are ${doc.role}`}
-          </span>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          {archived ? (
-            <Tag>Archived · read-only</Tag>
-          ) : doc.role === "viewer" ? (
-            <Tag>Viewer · read-only</Tag>
-          ) : (
-            <Button variant="primary" onClick={() => setEditing("new")}>
-              New log
-            </Button>
-          )}
-          <ExportButton docId={doc.id} role={doc.role} params={params} />
-          {doc.role === "owner" && (
-            <Button variant="glass" onClick={() => setSharing(true)}>
-              Share
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <LogFilters params={params} onChange={setFilter} />
-      <ActiveFilters
-        params={params}
-        onRemove={(k, v) =>
-          setFilter(
-            k,
-            params.getAll(k).filter((x) => x !== v),
-          )
-        }
-        onClear={clearFilters}
-      />
-
-      {logs.error ? (
-        <p role="alert" className="text-danger">
-          {errorText(logs.error)}
-        </p>
-      ) : logs.isPending ? (
-        <p className="text-fg-secondary">Loading…</p>
-      ) : (
-        <>
-          <p aria-live="polite" className="text-sm text-fg-secondary">
-            {total} {total === 1 ? "log" : "logs"}
-          </p>
-          {!readOnly && items.some((l) => l.is_example) && (
-            <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3 text-sm">
-              <span>
-                Example logs show what a good entry looks like: what you did,
-                the result, and the evidence.
-              </span>
-              <Button
-                size="sm"
-                variant="glass"
-                disabled={removeExamples.isPending}
-                onClick={() => removeExamples.mutate(undefined)}
-              >
-                Remove examples
+      <DocumentPage
+        doc={doc}
+        current="logs"
+        actions={
+          <>
+            {!readOnly && (
+              <Button variant="primary" onClick={() => setEditing("new")}>
+                New log
               </Button>
-              {removeExamples.error && (
-                <p role="alert" className="text-danger">
-                  {errorText(removeExamples.error)}
+            )}
+            <ExportButton docId={doc.id} role={doc.role} params={params} />
+            {doc.role === "owner" && (
+              <Button variant="glass" onClick={() => setSharing(true)}>
+                Share
+              </Button>
+            )}
+          </>
+        }
+      >
+        <LogFilters params={params} onChange={setFilter} />
+        <ActiveFilters
+          params={params}
+          onRemove={(k, v) =>
+            setFilter(
+              k,
+              params.getAll(k).filter((x) => x !== v),
+            )
+          }
+          onClear={clearFilters}
+        />
+
+        {logs.error ? (
+          <p role="alert" className="text-danger">
+            {errorText(logs.error)}
+          </p>
+        ) : logs.isPending ? (
+          <p className="text-fg-secondary">Loading…</p>
+        ) : (
+          <>
+            <p aria-live="polite" className="text-sm text-fg-secondary">
+              {total} {total === 1 ? "log" : "logs"}
+            </p>
+            {!readOnly && items.some((l) => l.is_example) && (
+              <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3 text-sm">
+                <span>
+                  Example logs show what a good entry looks like: what you did,
+                  the result, and the evidence.
+                </span>
+                <Button
+                  size="sm"
+                  variant="glass"
+                  disabled={removeExamples.isPending}
+                  onClick={() => removeExamples.mutate(undefined)}
+                >
+                  Remove examples
+                </Button>
+                {removeExamples.error && (
+                  <p role="alert" className="text-danger">
+                    {errorText(removeExamples.error)}
+                  </p>
+                )}
+              </div>
+            )}
+            {total === 0 ? (
+              filtered ? (
+                <p className="text-fg-secondary">
+                  No logs match these filters.{" "}
+                  <Button variant="tinted" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
                 </p>
-              )}
-            </div>
-          )}
-          {total === 0 ? (
-            filtered ? (
+              ) : (
+                <p className="text-fg-secondary">
+                  No logs yet. Capture your latest win while you still remember
+                  the details.
+                </p>
+              )
+            ) : items.length === 0 ? (
               <p className="text-fg-secondary">
-                No logs match these filters.{" "}
-                <Button variant="tinted" onClick={clearFilters}>
-                  Clear filters
+                This page is empty.{" "}
+                <Button variant="tinted" onClick={() => setPage(1)}>
+                  Go to page 1
                 </Button>
               </p>
             ) : (
-              <p className="text-fg-secondary">
-                No logs yet. Capture your latest win while you still remember
-                the details.
-              </p>
-            )
-          ) : items.length === 0 ? (
-            <p className="text-fg-secondary">
-              This page is empty.{" "}
-              <Button variant="tinted" onClick={() => setPage(1)}>
-                Go to page 1
-              </Button>
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y rounded-md border">
-              {items.map((l) => (
-                <LogRow
-                  key={l.id}
-                  log={l}
-                  readOnly={readOnly}
-                  onEdit={setEditing}
-                  onDelete={setDeleting}
-                />
-              ))}
-            </ul>
-          )}
-          {pages > 1 && (
-            <nav aria-label="Pagination" className="flex items-center gap-3">
-              <Button
-                variant="glass"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Previous
-              </Button>
-              <span className="text-sm">
-                Page {page} of {pages}
-              </span>
-              <Button
-                variant="glass"
-                size="sm"
-                disabled={page >= pages}
-                onClick={() => setPage(page + 1)}
-              >
-                Next
-              </Button>
-            </nav>
-          )}
-        </>
-      )}
+              <ul className="flex flex-col divide-y rounded-md border">
+                {items.map((l) => (
+                  <LogRow
+                    key={l.id}
+                    log={l}
+                    readOnly={readOnly}
+                    onEdit={setEditing}
+                    onDelete={setDeleting}
+                  />
+                ))}
+              </ul>
+            )}
+            {pages > 1 && (
+              <nav aria-label="Pagination" className="flex items-center gap-3">
+                <Button
+                  variant="glass"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Page {page} of {pages}
+                </span>
+                <Button
+                  variant="glass"
+                  size="sm"
+                  disabled={page >= pages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </nav>
+            )}
+          </>
+        )}
+      </DocumentPage>
 
       <LogFormDialog
         open={editing !== null}
@@ -325,11 +311,6 @@ export function Component() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Owners, and tenant admins who can open the page (FR-11). */}
-      {(doc.role === "owner" || me?.role === "admin") && (
-        <Activity docId={doc.id} />
-      )}
 
       <SharePanel doc={doc} open={sharing} onOpenChange={setSharing} />
     </div>

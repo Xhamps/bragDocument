@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="117" viewBox="0 0 108 117" role="img" aria-labelledby="title"><title id="title">Brag Document monogram — white</title><defs>
+  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#3395FF"/>
+    <stop offset="48%" stop-color="#6A5DE0"/>
+    <stop offset="100%" stop-color="#A459D7"/>
+  </linearGradient>
+  <linearGradient id="foldHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.92"/>
+    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+  </linearGradient>
+</defs>
+<!-- Receipt/page silhouette with a folded upper-right corner and a B-shaped right edge -->
+<path d="M24 4H57C61 4 64 5.7 67 8.8L83 25.5C86 28.5 87 31.5 87 36V42C95 45 100 51 100 59C100 67 95 73 87 76C94 80 98 86 98 94C98 105 89 113 77 113H24C12 113 4 105 4 93V24C4 12 12 4 24 4Z" fill="#FFFFFF"/>
+<!-- Folded page corner -->
+<path d="M57 4V22C57 29 62 34 69 34H87C87 30 86 28.5 83 25.5L67 8.8C64 5.7 61 4 57 4Z" fill="#DDE7FF"/>
+<!-- Three receipt/document lines -->
+<path d="M22 53H66 M22 70H73 M22 87H61" fill="none" stroke="#040617" stroke-width="7.5" stroke-linecap="round"/>
+</svg>

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Card, TextField } from "@bragdoc/ui";
+import { Link } from "react-router";
+import { Card, TextField, focusRing } from "@bragdoc/ui";
+import { Logo } from "../layout/Logo";
 
 export function AuthCard({
   title,
@@ -15,7 +17,14 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm items-center p-4">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-4">
+      <Link
+        to="/"
+        className={`${focusRing} inline-flex items-center gap-2 self-center rounded-sm text-[17px] font-semibold text-fg-primary no-underline`}
+      >
+        <Logo className="h-8" />
+        Brag Document
+      </Link>
       {/* Not Card's title prop: that renders an h3, and this page needs its h1. */}
       <Card className="flex w-full flex-col gap-4">
         <div className="flex flex-col gap-1">

@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { me, mockFetch, renderAt } from "../test/mocks";
+import { me, mockFetch, openAccountMenu, renderAt } from "../test/mocks";
 
 const entry = {
   id: 2,
@@ -36,7 +36,6 @@ test("lists entries; clicking a user or document filters and keeps it in the URL
     await screen.findByText(/created log “Migrated billing”/),
   ).toBeInTheDocument();
   expect(screen.getByText("telegram")).toBeInTheDocument();
-  expect(screen.getByRole("columnheader", { name: "Source" })).toBeVisible();
 
   await userEvent.click(screen.getByRole("button", { name: "Bob" }));
   await vi.waitFor(() =>
@@ -106,15 +105,16 @@ test("a failed load shows the error with Retry", async () => {
   await vi.waitFor(() => expect(auditCalls(calls)).toHaveLength(2));
 });
 
-test("nav shows Audit log to admins", async () => {
+test("menu shows Audit log to admins", async () => {
   mockFetch({ "GET /me": me, "GET /documents": docs });
   renderAt("/");
+  await openAccountMenu();
   expect(
-    await screen.findByRole("link", { name: "Audit log" }),
+    await screen.findByRole("menuitem", { name: "Audit log" }),
   ).toHaveAttribute("href", "/audit");
 });
 
-test("nav shows Audit log to members who own a document", async () => {
+test("menu shows Audit log to members who own a document", async () => {
   mockFetch({
     "GET /me": { ...me, role: "member" },
     "GET /documents": {
@@ -123,16 +123,18 @@ test("nav shows Audit log to members who own a document", async () => {
     },
   });
   renderAt("/");
+  await openAccountMenu();
   expect(
-    await screen.findByRole("link", { name: "Audit log" }),
+    await screen.findByRole("menuitem", { name: "Audit log" }),
   ).toBeInTheDocument();
 });
 
-test("nav hides Audit log from members who own nothing", async () => {
+test("menu hides Audit log from members who own nothing", async () => {
   mockFetch({ "GET /me": { ...me, role: "member" }, "GET /documents": docs });
   renderAt("/");
-  await screen.findByText("a@acme.com");
+  await openAccountMenu();
+  await screen.findByRole("menuitem", { name: "Settings" });
   expect(
-    screen.queryByRole("link", { name: "Audit log" }),
+    screen.queryByRole("menuitem", { name: "Audit log" }),
   ).not.toBeInTheDocument();
 });

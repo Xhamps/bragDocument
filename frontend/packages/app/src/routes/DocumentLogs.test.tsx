@@ -3,8 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { me, mockFetch, renderAt } from "../test/mocks";
 import type { AuditEntry, Document, Log } from "../lib/types";
 
-afterEach(() => vi.useRealTimers());
-
 const doc = (over: Partial<Document> = {}): Document => ({
   id: "d1",
   owner_id: "u1",
@@ -80,11 +78,13 @@ test("shows statement, expands to Markdown and safe links", async () => {
 
 test("Markdown images are not rendered", async () => {
   mockFetch(routes([log({ description: "![x](https://evil.example/p.png)" })]));
-  const { container } = renderAt("/documents/d1");
-  await userEvent.click(
-    await screen.findByRole("button", { name: /moved billing jobs/i }),
-  );
-  expect(container.querySelector("img")).toBeNull();
+  renderAt("/documents/d1");
+  const row = await screen.findByRole("button", {
+    name: /moved billing jobs/i,
+  });
+  await userEvent.click(row);
+  // Only the log row: the header's logo is an <img> too.
+  expect(row.closest("li")!.querySelector("img")).toBeNull();
 });
 
 test("warns when a log has no impact", async () => {
@@ -306,64 +306,67 @@ test("missing document says so", async () => {
   expect(await screen.findByText("Document not found.")).toBeInTheDocument();
 });
 
-test("owner sees Activity with a View all link", async () => {
+test("owner gets an Activity tab listing entries with a View all link", async () => {
   mockFetch({
     ...routes(),
     "GET /documents/d1/audit": { entries: [edited], next_before: null },
   });
-  renderAt("/documents/d1");
+  const { router } = renderAt("/documents/d1");
+  await userEvent.click(await screen.findByRole("link", { name: "Activity" }));
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe("/documents/d1/activity"),
+  );
   expect(
-    await screen.findByRole("heading", { name: "Activity" }),
+    await screen.findByText(/edited log “Migrated billing”/),
   ).toBeInTheDocument();
+  expect(screen.getByText("Ana")).toBeInTheDocument();
   expect(
-    await screen.findByText(/Ana edited log “Migrated billing”/),
-  ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /view all/i })).toHaveAttribute(
-    "href",
-    "/audit?document=d1",
+    screen.getByRole("link", { name: /view all in audit log/i }),
+  ).toHaveAttribute("href", "/audit?document=d1");
+  expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
+    "aria-current",
+    "page",
   );
 });
 
 const editorDoc = doc({ role: "editor", owner_id: "u2", owner_name: "Bob" });
 
-test("editor does not see Activity", async () => {
+test("editor has no Activity tab and is sent back to the logs", async () => {
   const calls = mockFetch({
     ...routes([log()], editorDoc),
     "GET /me": { ...me, role: "member" },
   });
-  renderAt("/documents/d1");
+  const { router } = renderAt("/documents/d1/activity");
   await screen.findByText("Moved billing jobs");
+  expect(router.state.location.pathname).toBe("/documents/d1");
   expect(
-    screen.queryByRole("heading", { name: "Activity" }),
+    screen.queryByRole("link", { name: "Activity" }),
   ).not.toBeInTheDocument();
   expect(calls.some((c) => c.path === "/documents/d1/audit")).toBe(false);
 });
 
-test("Activity refetches once the outbox has delivered", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  // The entry lands through the outbox, after the first post-edit refetch.
-  let saved = false;
-  let refetches = 0;
-  mockFetch({
+test("Activity filters by user, action and dates through the URL", async () => {
+  const calls = mockFetch({
     ...routes(),
-    "GET /documents/d1/audit": () => {
-      if (saved) refetches++;
-      return { entries: refetches > 1 ? [edited] : [], next_before: null };
-    },
-    "PATCH /documents/d1/logs/l1": () => {
-      saved = true;
-      return log();
+    "GET /documents/d1/audit": { entries: [edited], next_before: null },
+    "GET /audit/filters": {
+      actors: [{ id: "u1", name: "Ana", email: "a@acme.com" }],
+      documents: [{ id: "d1", title: "2026" }],
     },
   });
-  renderAt("/documents/d1");
-  expect(await screen.findByText("No activity yet.")).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Actions" }));
-  await userEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
-  await userEvent.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(refetches).toBe(1));
-  expect(screen.getByText("No activity yet.")).toBeInTheDocument();
-  vi.advanceTimersByTime(2000);
-  expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
+  const { router } = renderAt("/documents/d1/activity?action=log.edited");
+  await screen.findByText(/edited log/);
+  const activity = () => calls.filter((c) => c.path === "/documents/d1/audit");
+  expect(activity()[0].search).toContain("action=log.edited");
+  // The tab is one document: no document picker.
+  expect(screen.queryByLabelText("Document")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: /view all in audit log/i }),
+  ).toHaveAttribute("href", "/audit?action=log.edited&document=d1");
+
+  await userEvent.selectOptions(await screen.findByLabelText("User"), "u1");
+  await waitFor(() => expect(activity().at(-1)?.search).toContain("actor=u1"));
+  expect(router.state.location.search).toContain("actor=u1");
 });
 
 test("a tenant admin with an editor grant sees Activity", async () => {
@@ -371,6 +374,6 @@ test("a tenant admin with an editor grant sees Activity", async () => {
     ...routes([log()], editorDoc),
     "GET /documents/d1/audit": { entries: [edited], next_before: null },
   });
-  renderAt("/documents/d1");
-  expect(await screen.findByText(/Ana edited log/)).toBeInTheDocument();
+  renderAt("/documents/d1/activity");
+  expect(await screen.findByText(/edited log/)).toBeInTheDocument();
 });

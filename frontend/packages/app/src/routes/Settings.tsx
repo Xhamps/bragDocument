@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Card, Tag } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
+import { Header } from "../layout/Header";
 import {
   useTelegramCode,
   useTelegramStatus,
@@ -10,7 +11,10 @@ import {
 export function Component() {
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="type-title-2">Settings</h2>
+      <Header
+        breadcrumbs={[{ label: "Documents", href: "/" }, { label: "Settings" }]}
+        title="Settings"
+      />
       <TelegramCard />
     </div>
   );

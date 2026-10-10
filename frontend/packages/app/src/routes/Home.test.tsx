@@ -1,5 +1,11 @@
 import { screen } from "@testing-library/react";
-import { me, mockFetch, renderAt, supabaseMock } from "../test/mocks";
+import {
+  accountButton,
+  me,
+  mockFetch,
+  renderAt,
+  supabaseMock,
+} from "../test/mocks";
 
 function signedOut() {
   supabaseMock.auth.getSession.mockResolvedValueOnce({
@@ -49,6 +55,6 @@ test("signed-out visitor on a protected page is still sent to sign-in", async ()
 test("signed-in user at / still sees their documents", async () => {
   mockFetch({ "GET /me": me, "GET /documents": { owned: [], shared: [] } });
   renderAt("/");
-  expect(await screen.findByText("a@acme.com")).toBeInTheDocument();
+  expect(await accountButton()).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
 });

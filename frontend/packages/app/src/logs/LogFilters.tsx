@@ -32,10 +32,22 @@ export function LogFilters({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         <SearchInput value={params.get("q") ?? ""} onCommit={single("q")} />
+        <Select
+          aria-label="Sort"
+          options={SORTS}
+          value={params.get("sort") ?? "-created_at"}
+          onChange={(e) =>
+            onChange(
+              "sort",
+              e.target.value === "-created_at" ? [] : [e.target.value],
+            )
+          }
+        />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <TextField
           aria-label="Filter by tag"
           placeholder="Tag"
-          className="w-36"
           onKeyDown={(e) => {
             const v = e.currentTarget.value.trim().toLowerCase();
             if (e.key === "Enter" && v) {
@@ -49,7 +61,6 @@ export function LogFilters({
           key={params.get("domain") ?? ""} // remount when a chip clears it
           aria-label="Filter by link domain"
           placeholder="Domain, e.g. github.com"
-          className="w-52"
           defaultValue={params.get("domain") ?? ""}
           onBlur={(e) => commitDomain(e.target.value)}
           onKeyDown={(e) =>
@@ -59,30 +70,17 @@ export function LogFilters({
         <TextField
           type="date"
           aria-label="From"
-          className="w-40"
           value={params.get("from") ?? ""}
           onChange={(e) => single("from")(e.target.value)}
         />
         <TextField
           type="date"
           aria-label="To"
-          className="w-40"
           value={params.get("to") ?? ""}
           onChange={(e) => single("to")(e.target.value)}
         />
-        <Select
-          aria-label="Sort"
-          options={SORTS}
-          value={params.get("sort") ?? "-created_at"}
-          onChange={(e) =>
-            onChange(
-              "sort",
-              e.target.value === "-created_at" ? [] : [e.target.value],
-            )
-          }
-        />
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t pt-3">
         <Toggles
           legend="Status"
           values={STATUSES}
@@ -116,7 +114,7 @@ function Toggles({
   onToggle: (v: string) => void;
 }) {
   return (
-    <fieldset className="flex items-center gap-1">
+    <fieldset className="flex flex-wrap items-center gap-1">
       <legend className="sr-only">{legend}</legend>
       <span aria-hidden className="mr-1 text-sm text-fg-secondary">
         {legend}
@@ -165,7 +163,8 @@ function SearchInput({
       type="search"
       aria-label="Search logs"
       placeholder="Search name and description"
-      className="w-64"
+      icon="search"
+      className="min-w-60 flex-1"
       value={text}
       onChange={(e) => setText(e.target.value)}
     />

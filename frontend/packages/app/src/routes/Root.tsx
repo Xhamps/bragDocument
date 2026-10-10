@@ -1,5 +1,7 @@
-import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { IconButton, TopBar, useTheme, type TopBarItem } from "@bragdoc/ui";
+import { Outlet, useNavigate } from "react-router";
+import { IconButton, TopBar, useTheme, type UserMenuItem } from "@bragdoc/ui";
+import { routerLink } from "../lib/routerLink";
+import { Logo } from "../layout/Logo";
 import { useMe } from "../auth/useMe";
 import { useDocuments } from "../documents/useDocuments";
 import { supabase } from "../lib/supabase";
@@ -9,7 +11,6 @@ export function Component() {
   const { data: docs } = useDocuments();
   const canAudit = me?.role === "admin" || (docs?.owned.length ?? 0) > 0;
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
 
   async function signOut() {
@@ -17,31 +18,31 @@ export function Component() {
     navigate("/sign-in");
   }
 
-  const items = [
-    me?.role === "admin" && { label: me.tenant.name, href: "/tenant" },
-    canAudit && { label: "Audit log", href: "/audit" },
-    import.meta.env.DEV && { label: "Kitchen sink", href: "/kitchen-sink" },
-    { label: "Settings", href: "/settings" },
-  ]
-    .filter((i): i is TopBarItem & { href: string } => Boolean(i))
-    // value = href: labels can collide (a tenant named "Settings").
-    .map((i) => ({ ...i, value: i.href }));
-  // "" = nothing current (e.g. "/").
-  const current =
-    items.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
-      ?.href ?? "";
+  const links: (UserMenuItem | false)[] = [
+    me?.role === "admin" && {
+      label: me.tenant.name,
+      href: "/tenant",
+      icon: "user",
+    },
+    canAudit && { label: "Audit log", href: "/audit", icon: "history" },
+    import.meta.env.DEV && {
+      label: "Kitchen sink",
+      href: "/kitchen-sink",
+      icon: "grid",
+    },
+    { label: "Settings", href: "/settings", icon: "settings" },
+  ];
 
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-5xl p-4">
         {/* Never pass onSelect: it preventDefaults link clicks and blocks router navigation. */}
         <TopBar
-          brand={{ name: "Brag Document", href: "/" }}
-          items={items}
-          value={current}
-          renderLink={(_item, { href, ...props }) => (
-            <Link to={href} {...props} />
-          )}
+          variant="floating"
+          // Fill the page container so the pill lines up with the content.
+          className="px-0 pt-0 [&>div]:max-w-none"
+          brand={{ name: "Brag Document", href: "/", logo: <Logo /> }}
+          renderLink={routerLink}
           actions={
             <IconButton
               icon={theme === "dark" ? "sun" : "moon"}
@@ -51,9 +52,15 @@ export function Component() {
             />
           }
           user={{
-            variant: "pill",
-            user: { name: me?.email ?? "" },
+            user: {
+              name: me?.display_name || me?.email || "",
+              // Under the name; skipped when the name already is the email.
+              email: me?.display_name ? me.email : undefined,
+            },
+            renderLink: routerLink,
             items: [
+              ...links.filter((i) => i !== false),
+              "separator",
               {
                 label: "Sign out",
                 icon: "signOut",

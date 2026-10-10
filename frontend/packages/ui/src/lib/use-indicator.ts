@@ -5,8 +5,10 @@ type Pos = { x: number; y: number; w: number; h: number };
 // Port of the DS useIndicator: measures the `[data-on="true"]` child of the
 // returned ref and positions a sliding pill over it. `animated` turns on after
 // the first frame so the initial placement does not slide in from 0,0.
-function useIndicator(deps: React.DependencyList) {
-  const ref = React.useRef<HTMLDivElement>(null);
+function useIndicator<T extends HTMLElement = HTMLDivElement>(
+  deps: React.DependencyList,
+) {
+  const ref = React.useRef<T>(null);
   const [pos, setPos] = React.useState<Pos | null>(null);
   const [animated, setAnimated] = React.useState(false);
 

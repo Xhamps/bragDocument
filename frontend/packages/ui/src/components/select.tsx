@@ -15,7 +15,7 @@ type SelectProps = Omit<React.ComponentProps<"select">, "children" | "prefix"> &
     options: Array<string | SelectOption>;
     /** Inline lead-in inside the pill ("Corner Radius:"). */
     prefix?: React.ReactNode;
-    /** Adds a disabled empty first option ("Sort by"). */
+    /** Adds a disabled empty first option ("Sort by"); shows only with `value=""` or `defaultValue=""`. */
     placeholder?: string;
   };
 
@@ -29,6 +29,8 @@ function Select({
   className,
   id,
   disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
   ...props
 }: SelectProps) {
   const autoId = React.useId();
@@ -41,6 +43,8 @@ function Select({
       error={error}
       disabled={disabled}
       className={className}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
     >
       {(aria) => (
         <div

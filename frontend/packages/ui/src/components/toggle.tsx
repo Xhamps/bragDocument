@@ -35,7 +35,7 @@ function Toggle({
         onCheckedChange={onChange}
         disabled={disabled}
         className={cn(
-          "relative h-[30px] w-[52px] shrink-0 cursor-[inherit] rounded-pill border-container-border glass p-0 inset-shadow-ds",
+          "relative h-[30px] w-[52px] shrink-0 cursor-[inherit] rounded-pill border border-container-border bg-container p-0 inset-shadow-ds",
           "transition-[background-color,border-color] duration-base ease-standard",
           "disabled:opacity-50 data-checked:border-button data-checked:bg-button",
           focusRing,
@@ -44,7 +44,7 @@ function Toggle({
         <Switch.Thumb
           className={cn(
             "absolute top-[3px] left-[3px] block size-[22px] rounded-pill bg-fg-tertiary shadow-sm",
-            "transition-[translate,background-color,width] duration-base ease-spring group-active/toggle:w-[26px]",
+            "[transition:translate_var(--duration-base)_var(--ease-spring),background-color_var(--duration-base)_var(--ease-standard),width_var(--duration-fast)_var(--ease-standard)] group-active/toggle:w-[26px]",
             "data-checked:translate-x-[22px] data-checked:bg-button-fg data-checked:shadow-md group-active/toggle:data-checked:translate-x-[18px]",
           )}
         />

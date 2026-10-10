@@ -11,6 +11,8 @@ function TextArea({
   className,
   id,
   disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
   ...props
 }: TextAreaProps) {
   const autoId = React.useId();
@@ -23,6 +25,8 @@ function TextArea({
       error={error}
       disabled={disabled}
       className={className}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
     >
       {(aria) => (
         <textarea

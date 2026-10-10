@@ -10,7 +10,10 @@ type FieldFrameProps = {
   error?: React.ReactNode;
 };
 
-type FieldAria = { "aria-invalid"?: true; "aria-describedby"?: string };
+type FieldAria = Pick<
+  React.AriaAttributes,
+  "aria-invalid" | "aria-describedby"
+>;
 
 // Shared label / hint / error frame for TextField, TextArea and Select.
 function Field({
@@ -21,12 +24,15 @@ function Field({
   disabled,
   className,
   children,
-}: FieldFrameProps & {
-  id: string;
-  disabled?: boolean;
-  className?: string;
-  children: (aria: FieldAria) => React.ReactNode;
-}) {
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+}: FieldFrameProps &
+  FieldAria & {
+    id: string;
+    disabled?: boolean;
+    className?: string;
+    children: (aria: FieldAria) => React.ReactNode;
+  }) {
   const msgId = `${id}-msg`;
   return (
     <div
@@ -47,8 +53,12 @@ function Field({
         </label>
       )}
       {children({
-        "aria-invalid": error ? true : undefined,
-        "aria-describedby": error || hint ? msgId : undefined,
+        // The frame's error wins; otherwise the caller's aria-invalid stands.
+        "aria-invalid": error ? true : invalid,
+        "aria-describedby":
+          [describedBy, error || hint ? msgId : undefined]
+            .filter(Boolean)
+            .join(" ") || undefined,
       })}
       {error ? (
         <div id={msgId} role="alert" className="type-footnote text-danger">

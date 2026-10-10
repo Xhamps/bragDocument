@@ -44,3 +44,10 @@ test("Toggle is a switch that reports changes", async () => {
   await userEvent.click(screen.getByRole("switch", { name: "Notifications" }));
   expect(onChange).toHaveBeenCalledWith(true);
 });
+
+test("Checkbox without a label keeps the caller's aria-label", () => {
+  render(<Checkbox aria-label="Select row" />);
+  expect(
+    screen.getByRole("checkbox", { name: "Select row" }),
+  ).toBeInTheDocument();
+});

@@ -25,3 +25,15 @@ test("TextArea shares the frame", () => {
     "true",
   );
 });
+
+test("caller aria-describedby is merged with the hint", () => {
+  render(<TextField aria-label="X" aria-describedby="ext" hint="h" />);
+  const ids = screen.getByLabelText("X").getAttribute("aria-describedby");
+  expect(ids?.split(" ")).toEqual(expect.arrayContaining(["ext"]));
+  expect(ids?.split(" ")).toHaveLength(2);
+});
+
+test("caller aria-invalid stands when there is no error", () => {
+  render(<TextField aria-label="X" aria-invalid="true" />);
+  expect(screen.getByLabelText("X")).toHaveAttribute("aria-invalid", "true");
+});

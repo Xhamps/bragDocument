@@ -25,6 +25,8 @@ function TextField({
   className,
   id,
   disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
   ...props
 }: TextFieldProps) {
   const autoId = React.useId();
@@ -37,6 +39,8 @@ function TextField({
       error={error}
       disabled={disabled}
       className={className}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
     >
       {(aria) => (
         <div

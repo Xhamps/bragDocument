@@ -23,6 +23,7 @@ function Checkbox({
   ...props
 }: CheckboxProps) {
   const id = React.useId();
+  const text = label ?? children;
   return (
     <label
       data-slot="checkbox"
@@ -34,7 +35,7 @@ function Checkbox({
     >
       <RadixCheckbox.Root
         disabled={disabled}
-        aria-labelledby={`${id}-label`}
+        aria-labelledby={text != null ? `${id}-label` : undefined}
         aria-describedby={description ? `${id}-desc` : undefined}
         {...props}
         className={cn(
@@ -53,7 +54,7 @@ function Checkbox({
         </RadixCheckbox.Indicator>
       </RadixCheckbox.Root>
       <span className="flex flex-col peer-data-checked:text-fg-primary">
-        <span id={`${id}-label`}>{label ?? children}</span>
+        {text != null && <span id={`${id}-label`}>{text}</span>}
         {description && (
           <span id={`${id}-desc`} className="type-footnote text-fg-secondary">
             {description}

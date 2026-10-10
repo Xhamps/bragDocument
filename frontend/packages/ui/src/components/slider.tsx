@@ -17,6 +17,9 @@ type SliderProps = {
   disabled?: boolean;
   id?: string;
   className?: string;
+  /** Names the input when there is no visible `label`. */
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 };
 
 // Native range input, as in the DS; the filled track is a gradient at --pct.
@@ -34,10 +37,15 @@ function Slider({
   disabled,
   id,
   className,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: SliderProps) {
   const [inner, setInner] = React.useState(defaultValue ?? min);
   const current = value ?? inner;
-  const pct = max > min ? ((current - min) / (max - min)) * 100 : 0;
+  const pct =
+    max > min
+      ? Math.min(100, Math.max(0, ((current - min) / (max - min)) * 100))
+      : 0;
   const autoId = React.useId();
   const fid = id ?? autoId;
 
@@ -91,6 +99,8 @@ function Slider({
           step={step}
           value={current}
           disabled={disabled}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           aria-valuetext={format(current)}
           onChange={(e) => {
             const v = Number(e.target.value);

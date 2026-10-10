@@ -16,14 +16,22 @@ function useIndicator(deps: React.DependencyList) {
     if (!box || !el) return setPos(null);
     const b = box.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    setPos({
+    const next = {
       x: r.left - b.left - box.clientLeft,
       y: r.top - b.top - box.clientTop,
       w: r.width,
       h: r.height,
-    });
+    };
+    // Skip the re-render when resize/font events leave the pill in place.
+    setPos((p) =>
+      p && p.x === next.x && p.y === next.y && p.w === next.w && p.h === next.h
+        ? p
+        : next,
+    );
   }, []);
 
+  // Callers pass their own deps (value, option count, size); the linter cannot
+  // see through a forwarded array.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useLayoutEffect(measure, deps);
 

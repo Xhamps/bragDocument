@@ -75,3 +75,16 @@ test("FieldTile shows label and placeholder", () => {
     screen.getByRole("button", { name: /From.*Choose/ }),
   ).toBeInTheDocument();
 });
+
+test("Stepper keeps one live region across changes", async () => {
+  render(<Stepper label="Bags" defaultValue={1} />);
+  const out = screen.getByRole("status");
+  await userEvent.click(screen.getByRole("button", { name: /increase/i }));
+  expect(screen.getByRole("status")).toBe(out);
+  expect(out).toHaveTextContent("2");
+});
+
+test("Slider without a visible label takes aria-label", () => {
+  render(<Slider aria-label="Volume" defaultValue={500} max={100} />);
+  expect(screen.getByRole("slider", { name: "Volume" })).toBeInTheDocument();
+});

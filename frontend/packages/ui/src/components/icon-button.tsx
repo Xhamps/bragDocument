@@ -11,7 +11,7 @@ const iconButtonVariants = cva(
   [
     "relative inline-flex shrink-0 cursor-pointer items-center justify-center border border-transparent p-0",
     "transition-[background-color,border-color,color,box-shadow,translate,scale] duration-base ease-standard",
-    "hover:-translate-y-px active:scale-[0.92] active:duration-fast active:ease-spring",
+    "hover:-translate-y-px motion-reduce:hover:translate-y-0 active:scale-[0.92] active:duration-fast active:ease-spring",
     "disabled:pointer-events-none disabled:cursor-default disabled:shadow-none",
     "[&>svg]:transition-transform [&>svg]:duration-base [&>svg]:ease-spring",
     focusRing,

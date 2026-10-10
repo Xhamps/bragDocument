@@ -20,7 +20,7 @@ function SearchField({ label, className, ...props }: SearchFieldProps) {
       <input
         type="search"
         placeholder="Search"
-        aria-label={label ?? props.placeholder ?? "Search"}
+        aria-label={label || props.placeholder || "Search"}
         {...props}
         className={cn(
           "min-w-0 flex-1 rounded-sm border-0 bg-transparent text-[15px] text-fg-primary placeholder:text-fg-secondary",

@@ -60,7 +60,7 @@ function SegmentedControl({
         className={cn(
           "pointer-events-none absolute top-0 left-0 z-0 box-border rounded-pill will-change-[transform,width]",
           tone === "neutral"
-            ? "glass shadow-md"
+            ? "border border-container-border bg-container shadow-md"
             : "after:absolute after:inset-x-1/4 after:bottom-[3px] after:h-0.5 after:rounded-[2px] after:bg-button-text",
           animated &&
             "[transition:transform_var(--duration-slow)_var(--ease-spring),width_var(--duration-slow)_var(--ease-spring),height_var(--duration-slow)_var(--ease-spring),opacity_var(--duration-fast)_var(--ease-standard)]",

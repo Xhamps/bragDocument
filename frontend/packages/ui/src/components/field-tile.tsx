@@ -25,7 +25,7 @@ function FieldTile({
       {...props}
       className={cn(
         "group/tile box-border flex min-h-[72px] w-full cursor-pointer items-center gap-4 rounded-md glass px-5 py-3 text-left text-fg-primary",
-        "transition-[border-color,box-shadow,translate,scale] duration-base ease-standard hover:-translate-y-0.5 hover:border-fg-tertiary hover:shadow-md active:scale-[0.99]",
+        "transition-[border-color,box-shadow,translate,scale] duration-base ease-standard hover:-translate-y-0.5 hover:border-fg-tertiary hover:shadow-md active:scale-[0.99] motion-reduce:hover:translate-y-0",
         focusRing,
         className,
       )}

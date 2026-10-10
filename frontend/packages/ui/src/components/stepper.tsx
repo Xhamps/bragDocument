@@ -57,12 +57,14 @@ function Stepper({
           "border-button disabled:border-button-inactive disabled:bg-transparent disabled:text-button-inactive",
         )}
       />
+      {/* Stable live region; only the inner span remounts to replay the tick. */}
       <output
-        key={current}
         aria-live="polite"
-        className="inline-block min-w-5 animate-tick text-center type-title-3 text-fg-primary tabular-nums"
+        className="inline-block min-w-5 text-center type-title-3 text-fg-primary tabular-nums"
       >
-        {current}
+        <span key={current} className="inline-block animate-tick">
+          {current}
+        </span>
       </output>
       <IconButton
         icon="minus"

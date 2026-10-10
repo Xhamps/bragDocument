@@ -1,24 +1,33 @@
 import { act, screen, waitFor } from "@testing-library/react";
-import { me, mockFetch, renderAt, supabaseMock } from "../test/mocks";
+import userEvent from "@testing-library/user-event";
+import {
+  accountButton,
+  me,
+  mockFetch,
+  openAccountMenu,
+  renderAt,
+  supabaseMock,
+} from "../test/mocks";
 
-test("shell renders the title, the caller, and the documents page", async () => {
+test("shell renders the title, the caller's avatar, and the documents page", async () => {
   mockFetch({ "GET /me": me, "GET /documents": { owned: [], shared: [] } });
   renderAt("/");
   expect(
     await screen.findByRole("heading", { name: "Brag Document" }),
   ).toBeInTheDocument();
-  expect(await screen.findByText("a@acme.com")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
-    "href",
-    "/settings",
-  );
+  await accountButton();
+  // The email only shows inside the menu, not in the bar.
+  expect(screen.queryByText("a@acme.com")).not.toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "Your documents" }),
+  ).toBeInTheDocument();
 });
 
 test("unauthenticated visitor is sent to sign-in", async () => {
   supabaseMock.auth.getSession.mockResolvedValueOnce({
     data: { session: null },
   } as never);
-  renderAt("/");
+  renderAt("/settings");
   expect(
     await screen.findByRole("heading", { name: /sign in/i }),
   ).toBeInTheDocument();
@@ -27,40 +36,47 @@ test("unauthenticated visitor is sent to sign-in", async () => {
 test("unknown path renders not found", async () => {
   mockFetch({ "GET /me": me });
   renderAt("/nope");
-  expect(await screen.findByText(/not found/i)).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "Page not found" }),
+  ).toBeInTheDocument();
 });
 
 test("sign-out clears the cached caller", async () => {
   mockFetch({ "GET /me": me, "GET /documents": { owned: [], shared: [] } });
   renderAt("/");
-  expect(await screen.findByText("a@acme.com")).toBeInTheDocument();
+  await accountButton();
   const onChange = supabaseMock.auth.onAuthStateChange.mock.calls[0][0];
   act(() => onChange("SIGNED_OUT", null));
   await waitFor(() =>
-    expect(screen.queryByText("a@acme.com")).not.toBeInTheDocument(),
+    expect(
+      screen.queryByRole("button", { name: "Ada, account menu" }),
+    ).not.toBeInTheDocument(),
   );
 });
 
-test("nav highlights the current route by href", async () => {
+test("the account menu holds the nav and sign-out; the theme toggle stays in the bar", async () => {
   mockFetch({
     "GET /me": me,
     "GET /documents": { owned: [], shared: [] },
-    "GET /audit": { entries: [], next_before: null },
-    "GET /audit/filters": { actors: [], documents: [] },
   });
   const { router } = renderAt("/");
-  await screen.findByText("a@acme.com");
-  // The mobile menu may duplicate links, so check every copy.
-  const navLinks = () =>
-    ["Acme", "Audit log", "Settings"].flatMap((name) =>
-      screen.getAllByRole("link", { name }),
-    );
-  for (const link of navLinks())
-    expect(link).not.toHaveAttribute("aria-current");
-
-  await act(() => router.navigate("/audit"));
-  for (const link of screen.getAllByRole("link", { name: "Audit log" }))
-    expect(link).toHaveAttribute("aria-current", "page");
-  for (const link of navLinks().filter((l) => l.textContent !== "Audit log"))
-    expect(link).not.toHaveAttribute("aria-current");
+  expect(
+    await screen.findByRole("button", { name: "Toggle dark mode" }),
+  ).toBeInTheDocument();
+  await openAccountMenu();
+  expect(screen.getByText("a@acme.com")).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Acme" })).toHaveAttribute(
+    "href",
+    "/tenant",
+  );
+  expect(screen.getByRole("menuitem", { name: "Audit log" })).toHaveAttribute(
+    "href",
+    "/audit",
+  );
+  expect(
+    screen.getByRole("menuitem", { name: "Sign out" }),
+  ).toBeInTheDocument();
+  // Client-side navigation, not a full page load.
+  await userEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
+  expect(router.state.location.pathname).toBe("/settings");
 });

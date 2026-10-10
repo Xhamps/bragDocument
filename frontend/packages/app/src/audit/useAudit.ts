@@ -3,12 +3,36 @@ import {
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import { api } from "../lib/api";
 import type { AuditFilters, AuditPage } from "../lib/types";
 
-export type AuditQuery = Partial<
-  Record<"actor" | "document" | "action" | "from" | "to", string>
->;
+const keys = ["actor", "document", "action", "from", "to"] as const;
+export type AuditKey = (typeof keys)[number];
+export type AuditQuery = Partial<Record<AuditKey, string>>;
+
+const nonEmpty = (q: AuditQuery) =>
+  Object.fromEntries(Object.entries(q).filter(([, v]) => v)) as Record<
+    string,
+    string
+  >;
+
+/** Filters live in the URL so a filtered view can be shared (PRD-0009 §9). */
+export function useAuditParams() {
+  const [params, setParams] = useSearchParams();
+  const filters = Object.fromEntries(
+    keys.map((k) => [k, params.get(k) ?? ""]),
+  ) as Required<AuditQuery>;
+  const set = (k: AuditKey, v: string) =>
+    setParams((p) => {
+      const next = new URLSearchParams(p);
+      if (v) next.set(k, v);
+      else next.delete(k);
+      return next;
+    });
+  return { filters, set, clear: () => setParams({}) };
+}
+export type AuditParams = ReturnType<typeof useAuditParams>;
 
 function pages(path: string, params: Record<string, string>, limit: number) {
   return {
@@ -25,15 +49,24 @@ function pages(path: string, params: Record<string, string>, limit: number) {
 
 /** The Audit log page: filters straight from the URL. */
 export function useAudit(filters: AuditQuery) {
-  const params = Object.fromEntries(
-    Object.entries(filters).filter(([, v]) => v),
-  ) as Record<string, string>;
-  return useInfiniteQuery(pages("/audit", params, 50));
+  return useInfiniteQuery(pages("/audit", nonEmpty(filters), 50));
 }
 
-/** The document page's Activity section: the latest few. */
-export function useDocumentActivity(docId: string) {
-  return useInfiniteQuery(pages(`/documents/${docId}/audit`, {}, 10));
+/** The document's Activity tab; only fetched for owners and tenant admins. */
+export function useDocumentActivity(
+  docId: string,
+  filters: AuditQuery,
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    // The path picks the document.
+    ...pages(
+      `/documents/${docId}/audit`,
+      nonEmpty({ ...filters, document: "" }),
+      50,
+    ),
+    enabled,
+  });
 }
 
 export function useAuditFilters() {

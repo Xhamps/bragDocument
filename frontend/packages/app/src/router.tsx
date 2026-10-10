@@ -25,6 +25,10 @@ export const routes: RouteObject[] = [
             path: "documents/:id/dashboard",
             lazy: () => import("./routes/Dashboard"),
           },
+          {
+            path: "documents/:id/activity",
+            lazy: () => import("./routes/DocumentActivity"),
+          },
           ...(import.meta.env.DEV
             ? [
                 {

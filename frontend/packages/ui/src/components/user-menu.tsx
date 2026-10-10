@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { cn, focusRing } from "#lib/utils";
 import { Icon, renderIcon, type IconProp } from "#components/icon";
 import {
@@ -18,6 +19,13 @@ type UserMenuItem = {
   shortcut?: string;
 };
 
+/** Props for one rendered menu link; spread them onto your router's link (map `href` to `to`). */
+type UserMenuLinkProps = {
+  href: string;
+  className: string;
+  children: React.ReactNode;
+};
+
 type UserMenuProps = {
   user: {
     name: string;
@@ -29,6 +37,11 @@ type UserMenuProps = {
   /** Defaults to Account, Billing, separator, Sign out. */
   items?: Array<UserMenuItem | "separator">;
   onSelect?: (label: string, item: UserMenuItem) => void;
+  /** Renders items with an `href`. Defaults to a plain `<a>`. */
+  renderLink?: (
+    item: UserMenuItem,
+    props: UserMenuLinkProps,
+  ) => React.ReactNode;
   /** pill = glass button with avatar, name, role and caret (default); avatar = the avatar alone. */
   variant?: "pill" | "avatar";
   placement?: "bottom-end" | "bottom-start" | "top-start" | "top-end";
@@ -88,6 +101,7 @@ function UserMenu({
   user,
   items = DEFAULT_ITEMS,
   onSelect,
+  renderLink = (_, props) => <a {...props} />,
   variant = "pill",
   placement = "bottom-end",
   defaultOpen,
@@ -166,9 +180,11 @@ function UserMenu({
               }}
             >
               {it.href ? (
-                <a href={it.href} className="no-underline">
-                  <ItemBody item={it} />
-                </a>
+                renderLink(it, {
+                  href: it.href,
+                  className: "no-underline",
+                  children: <ItemBody item={it} />,
+                })
               ) : (
                 <ItemBody item={it} />
               )}
@@ -196,4 +212,9 @@ function ItemBody({ item }: { item: UserMenuItem }) {
   );
 }
 
-export { UserMenu, type UserMenuProps, type UserMenuItem };
+export {
+  UserMenu,
+  type UserMenuItem,
+  type UserMenuLinkProps,
+  type UserMenuProps,
+};

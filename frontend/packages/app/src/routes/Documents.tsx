@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Card, Checkbox } from "@bragdoc/ui";
 import { errorText } from "../lib/errors";
 import type { Document } from "../lib/types";
+import { Header } from "../layout/Header";
 import { DocumentCard } from "../documents/DocumentCard";
 import { DocumentFormDialog } from "../documents/DocumentFormDialog";
 import { DeleteDocumentDialog } from "../documents/DeleteDocumentDialog";
@@ -60,20 +61,25 @@ export function Component() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <h2 className="type-title-2">Your documents</h2>
-        <Checkbox
-          className="ml-auto"
-          label="Show archived"
-          checked={showArchived}
-          onCheckedChange={(v) => setShowArchived(v === true)}
-        />
-        {data.owned.length > 0 && (
-          <Button variant="primary" onClick={() => setCreating(true)}>
-            New document
-          </Button>
-        )}
-      </div>
+      <Header
+        breadcrumbs={[{ label: "Documents" }]}
+        title="Your documents"
+        subtitle="A running record of your work and why it mattered."
+        actions={
+          <div className="flex items-center gap-4">
+            <Checkbox
+              label="Show archived"
+              checked={showArchived}
+              onCheckedChange={(v) => setShowArchived(v === true)}
+            />
+            {data.owned.length > 0 && (
+              <Button variant="primary" onClick={() => setCreating(true)}>
+                New document
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {archiveError && (
         <p role="alert" className="text-sm text-danger">

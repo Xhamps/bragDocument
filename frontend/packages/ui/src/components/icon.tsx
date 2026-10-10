@@ -17,6 +17,7 @@ import {
   Ellipsis,
   ExternalLink,
   Eye,
+  History,
   House,
   LayoutGrid,
   LogOut,
@@ -28,6 +29,7 @@ import {
   Play,
   Plus,
   Search,
+  Send,
   Settings,
   Share,
   SlidersHorizontal,
@@ -75,6 +77,8 @@ const ICONS: Record<string, LucideIcon> = {
   more: Ellipsis,
   edit: Pencil,
   trash: Trash2,
+  send: Send,
+  history: History,
 };
 
 export type IconProp = React.ReactNode | string;

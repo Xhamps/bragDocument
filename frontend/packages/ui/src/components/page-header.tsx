@@ -1,12 +1,14 @@
 import type * as React from "react";
-import { cn, focusRing } from "#lib/utils";
-import { Icon } from "#components/icon";
+import { cn } from "#lib/utils";
+import { Breadcrumb, type BreadcrumbProps } from "#components/breadcrumb";
 
 type PageHeaderProps = {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /** The last crumb is the current page. */
-  breadcrumbs?: Array<{ label: string; href?: string }>;
+  breadcrumbs?: BreadcrumbProps["items"];
+  /** Renders breadcrumb links (e.g. your router's link). */
+  renderLink?: BreadcrumbProps["renderLink"];
   /** Tags above the title. */
   eyebrow?: React.ReactNode;
   /** A row of small facts under the subtitle (dates, owners, counts). */
@@ -30,6 +32,7 @@ function PageHeader({
   title,
   subtitle,
   breadcrumbs = [],
+  renderLink,
   eyebrow,
   meta,
   actions,
@@ -43,44 +46,7 @@ function PageHeader({
       data-slot="page-header"
       className={cn("flex flex-col gap-3 px-6 pt-8 pb-4", className)}
     >
-      {breadcrumbs.length > 0 && (
-        <nav aria-label="Breadcrumb">
-          <ol className="m-0 flex list-none flex-wrap items-center gap-1 p-0 type-footnote">
-            {breadcrumbs.map((c, i) => {
-              const last = i === breadcrumbs.length - 1;
-              return (
-                <li key={i} className="inline-flex items-center gap-1">
-                  {last ? (
-                    <span
-                      aria-current="page"
-                      className="font-medium text-fg-primary"
-                    >
-                      {c.label}
-                    </span>
-                  ) : (
-                    <>
-                      <a
-                        href={c.href ?? "#"}
-                        className={cn(
-                          "rounded-sm text-fg-secondary no-underline transition-colors duration-fast hover:text-button-text",
-                          focusRing,
-                        )}
-                      >
-                        {c.label}
-                      </a>
-                      <Icon
-                        name="chevron"
-                        size={14}
-                        className="text-fg-tertiary"
-                      />
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-      )}
+      <Breadcrumb items={breadcrumbs} renderLink={renderLink} />
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div className="flex min-w-0 flex-col gap-2">
           {eyebrow && <div className="flex gap-2">{eyebrow}</div>}

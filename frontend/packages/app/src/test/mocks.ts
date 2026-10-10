@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { AuthProvider } from "../auth/AuthProvider";
 import { routes } from "../router";
 import type { Me } from "../lib/types";
@@ -91,6 +92,15 @@ export function mockFetch(table: Routes) {
     }),
   );
   return calls;
+}
+
+/** The signed-in shell's avatar button; resolves once the caller has loaded. */
+export const accountButton = () =>
+  screen.findByRole("button", { name: `${me.display_name}, account menu` });
+
+/** Opens the account menu, where the nav, theme toggle and sign-out live. */
+export async function openAccountMenu() {
+  await userEvent.click(await accountButton());
 }
 
 export function renderAt(path: string) {

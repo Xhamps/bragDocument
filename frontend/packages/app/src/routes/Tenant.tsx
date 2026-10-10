@@ -5,6 +5,7 @@ import { Button, Tag, TextField } from "@bragdoc/ui";
 import { useMe } from "../auth/useMe";
 import { api, ApiError } from "../lib/api";
 import { errorText } from "../lib/errors";
+import { Header } from "../layout/Header";
 import type { Invitation, Member } from "../lib/types";
 
 export function Component() {
@@ -71,9 +72,17 @@ export function Component() {
   const withdrawError = errorText(withdraw.error);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
+      <Header
+        breadcrumbs={[
+          { label: "Documents", href: "/" },
+          { label: me.tenant.name },
+        ]}
+        title={me.tenant.name}
+        subtitle="Members and invitations of your tenant."
+      />
       <section className="flex flex-col gap-3">
-        <h2 className="type-title-2">{me.tenant.name}: members</h2>
+        <h3 className="type-title-3">Members</h3>
         <ul className="divide-y rounded-lg glass shadow-glass">
           {members.data.map((m) => (
             <li key={m.id} className="flex items-center gap-3 p-3 text-sm">
@@ -107,7 +116,7 @@ export function Component() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="type-title-2">Invitations</h2>
+        <h3 className="type-title-3">Invitations</h3>
         <p className="text-sm text-fg-secondary">
           Invited people join this tenant when they sign in with that email. No
           email is sent; share the sign-in link yourself.

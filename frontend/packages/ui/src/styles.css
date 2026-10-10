@@ -295,6 +295,6 @@
     font-family: var(--font-sans);
   }
   body {
-    @apply min-h-screen bg-page type-body text-fg-primary antialiased;
+    @apply min-h-screen bd-backdrop type-body text-fg-primary antialiased;
   }
 }

@@ -32,7 +32,7 @@ export function Component() {
       ?.href ?? "";
 
   return (
-    <div className="min-h-screen bd-backdrop">
+    <div className="min-h-screen">
       <div className="mx-auto max-w-5xl p-4">
         {/* Never pass onSelect: it preventDefaults link clicks and blocks router navigation. */}
         <TopBar
